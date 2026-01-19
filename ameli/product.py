@@ -448,6 +448,7 @@ class Product:
                 "title": TITLE,
                 "description": description,
                 "license": "cc-by-sa-4.0",
+                "version": __version__,
             },
             "data/product.json": {
                 "version": __version__,

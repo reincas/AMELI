@@ -297,6 +297,7 @@ class Config():
                 "title": TITLE,
                 "description": description,
                 "license": "cc-by-sa-4.0",
+                "version": __version__,
             },
             "data/config.json": {
                 "version": __version__,
