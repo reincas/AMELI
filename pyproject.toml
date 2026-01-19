@@ -16,7 +16,7 @@ authors = [
     { name = "Reinhard Caspary", email = "reinhard.caspary@phoenixd.uni-hannover.de"},
 ]
 description = "Python 3 package to calculate angular matrix elements of lanthanide ions."
-license = {text = "MIT"}
+license = "MIT"
 readme = "README.md"
 dependencies = [
     "diskcache",
