@@ -201,7 +201,7 @@ class ConfigInfo:
 # Config class
 ###########################################################################
 
-TITLE = "Many-electron  configuration"
+TITLE = "Many-electron configuration"
 
 DESCRIPTION = """
 This container stores data regarding a configuration of n electrons in one or more partly occupied subshells.
