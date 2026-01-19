@@ -2,7 +2,7 @@
 .test/
 .venv/
 attic/
-vault/
+ameli/vault/
 private/
 
 
