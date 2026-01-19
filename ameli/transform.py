@@ -996,7 +996,7 @@ class SljmStates:
 # Transform class
 ###########################################################################
 
-TITLE = "Transformatdion matrix from product states to LS coupling"
+TITLE = "Transformation matrix from product states to LS coupling"
 
 DESCRIPTION = """
 This container stores the orthonormal transformation matrix V from electron product states to LS coupling for a
