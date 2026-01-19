@@ -176,42 +176,40 @@ if __name__ == "__main__":
     log_console(formatter, loglevel)
     logging.getLogger().setLevel(loglevel)
 
-    num_electrons = 2
-    config_name = f"f{num_electrons}"
-
     names = []
-    names.extend([(f"U/{k},{q}", f"U/a/{k},{q}") for k in range(7) for q in range(-k, k+1)])
-    names.extend([(f"T/{k},{q}", f"T/a/{k},{q}") for k in range(2) for q in range(-k, k+1)])
-    names.extend([(f"UU/{k}", f"UU/{k}") for k in (0, 1, 2, 3, 4, 5, 6)])
-    names.extend([(f"TT/{k}", f"TT/{k}") for k in (0, 1)])
-    names.extend([(f"UT/{k}", f"UT/{k}") for k in (0, 1)])
-    names.extend([(f"L/{q}", f"L/{q}") for q in range(-1, 2)])
-    names.extend([(f"S/{q}", f"S/{q}") for q in range(-1, 2)])
-    names.extend([(f"J/{q}", f"J/{q}") for q in range(-1, 2)])
-    names.append(("L2", "L2"))
-    names.append(("S2", "S2"))
-    names.append(("J2", "J2"))
-    names.append(("LS", "LS"))
-    names.extend([(f"H1/{k}", f"H1/{k}") for k in (2, 4, 6)])
-    names.append(("H2", "H2"))
-    names.extend([(f"H3/{i}", f"H3/{i}") for i in (0, 1, 2)])
-    names.extend([(f"H4/{c}", f"H4/{c}") for c in (2, 3, 4, 6, 7, 8)])
-    names.extend([(f"H5/{k}", f"H5/{k}") for k in (0, 2, 4)])
-    names.extend([(f"H6/{k}", f"H6/{k}") for k in (2, 4, 6)])
+    names.extend([(f"U/{k},{q}", f"U/a/{k},{q}", 1) for k in range(7) for q in range(-k, k+1)])
+    names.extend([(f"T/{k},{q}", f"T/a/{k},{q}", 1) for k in range(2) for q in range(-k, k+1)])
+    names.extend([(f"UU/{k}", f"UU/{k}", 2) for k in (0, 1, 2, 3, 4, 5, 6)])
+    names.extend([(f"TT/{k}", f"TT/{k}", 2) for k in (0, 1)])
+    names.extend([(f"UT/{k}", f"UT/{k}", 2) for k in (0, 1)])
+    names.extend([(f"L/{q}", f"L/{q}", 1) for q in range(-1, 2)])
+    names.extend([(f"S/{q}", f"S/{q}", 1) for q in range(-1, 2)])
+    names.extend([(f"J/{q}", f"J/{q}", 1) for q in range(-1, 2)])
+    names.append(("L2", "L2", 1))
+    names.append(("S2", "S2", 1))
+    names.append(("J2", "J2", 1))
+    names.append(("LS", "LS", 1))
+    names.extend([(f"H1/{k}", f"H1/{k}", 2) for k in (2, 4, 6)])
+    names.append(("H2", "H2", 1))
+    names.extend([(f"H3/{i}", f"H3/{i}", 2) for i in (0, 1, 2)])
+    names.extend([(f"H4/{c}", f"H4/{c}", 3) for c in (2, 3, 4, 6, 7, 8)])
+    names.extend([(f"H5/{k}", f"H5/{k}", 2) for k in (0, 2, 4)])
+    names.extend([(f"H6/{k}", f"H6/{k}", 2) for k in (2, 4, 6)])
 
-    dtype_sym = DataType("symbolic")
-    dtype_num = DataType("float64")
+    # check_rational(config_name)
+    # check_orthonormal(dtype_sym, config_name)
+    # check_transform(dtype_sym, config_name)
+    # print()
+    # check_orthonormal(dtype_num, config_name)
+    # check_transform(dtype_num, config_name)
+    # print()
+    # compare_transform(dtype_num, config_name)
 
-    check_rational(config_name)
-    check_orthonormal(dtype_sym, config_name)
-    check_transform(dtype_sym, config_name)
-    print()
-    check_orthonormal(dtype_num, config_name)
-    check_transform(dtype_num, config_name)
-    print()
-    compare_transform(dtype_num, config_name)
-
-    matrix = Matrix(dtype_sym, config_name, "H1/2", "SLJM")
-    matrix = Matrix(dtype_num, config_name, "H1/2", "SLJM")
-    # for name in ["H1/2", "H1/4", "H1/6", "H2", "H3/0", "H3/1", "H3/2"]:
-    #     check_matrix(config_name, name, "SLJM")
+    for num_electrons in range(1, 14):
+        config_name = f"f{num_electrons}"
+        for dtype in ("symbolic", "float64"):
+            for space in ("Product", "SLJM"):
+                for name, _, min_electrons in names:
+                    if num_electrons < min_electrons:
+                        continue
+                    matrix = Matrix(dtype, config_name, name, space)
