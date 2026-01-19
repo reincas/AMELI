@@ -296,7 +296,7 @@ class Config():
             "meta.json": {
                 "title": TITLE,
                 "description": description,
-                "license": "MIT",
+                "license": "CC-BY-SA",
             },
             "data/config.json": {
                 "version": __version__,

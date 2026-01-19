@@ -403,7 +403,7 @@ class Unit:
             "meta.json": {
                 "title": TITLE,
                 "description": description,
-                "license": "MIT",
+                "license": "CC-BY-SA",
             },
             "data/unit.json": {
                 "version": __version__,

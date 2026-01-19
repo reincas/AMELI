@@ -1155,7 +1155,7 @@ class Transform:
             "meta.json": {
                 "title": TITLE,
                 "description": description,
-                "license": "MIT",
+                "license": "CC-BY-SA",
             },
             "data/transform.json": {
                 "version": __version__,
