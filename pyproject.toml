@@ -1,0 +1,32 @@
+# pyproject.toml
+[build-system]
+requires = [
+    "setuptools",
+    "wheel",
+]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["ameli", "ameli.sym"]
+
+[project]
+name = "AMELI"
+version = "1.0.0"
+authors = [
+    { name = "Reinhard Caspary", email = "reinhard.caspary@phoenixd.uni-hannover.de"},
+]
+description = "Python 3 package to calculate angular matrix elements of lanthanide ions."
+readme = "README.md"
+dependencies = [
+    "diskcache",
+    "numpy>=1.15",
+    "sympy",
+	"h5py",
+    "scidatacontainer",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent"
+]
