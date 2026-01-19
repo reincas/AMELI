@@ -16,9 +16,10 @@ from abc import ABC, abstractmethod
 import sympy as sp
 
 from . import space_registry, desc_format
+from .datatype import DataType
+from .vault import get_vault
 from .config import ConfigInfo, get_config
 from .product import get_product
-from .vault import get_vault
 
 __version__ = "1.0.0"
 
@@ -306,6 +307,8 @@ class Unit:
         """ Initialize the spherical unit tensor operator matrix. """
 
         # Store data type
+        if isinstance(dtype, str):
+            dtype = DataType(dtype)
         self.dtype = dtype
 
         # Configuration string

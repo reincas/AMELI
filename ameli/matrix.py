@@ -16,8 +16,9 @@ import time
 import sympy as sp
 
 from . import space_registry, desc_format
-from .config import ConfigInfo, get_config
+from .datatype import DataType
 from .vault import get_vault
+from .config import ConfigInfo, get_config
 from .unit import Unit
 
 __version__ = "1.0.0"
@@ -544,6 +545,8 @@ class Matrix:
         """ Initialize the spherical tensor operator matrix. """
 
         # Store data type
+        if isinstance(dtype, str):
+            dtype = DataType(dtype)
         self.dtype = dtype
 
         # Configuration string

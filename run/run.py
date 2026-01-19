@@ -180,41 +180,24 @@ if __name__ == "__main__":
     config_name = f"f{num_electrons}"
 
     names = []
-    # names.extend([(f"U/{k},{q}", f"U/a/{k},{q}") for k in range(7) for q in range(-k, k+1)])
-    # names.extend([(f"T/{k},{q}", f"T/a/{k},{q}") for k in range(2) for q in range(-k, k+1)])
-    # names.extend([(f"UU/{k}", f"UU/{k}") for k in (0, 1, 2, 3, 4, 5, 6)])
-    # names.extend([(f"TT/{k}", f"TT/{k}") for k in (0, 1)])
-    # names.extend([(f"UT/{k}", f"UT/{k}") for k in (0, 1)])
-    # names.extend([(f"L/{q}", f"L/{q}") for q in range(-1, 2)])
-    # names.extend([(f"S/{q}", f"S/{q}") for q in range(-1, 2)])
-    # names.extend([(f"J/{q}", f"J/{q}") for q in range(-1, 2)])
-    # names.append(("L2", "L2"))
-    # names.append(("S2", "S2"))
-    # names.append(("J2", "J2"))
-    # names.append(("LS", "LS"))
-    # names.extend([(f"H1/{k}", f"H1/{k}") for k in (2, 4, 6)])
-    # names.append(("H2", "H2"))
-    # names.extend([(f"H3/{i}", f"H3/{i}") for i in (0, 1, 2)])
-    # names.extend([(f"H4/{c}", f"H4/{c}") for c in (2, 3, 4, 6, 7, 8)])
-    # names.extend([(f"H5/{k}", f"H5/{k}") for k in (0, 2, 4)])
-    # names.extend([(f"H6/{k}", f"H6/{k}") for k in (2, 4, 6)])
-
-    # dtypes = [DataType("symbolic"), DataType("float64")]
-    #
-    # config = Config(config_name)
-    # product = Product(config_name)
-    # for dtype in dtypes:
-    #     unit = Unit(dtype, config_name, "UT/1,0,1,0").matrix
-    #     matrix = Matrix(dtype, config_name, "U/1,0", "Product")
-    #     transform = Transform(dtype, config_name)
-    #     matrix = Matrix(dtype, config_name, "U/1,0", "SLJM")
-    #
-    # names = [name for name in transform.col_states.tensor_chain if name not in ("sen", "num", "tau")]
-    # for name in names:
-    #     check_matrix(config_name, name, "Product")
-    #
-    # for name in names:
-    #     check_matrix(config_name, name, "SLJM")
+    names.extend([(f"U/{k},{q}", f"U/a/{k},{q}") for k in range(7) for q in range(-k, k+1)])
+    names.extend([(f"T/{k},{q}", f"T/a/{k},{q}") for k in range(2) for q in range(-k, k+1)])
+    names.extend([(f"UU/{k}", f"UU/{k}") for k in (0, 1, 2, 3, 4, 5, 6)])
+    names.extend([(f"TT/{k}", f"TT/{k}") for k in (0, 1)])
+    names.extend([(f"UT/{k}", f"UT/{k}") for k in (0, 1)])
+    names.extend([(f"L/{q}", f"L/{q}") for q in range(-1, 2)])
+    names.extend([(f"S/{q}", f"S/{q}") for q in range(-1, 2)])
+    names.extend([(f"J/{q}", f"J/{q}") for q in range(-1, 2)])
+    names.append(("L2", "L2"))
+    names.append(("S2", "S2"))
+    names.append(("J2", "J2"))
+    names.append(("LS", "LS"))
+    names.extend([(f"H1/{k}", f"H1/{k}") for k in (2, 4, 6)])
+    names.append(("H2", "H2"))
+    names.extend([(f"H3/{i}", f"H3/{i}") for i in (0, 1, 2)])
+    names.extend([(f"H4/{c}", f"H4/{c}") for c in (2, 3, 4, 6, 7, 8)])
+    names.extend([(f"H5/{k}", f"H5/{k}") for k in (0, 2, 4)])
+    names.extend([(f"H6/{k}", f"H6/{k}") for k in (2, 4, 6)])
 
     dtype_sym = DataType("symbolic")
     dtype_num = DataType("float64")

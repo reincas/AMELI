@@ -24,12 +24,13 @@ import numpy as np
 import sympy as sp
 
 from . import space_registry, register_space, desc_format
-from .config import SPECTRAL, ConfigInfo, get_config
 from .uintarray import decode_uint_array, encode_uint_array
+from .datatype import DataType
+from .casimir import CASIMIR
 from .vault import get_vault
+from .config import SPECTRAL, ConfigInfo, get_config
 from .unit import Unit
 from .matrix import Matrix
-from .casimir import CASIMIR
 
 __version__ = "1.0.0"
 ATOL = 1e-12
@@ -1035,6 +1036,8 @@ class Transform:
         """ Initialize the orthonormal transformation matrix from the product space to LS coupling. """
 
         # Store data type
+        if isinstance(dtype, str):
+            dtype = DataType(dtype)
         self.dtype = dtype
 
         # Configuration string
