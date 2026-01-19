@@ -662,7 +662,7 @@ class Matrix:
             "meta.json": {
                 "title": TITLE,
                 "description": description,
-                "license": "CC-BY-SA",
+                "license": "cc-by-sa-4.0",
             },
             "data/matrix.json": {
                 "version": __version__,
