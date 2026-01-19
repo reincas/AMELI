@@ -754,7 +754,7 @@ def transform_level(logger, result, level, label="", transform=None, transform_i
         result.add_values(level, eigenvalue, count)
 
         # Log the space separated string of the irreducible representations from this and all previous levels
-        this_label = f"{label} {SYM_INFO[result.name(level)]["repr"](eigenvalue)}"
+        this_label = f"{label} {SYM_INFO[result.name(level)]['repr'](eigenvalue)}"
         logger.debug(f"{result.status} |{this_label} >")
 
         # Recursion to next level
