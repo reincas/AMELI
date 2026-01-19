@@ -201,7 +201,7 @@ class ConfigInfo:
 # Config class
 ###########################################################################
 
-TITLE = "Collection of all states of an electron configuration"
+TITLE = "Collection of all states of the electron configuration '{config_name}'"
 
 DESCRIPTION = """
 This container stores data regarding a configuration of n electrons in one or more partly occupied subshells.
@@ -294,7 +294,7 @@ class Config():
                                   "id": "https://github.com/reincas/ameli", "idType": "URL"}],
             },
             "meta.json": {
-                "title": TITLE,
+                "title": TITLE.format(config_name=self.name),
                 "description": description,
                 "license": "cc-by-sa-4.0",
                 "version": __version__,
