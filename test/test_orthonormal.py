@@ -12,13 +12,13 @@ import pytest
 from itertools import product
 import numpy as np
 import sympy as sp
-from ameli import Transform
+from ameli import get_transform
 
 
-@pytest.mark.parametrize("dtype, num_electrons", list(product(("symbolic", "float64"), range(1, 3))))
+@pytest.mark.parametrize("dtype, num_electrons", list(product(("symbolic", "float64"), range(1, 4))))
 def test_orthonormal(dtype: str, num_electrons: int):
     config_name = f"f{num_electrons}"
-    transform = Transform(dtype, config_name)
+    transform = get_transform(dtype, config_name)
     dtype = transform.dtype
     if dtype.is_symbolic:
         V = transform.matrix

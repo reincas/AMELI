@@ -91,8 +91,8 @@ def desc_format(description, kwargs):
 # Import main classes
 ##########################################################################
 
-from .config import SPECTRAL, Electron, Config
-from .product import Product
+from .config import SPECTRAL, Electron, Config, get_config
+from .product import Product, get_product
 from .unit import Unit
 from .matrix import Matrix
-from .transform import Transform
+from .transform import Transform, get_transform

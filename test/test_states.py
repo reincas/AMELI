@@ -13,7 +13,7 @@ import pytest
 import re
 from itertools import product
 import sympy as sp
-from ameli import SPECTRAL, Transform
+from ameli import SPECTRAL, get_transform
 
 from data_states import SOURCES, STATES
 
@@ -25,12 +25,12 @@ def rational_range(start, stop):
         curr += 1
 
 
-@pytest.mark.parametrize("dtype, num_electrons", list(product(("symbolic", "float64"), range(1, 3))))
+@pytest.mark.parametrize("dtype, num_electrons", list(product(("symbolic", "float64"), range(1, 4))))
 def test_states(dtype: str, num_electrons: int):
 
     # States determined by AMELI
     config_name = f"f{num_electrons}"
-    transform = Transform(dtype, config_name)
+    transform = get_transform(dtype, config_name)
     states = transform.col_states.names
 
     # Terms from literature
