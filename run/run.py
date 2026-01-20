@@ -1,6 +1,8 @@
-# TODO: All tensor operators
-# TODO: Store tensor name and parameters
-# TODO: TransformMatrix class
+##########################################################################
+# Copyright (c) 2025 Reinhard Caspary                                    #
+# <reinhard.caspary@phoenixd.uni-hannover.de>                            #
+# This program is free software under the terms of the MIT license.      #
+##########################################################################
 
 import logging
 
@@ -55,22 +57,6 @@ def log_file(filename, formatter, level):
         handler.setFormatter(formatter)
         logger.addHandler(handler)
     handler.setLevel(level)
-
-
-def check_rational(config_name):
-    dtype = DataType("symbolic")
-    transform = Transform(dtype, config_name)
-    config = transform.config
-    irrational = {element for element in set(transform.matrix) if not (element ** 2).is_rational}
-    success = len(irrational) == 0
-    if not success:
-        elements = ", ".join(map(str, list(irrational)[:8]))
-        if len(irrational) > 8:
-            elements += ", ..."
-        print(f"  Irrational elements: {elements}")
-    res = "passed" if success else "FAILED"
-    print(f"{config.name} ({dtype.name}) | Square roots of rationals test: {res}")
-    return success
 
 
 def check_orthonormal(dtype, config_name):
