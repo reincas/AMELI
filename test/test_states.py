@@ -24,7 +24,7 @@ def rational_range(start, stop):
         curr += 1
 
 
-@pytest.mark.parametrize("dtype, num_electrons", list(product(("symbolic", "float64"), range(1, 4))))
+@pytest.mark.parametrize("dtype, num_electrons", list(product(("symbolic", "float64"), range(1, 5))))
 def test_states(dtype: str, num_electrons: int):
 
     # States determined by AMELI

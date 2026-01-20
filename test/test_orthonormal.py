@@ -15,7 +15,7 @@ import sympy as sp
 from ameli import get_transform
 
 
-@pytest.mark.parametrize("dtype, num_electrons", list(product(("symbolic", "float64"), range(1, 4))))
+@pytest.mark.parametrize("dtype, num_electrons", list(product(("symbolic", "float64"), range(1, 5))))
 def test_orthonormal(dtype: str, num_electrons: int):
 
     # Transformation object
