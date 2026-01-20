@@ -59,72 +59,6 @@ def log_file(filename, formatter, level):
     handler.setLevel(level)
 
 
-def check_orthonormal(dtype, config_name):
-    transform = Transform(dtype, config_name)
-    config = transform.config
-    dtype = transform.dtype
-    if dtype.is_symbolic:
-        V = transform.matrix
-        diff = (V.T * V - sp.eye(transform.num_states)).norm(sp.oo)
-        success = diff == 0
-        diff = "" if success else f" result = {diff} abs"
-    else:
-        V = transform.matrix
-        diff = np.max(np.abs(V.T @ V - np.eye(V.shape[0])) / (dtype.eps + dtype.eps * np.eye(V.shape[0])))
-        success = diff < 100
-        diff = f" result = {diff:.0f} eps"
-    res = "passed" if success else "FAILED"
-    print(f"{config.name} ({dtype.name}) | Orthonormality test{diff}: {res}")
-    return success
-
-
-def check_transform(dtype, config_name):
-    transform = Transform(dtype, config_name)
-    fails = []
-    for i, name in enumerate(transform.col_states.tensor_chain):
-        if name in ("sen", "num", "tau"):
-            continue
-        matrix = Matrix(dtype, config_name, name, "Product").matrix
-        eigenvalues = transform.eigenvalue_lists()[name]
-        if dtype.is_symbolic:
-            V = transform.matrix
-            D = sp.diag(*eigenvalues)
-            diff = (V.T * matrix * V - D).norm(sp.oo)
-            is_equal = diff == 0
-        else:
-            V = transform.matrix
-            D = np.diag([dtype.dtype(sp.S(x)) for x in eigenvalues])
-            diff = np.max(np.abs(V.T @ matrix @ V - D) / (dtype.eps + dtype.eps * np.abs(D)))
-            print(f"  {config_name} Transformation {name} diff = {diff:.0f} eps")
-            is_equal = diff < 100
-        if not is_equal:
-            fails.append(name)
-    success = len(fails) == 0
-    if not success:
-        fails = ", ".join(fails)
-        print(f"  {config_name} Transformation failed for {fails}")
-    res = "passed" if success else "FAILED"
-    print(f"{config_name} ({dtype.name}) | {name} transformation test: {res}")
-    return success
-
-
-def compare_transform(dtype, config_name):
-    dtype_ref = DataType("symbolic")
-    transform_ref = Transform(dtype_ref, config_name)
-    transform = Transform(dtype, config_name)
-    assert transform_ref.col_states.names == transform.col_states.names
-    diffs = []
-    for i, state in enumerate(transform.col_states.names):
-        eigenvector_ref = dtype.array(transform_ref.matrix)[:, i]
-        eigenvector = transform.matrix[:, i]
-        diffs.append((np.abs(np.dot(eigenvector_ref, eigenvector)) - 1.0) / dtype.eps)
-    diff = max(diffs)
-    success = diff < 100
-    res = "passed" if success else "FAILED"
-    print(f"{config_name} (symbolic <-> {dtype.name}) | Transformation vectors compare result = {diff:.0f} eps: {res}")
-    return success
-
-
 def check_matrix(config_name, name, space):
     dtype_sym = DataType("symbolic")
     obj_sym = Matrix(dtype_sym, config_name, name, space)
@@ -163,8 +97,8 @@ if __name__ == "__main__":
     logging.getLogger().setLevel(loglevel)
 
     names = []
-    names.extend([(f"U/{k},{q}", f"U/a/{k},{q}", 1) for k in range(7) for q in range(-k, k+1)])
-    names.extend([(f"T/{k},{q}", f"T/a/{k},{q}", 1) for k in range(2) for q in range(-k, k+1)])
+    names.extend([(f"U/{k},{q}", f"U/a/{k},{q}", 1) for k in range(7) for q in range(-k, k + 1)])
+    names.extend([(f"T/{k},{q}", f"T/a/{k},{q}", 1) for k in range(2) for q in range(-k, k + 1)])
     names.extend([(f"UU/{k}", f"UU/{k}", 2) for k in (0, 1, 2, 3, 4, 5, 6)])
     names.extend([(f"TT/{k}", f"TT/{k}", 2) for k in (0, 1)])
     names.extend([(f"UT/{k}", f"UT/{k}", 2) for k in (0, 1)])
