@@ -1232,7 +1232,7 @@ class Transform:
         return values
 
 
-@lru_cache(maxsize=4)
+@lru_cache(maxsize=None)
 def get_transform(dtype, config_name):
     """ Return cached Transform object. """
 
