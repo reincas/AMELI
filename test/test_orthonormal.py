@@ -1,5 +1,5 @@
 ##########################################################################
-# Copyright (c) 2025 Reinhard Caspary                                    #
+# Copyright (c) 2026 Reinhard Caspary                                    #
 # <reinhard.caspary@phoenixd.uni-hannover.de>                            #
 # This program is free software under the terms of the MIT license.      #
 ##########################################################################
@@ -17,6 +17,7 @@ from ameli import get_transform
 
 @pytest.mark.parametrize("dtype, num_electrons", list(product(("symbolic", "float64"), range(1, 5))))
 def test_orthonormal(dtype: str, num_electrons: int):
+    """ LS transformation orthonormality test. """
 
     # Transformation object
     config_name = f"f{num_electrons}"

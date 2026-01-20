@@ -1,5 +1,5 @@
 ##########################################################################
-# Copyright (c) 2025 Reinhard Caspary                                    #
+# Copyright (c) 2026 Reinhard Caspary                                    #
 # <reinhard.caspary@phoenixd.uni-hannover.de>                            #
 # This program is free software under the terms of the MIT license.      #
 ##########################################################################
@@ -26,37 +26,6 @@ def num_diff(value_sym, value):
     eps = num.finfo(dtype).eps
     value_ref = dtype(value_sym)
     return abs(value_ref - value) / (eps + eps * value_ref)
-
-
-##########################################################################
-# Log handlers
-##########################################################################
-
-def log_console(formatter, level):
-    filename = "stdout"
-    logger = logging.getLogger()
-    handler = [handler for handler in logger.handlers if handler.name == filename]
-    if handler:
-        handler = handler[0]
-    else:
-        handler = logging.StreamHandler()
-        handler.set_name = filename
-        handler.setFormatter(formatter)
-        logger.addHandler(handler)
-    handler.setLevel(level)
-
-
-def log_file(filename, formatter, level):
-    logger = logging.getLogger()
-    handler = [handler for handler in logger.handlers if handler.name == filename]
-    if handler:
-        handler = handler[0]
-    else:
-        handler = logging.FileHandler(filename)
-        handler.set_name = filename
-        handler.setFormatter(formatter)
-        logger.addHandler(handler)
-    handler.setLevel(level)
 
 
 def check_matrix(config_name, name, space):
