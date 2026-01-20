@@ -5,88 +5,16 @@
 ##########################################################################
 
 import logging
-import numpy as np
 from ameli import Matrix, lanthanide_matrices
-
-from lanthanide import Lanthanide, Coupling
-
 from logger import log_console, log_file
-
-
-# def num_diff(value_sym, value):
-#     assert isinstance(value_sym, sp.Expr)
-#     assert np.issubsctype(value, np.floating)
-#     dtype = value.dtype
-#     eps = num.finfo(dtype).eps
-#     value_ref = dtype(value_sym)
-#     return abs(value_ref - value) / (eps + eps * value_ref)
-
-
-# def check_matrix(config_name, name, space):
-#     dtype_sym = DataType("symbolic")
-#     obj_sym = Matrix(dtype_sym, config_name, name, space)
-#     dtype_num = DataType("float64")
-#     obj_num = Matrix(dtype_num, config_name, name, space)
-#     if space == "SLJM":
-#         assert obj_sym.states.names == obj_num.states.names
-#
-#     matrix_sym = dtype_num.array(obj_sym.matrix)
-#     matrix_num = obj_num.matrix
-#     diff = np.max(np.abs(matrix_sym - matrix_num)) / dtype_num.eps
-#     success = np.allclose(matrix_sym, matrix_num, atol=1000 * dtype_num.eps)
-#     res = "passed" if success else "FAILED"
-#     print(f"{config_name} | matrix {name} test {space}: {res} ({diff:.0f} eps)")
-#     return success
-
-
-def compare_old(names):
-    for name_new, name_old in names:
-        array_new = Matrix(config_name, name_new).array()
-        with Lanthanide(num_electrons) as ion:
-            array_old = ion.matrix(name_old, Coupling.Product).array
-        equal = np.all(np.isclose(array_old, array_new, atol=1e-12))
-        print(f"{config_name} | {name_new}: {equal}")
-        if not equal:
-            print(array_new[:5, :5])
-            print(array_old[:5, :5])
-            assert equal
 
 
 if __name__ == "__main__":
     formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
     loglevel = logging.DEBUG
-    # log_file("ameli.log", formatter, loglevel)
+    log_file("ameli.log", formatter, loglevel)
     log_console(formatter, loglevel)
     logging.getLogger().setLevel(loglevel)
-
-    # names = []
-    # names.extend([(f"U/{k},{q}", f"U/a/{k},{q}", 1) for k in range(7) for q in range(-k, k + 1)])
-    # names.extend([(f"T/{k},{q}", f"T/a/{k},{q}", 1) for k in range(2) for q in range(-k, k + 1)])
-    # names.extend([(f"UU/{k}", f"UU/{k}", 2) for k in (0, 1, 2, 3, 4, 5, 6)])
-    # names.extend([(f"TT/{k}", f"TT/{k}", 2) for k in (0, 1)])
-    # names.extend([(f"UT/{k}", f"UT/{k}", 2) for k in (0, 1)])
-    # names.extend([(f"L/{q}", f"L/{q}", 1) for q in range(-1, 2)])
-    # names.extend([(f"S/{q}", f"S/{q}", 1) for q in range(-1, 2)])
-    # names.extend([(f"J/{q}", f"J/{q}", 1) for q in range(-1, 2)])
-    # names.append(("L2", "L2", 1))
-    # names.append(("S2", "S2", 1))
-    # names.append(("J2", "J2", 1))
-    # names.append(("LS", "LS", 1))
-    # names.extend([(f"H1/{k}", f"H1/{k}", 2) for k in (2, 4, 6)])
-    # names.append(("H2", "H2", 1))
-    # names.extend([(f"H3/{i}", f"H3/{i}", 2) for i in (0, 1, 2)])
-    # names.extend([(f"H4/{c}", f"H4/{c}", 3) for c in (2, 3, 4, 6, 7, 8)])
-    # names.extend([(f"H5/{k}", f"H5/{k}", 2) for k in (0, 2, 4)])
-    # names.extend([(f"H6/{k}", f"H6/{k}", 2) for k in (2, 4, 6)])
-
-    # check_rational(config_name)
-    # check_orthonormal(dtype_sym, config_name)
-    # check_transform(dtype_sym, config_name)
-    # print()
-    # check_orthonormal(dtype_num, config_name)
-    # check_transform(dtype_num, config_name)
-    # print()
-    # compare_transform(dtype_num, config_name)
 
     names = lanthanide_matrices()
     for num_electrons in range(1, 14):
