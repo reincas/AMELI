@@ -9,13 +9,17 @@
 #
 ##########################################################################
 
+import logging
 import numpy as np
 import sympy as sp
 from ameli import Matrix, get_transform
+from logger import log_console, log_file
 
 
 def check_transform(dtype, num_electrons):
     """ Quantitative transformation check. """
+
+    logger = logging.getLogger()
 
     # Transformation object
     config_name = f"f{num_electrons}"
@@ -43,9 +47,15 @@ def check_transform(dtype, num_electrons):
         head = f"{dtype.name} | {config_name:<3s}"
         if i != 0:
             head = " " * len(head)
-        print(f"{head} | {name} | Transformation test: {diff:.0f} eps, {V.shape[0]} states -> {res}")
+        logger.info(f"{head} | {name} | Transformation test: {diff:.0f} eps, {V.shape[0]} states -> {res}")
 
 
 if __name__ == "__main__":
+    formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+    loglevel = logging.DEBUG
+    log_file("check_transform.log", formatter, loglevel, delete=True)
+    log_console(formatter, loglevel)
+    logging.getLogger().setLevel(loglevel)
+
     for num_electrons in range(1, 5):
         check_transform("float64", num_electrons)

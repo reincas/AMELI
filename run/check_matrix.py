@@ -17,6 +17,9 @@ from logger import log_console, log_file
 def check_matrix(dtype, num_electrons, space, names):
     """ Quantitative matrix check. """
 
+    logger = logging.getLogger()
+
+    # Check all matrices in the list
     for i, name in enumerate(names):
 
         # Floating point matrix object
@@ -39,7 +42,7 @@ def check_matrix(dtype, num_electrons, space, names):
         head = f"{dtype.name} | {config_name:<3s} | {space}"
         if i != 0:
             head = " " * len(head)
-        print(f"{head} | Matrix {name} test: {diff:.0f} eps -> {res}")
+        logger.info(f"{head} | Matrix {name} test: {diff:.0f} eps -> {res}")
 
 
 if __name__ == "__main__":
