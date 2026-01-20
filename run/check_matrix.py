@@ -15,7 +15,7 @@ from logger import log_console, log_file
 
 
 def check_matrix(dtype, num_electrons, space, names):
-    """ Quantitative matrix check. """
+    """ Quantitative matrix comparison. """
 
     logger = logging.getLogger()
 
