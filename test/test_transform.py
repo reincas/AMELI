@@ -4,7 +4,7 @@
 # This program is free software under the terms of the MIT license.      #
 ##########################################################################
 #
-# Orthonormality check for LS transformation matrices.
+# LS transformation check for the chain of symmetry matrices.
 #
 ##########################################################################
 
