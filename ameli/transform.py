@@ -1081,7 +1081,7 @@ class Transform:
 
         logger = logging.getLogger()
         logger.info(f"Generating {self.config_name} transformation matrix")
-        t = time.time()
+        t_all = time.time()
 
         # Get electron configuration
         config = get_config(self.config_name)
@@ -1176,7 +1176,7 @@ class Transform:
 
         # Create data container and store in file
         self.vault[self.file] = items
-        t = time.time() - t
+        t = time.time() - t_all
         logger.info(f"Stored {self.config_name} transformation matrix ({t:.1f} seconds) -> {self.file}")
 
     @staticmethod
