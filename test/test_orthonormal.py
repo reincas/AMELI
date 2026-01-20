@@ -17,19 +17,23 @@ from ameli import get_transform
 
 @pytest.mark.parametrize("dtype, num_electrons", list(product(("symbolic", "float64"), range(1, 4))))
 def test_orthonormal(dtype: str, num_electrons: int):
+
+    # Transformation object
     config_name = f"f{num_electrons}"
     transform = get_transform(dtype, config_name)
     dtype = transform.dtype
+
+    # Symbolic transformation test
     if dtype.is_symbolic:
         V = transform.matrix
         diff = (V.T * V - sp.eye(transform.num_states)).norm(sp.oo)
         success = diff == 0
-        # diff = "" if success else f" result = {diff} abs"
+
+    # Floating point transformation test
     else:
         V = transform.matrix
         diff = np.max(np.abs(V.T @ V - np.eye(V.shape[0])) / (dtype.eps + dtype.eps * np.eye(V.shape[0])))
         success = diff < 100
-        # diff = f" result = {diff:.0f} eps"
-    # res = "passed" if success else "FAILED"
-    # print(f"{config_name} ({dtype}) | Orthonormality test{diff}: {res}")
+
+    # Result
     assert success

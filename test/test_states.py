@@ -4,8 +4,7 @@
 # This program is free software under the terms of the MIT license.      #
 ##########################################################################
 #
-# Compare calculated LS states with the states listed in the book from
-# Nielson and Koster.
+# Compare calculated LS states with the literature.
 #
 ##########################################################################
 
