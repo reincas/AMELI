@@ -25,13 +25,14 @@ def log_console(formatter, level):
     handler.setLevel(level)
 
 
-def log_file(filename, formatter, level):
+def log_file(filename, formatter, level, delete=False):
     logger = logging.getLogger()
     handler = [handler for handler in logger.handlers if handler.name == filename]
     if handler:
         handler = handler[0]
     else:
-        handler = logging.FileHandler(filename)
+        mode = "w" if delete else "a"
+        handler = logging.FileHandler(filename, mode=mode)
         handler.set_name = filename
         handler.setFormatter(formatter)
         logger.addHandler(handler)
