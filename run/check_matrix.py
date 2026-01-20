@@ -4,7 +4,7 @@
 # This program is free software under the terms of the MIT license.      #
 ##########################################################################
 #
-# Quantitative of floating point with symbolic matrices.
+# Quantitative comparison of floating point with symbolic matrices.
 #
 ##########################################################################
 
