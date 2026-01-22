@@ -12,13 +12,13 @@ from logger import log_console, log_file
 if __name__ == "__main__":
     formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
     loglevel = logging.DEBUG
-    log_file("ameli.log", formatter, loglevel) ####### DEBUG
+    log_file("ameli_b.log", formatter, loglevel) ####### DEBUG
     log_console(formatter, loglevel)
     logging.getLogger().setLevel(loglevel)
 
     logger = logging.getLogger()
     names = lanthanide_matrices()
-    for num_electrons in [4]:#range(1, 14):
+    for num_electrons in [10]:#range(1, 14):
         config_name = f"f{num_electrons}"
         for dtype in ("symbolic", "float64"):
             for space in ("Product", "SLJM"):
