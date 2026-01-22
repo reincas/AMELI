@@ -459,8 +459,8 @@ def matrix_H5(dtype, config, k: int):
     """ Return the dtype matrix <|H5(k)|> of the spin-spin and spin-other-orbit first order perturbation Hamiltonian
     with rank k as product state matrix for the given electron configuration. """
 
-    matrix_ss = matrix_Hss(dtype, config, k)
-    matrix_soo = matrix_Hss(dtype, config, k)
+    matrix_ss = Matrix(dtype, config.name, f"Hss/{k}", "Product").matrix
+    matrix_soo = Matrix(dtype, config.name, f"Hsoo/{k}", "Product").matrix
     matrix = matrix_ss + matrix_soo
     return matrix
 
