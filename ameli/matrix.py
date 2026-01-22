@@ -410,9 +410,9 @@ def matrix_H4(dtype, config, c: int):
     return matrix
 
 
-def matrix_H5(dtype, config, k: int):
-    """ Return the dtype matrix <|H5(k)|> of the spin-spin and spin-other-orbit first order perturbation Hamiltonian
-    with rank k as product state matrix for the given electron configuration. """
+def matrix_Hss(dtype, config, k: int):
+    """ Return the dtype matrix <|Hss(k)|> of the spin-spin first order perturbation Hamiltonian with rank k as
+    product state matrix for the given electron configuration. """
 
     l = config.states.electron_pool[0].l
     num = config.info.num_electrons
@@ -425,18 +425,42 @@ def matrix_H5(dtype, config, k: int):
 
     factor = -12 * ck0 * ck2 * dtype.sqrt((k + 1) * (k + 2) * (2 * k + 1) * (2 * k + 3) * (2 * k + 5))
     unit = Unit(dtype, config.name, f"UTUT/{k},1,{k + 1},{k + 2},1,{k + 1},0,0").matrix
-    matrix_ss = factor * unit
+    matrix = factor * unit
+
+    return matrix
+
+
+def matrix_Hsoo(dtype, config, k: int):
+    """ Return the dtype matrix <|H5(k)|> of the spin-other-orbit first order perturbation Hamiltonian with rank k as
+    product state matrix for the given electron configuration. """
+
+    l = config.states.electron_pool[0].l
+    num = config.info.num_electrons
+    assert num >= 2
+    assert k % 2 == 0
+    assert 0 <= k <= 2 * l - 2
+
+    ck0 = dtype((-1) ** l * (2 * l + 1)) * dtype.sym3j(l, k, l, 0, 0, 0)
+    ck2 = dtype((-1) ** l * (2 * l + 1)) * dtype.sym3j(l, k + 2, l, 0, 0, 0)
 
     factor = ck0 ** 2 * dtype.sqrt((2 * l + k + 2) * (2 * l - k) * (k + 1) * (2 * k + 1))
     unit = Unit(dtype, config.name, f"UTUT/{k},0,{k},{k + 1},1,{k},0,0").matrix
     unit += 2 * Unit(dtype, config.name, f"UTUT/{k + 1},0,{k + 1},{k},1,{k + 1},0,0").matrix
-    matrix_soo = factor * unit
+    matrix = factor * unit
     factor = ck2 ** 2 * dtype.sqrt((2 * l + k + 3) * (2 * l - k - 1) * (k + 2) * (2 * k + 5))
     unit = Unit(dtype, config.name, f"UTUT/{k + 2},0,{k + 2},{k + 1},1,{k + 2},0,0").matrix
     unit += 2 * Unit(dtype, config.name, f"UTUT/{k + 1},0,{k + 1},{k + 2},1,{k + 1},0,0").matrix
-    matrix_soo += factor * unit
-    matrix_soo *= 2 * dtype.sqrt(3 * (2 * k + 3))
+    matrix += factor * unit
+    matrix *= 2 * dtype.sqrt(3 * (2 * k + 3))
+    return matrix
 
+
+def matrix_H5(dtype, config, k: int):
+    """ Return the dtype matrix <|H5(k)|> of the spin-spin and spin-other-orbit first order perturbation Hamiltonian
+    with rank k as product state matrix for the given electron configuration. """
+
+    matrix_ss = matrix_Hss(dtype, config, k)
+    matrix_soo = matrix_Hss(dtype, config, k)
     matrix = matrix_ss + matrix_soo
     return matrix
 
@@ -503,6 +527,10 @@ MATRICES = {
            "Spin-orbit first order perturbation Hamiltonian z"),
     "H4": (matrix_H4, ("c",),
            "Effective Coulomb second order perturbation Hamiltonian t_c with index c"),
+    "Hss": (matrix_Hss, ("k",),
+           "Spin-spin first order perturbation Hamiltonian mss_k with rank k"),
+    "Hsoo": (matrix_Hsoo, ("k",),
+           "Spin-other-orbit first order perturbation Hamiltonian msoo_k with rank k"),
     "H5": (matrix_H5, ("k",),
            "Spin-spin and spin-other-orbit first order perturbation Hamiltonian m_k with rank k"),
     "H6": (matrix_H6, ("k",),
