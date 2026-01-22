@@ -81,7 +81,7 @@ class DataType:
             return sp.factorial(value)
         return math.factorial(value)
 
-    @lru_cache(maxsize=None)
+    @lru_cache(maxsize=100000)
     def sym3j(self, j1, j2, j3, m1, m2, m3):
         """ Return symbolic or floating point result of the Wigner 3j-symbol. The given arguments of the 3j-symbol
         must be integers or SymPy expressions. The symbol evaluation takes place symbolic with infinite precision.
