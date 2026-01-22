@@ -108,6 +108,8 @@ def lanthanide_matrices():
     names.append(("H2", 1))
     names.extend([(f"H3/{i}", 2) for i in (0, 1, 2)])
     names.extend([(f"H4/{c}", 3) for c in (2, 3, 4, 6, 7, 8)])
+    names.extend([(f"Hss/{k}", 2) for k in (0, 2, 4)])
+    names.extend([(f"Hsoo/{k}", 2) for k in (0, 2, 4)])
     names.extend([(f"H5/{k}", 2) for k in (0, 2, 4)])
     names.extend([(f"H6/{k}", 2) for k in (2, 4, 6)])
     return names
