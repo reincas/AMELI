@@ -18,12 +18,12 @@ if __name__ == "__main__":
 
     logger = logging.getLogger()
     names = lanthanide_matrices()
-    for num_electrons in (1, 13, 2, 12, 3, 11):#range(1, 14):
+    for num_electrons in [4]:#range(1, 14):
         config_name = f"f{num_electrons}"
         for dtype in ("symbolic", "float64"):
             for space in ("Product", "SLJM"):
                 for name, min_electrons in names:
                     if num_electrons < min_electrons:
                         continue
-                    logger.info(f"================================ Matrix({dtype}, {config_name}, {name}, {space}) ================================")
+                    logger.info(f"================ Matrix({dtype}, {config_name}, {name}, {space}) ================")
                     matrix = Matrix(dtype, config_name, name, space)
