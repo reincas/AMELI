@@ -12,7 +12,7 @@ from logger import log_console, log_file
 if __name__ == "__main__":
     formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
     loglevel = logging.DEBUG
-    log_file("ameli_6.log", formatter, loglevel) ####### DEBUG
+    log_file("ameli.log", formatter, loglevel) ####### DEBUG
     log_console(formatter, loglevel)
     logging.getLogger().setLevel(loglevel)
 
