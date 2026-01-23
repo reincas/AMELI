@@ -34,7 +34,7 @@ def check_transform(dtype, num_electrons):
 
         # Operator matrix and eigenvalues
         matrix = Matrix(dtype, config_name, name, "Product").matrix
-        eigenvalues = transform.eigenvalue_lists()[name]
+        eigenvalues = transform.col_states.eigenvalue_lists()[name]
 
         # Transformation test
         V = transform.matrix

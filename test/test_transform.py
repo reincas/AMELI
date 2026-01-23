@@ -31,7 +31,7 @@ def test_transform(dtype: str, num_electrons: int):
 
         # Operator matrix and eigenvalues
         matrix = Matrix(dtype, config_name, name, "Product").matrix
-        eigenvalues = transform.eigenvalue_lists()[name]
+        eigenvalues = transform.col_states.eigenvalue_lists()[name]
 
         # Symbolic test
         if dtype.is_symbolic:

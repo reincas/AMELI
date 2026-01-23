@@ -991,6 +991,48 @@ class SljmStates:
         # Return dictionaries
         return states_dict, info_meta
 
+    def terms(self, template="term") -> list:
+        """ Return the list of unique LS terms of this configuration. The template can be chosen to be either
+        'short', 'term', or 'full'. """
+
+        raise NotImplemented("Add configName to the state metadata to make this method available again!")
+        # assert template in ("short", "term", "full")
+        # config = get_config(self.config_name)
+        # terms = str_terms(config, self.state_eigenvalues(), f"template_{template}")
+        # return terms
+
+    def state_eigenvalues(self) -> list:
+        """ Return a list of eigenvalue dictionaries of all states. """
+
+        eigenvalues = self.eigenvalue_lists()
+        states = [{name: eigenvalues[name][i] for name in self.tensor_chain} for i in range(self.num_states)]
+        return states
+
+    def eigenvalue_lists(self) -> dict:
+        """ Return a dictionary with tensor names as keys and the respective lists of eigenvalues of all states
+        as values. """
+
+        values = {}
+        for i, name in enumerate(self.tensor_chain):
+            values[name] = [self.eigenvalues[name][state[i]] for state in self.indices]
+        return values
+
+    def state_representations(self) -> list:
+        """ Return a list of irreducible representations dictionaries of all states. """
+
+        eigenvalues = self.representation_lists()
+        states = [{name: eigenvalues[name][i] for name in self.tensor_chain} for i in range(self.num_states)]
+        return states
+
+    def representation_lists(self) -> dict:
+        """ Return a dictionary with tensor names as keys and the respective lists of irreducible representations
+        of all states as values. """
+
+        values = {}
+        for i, name in enumerate(self.tensor_chain):
+            values[name] = [self.representations[name][state[i]] for state in self.indices]
+        return values
+
 
 ###########################################################################
 # Transform class
@@ -1189,47 +1231,6 @@ class Transform:
         """ Return the data container dictionaries representing the states in LS coupling. """
 
         return self.col_states.as_meta()
-
-    def terms(self, template="term") -> list:
-        """ Return the list of unique LS terms of this configuration. The template can be chosen to be either
-        'short', 'term', or 'full'. """
-
-        assert template in ("short", "term", "full")
-        config = get_config(self.config_name)
-        terms = str_terms(config, self.state_eigenvalues(), f"template_{template}")
-        return terms
-
-    def state_eigenvalues(self) -> list:
-        """ Return a list of eigenvalue dictionaries of all states. """
-
-        eigenvalues = self.eigenvalue_lists()
-        states = [{name: eigenvalues[name][i] for name in self.col_states.tensor_chain} for i in range(self.num_states)]
-        return states
-
-    def eigenvalue_lists(self) -> dict:
-        """ Return a dictionary with tensor names as keys and the respective lists of eigenvalues of all states
-        as values. """
-
-        values = {}
-        for i, name in enumerate(self.col_states.tensor_chain):
-            values[name] = [self.col_states.eigenvalues[name][state[i]] for state in self.col_states.indices]
-        return values
-
-    def state_representations(self) -> list:
-        """ Return a list of irreducible representations dictionaries of all states. """
-
-        eigenvalues = self.representation_lists()
-        states = [{name: eigenvalues[name][i] for name in self.col_states.tensor_chain} for i in range(self.num_states)]
-        return states
-
-    def representation_lists(self) -> dict:
-        """ Return a dictionary with tensor names as keys and the respective lists of irreducible representations
-        of all states as values. """
-
-        values = {}
-        for i, name in enumerate(self.col_states.tensor_chain):
-            values[name] = [self.col_states.representations[name][state[i]] for state in self.col_states.indices]
-        return values
 
 
 @lru_cache(maxsize=None)
