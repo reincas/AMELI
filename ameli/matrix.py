@@ -474,7 +474,7 @@ def matrix_H6(dtype, config, k: int):
     assert num >= 2
     assert l == 3
     assert k % 2 == 0
-    assert 2 <= k <= 2 * l
+    assert 0 <= k <= 2 * l
 
     factor = dtype.sqrt((2 * l + k + 1) * (2 * l - k + 1) * k * (2 * k - 1))
     unit = Unit(dtype, config.name, f"UTUT/{k},0,{k},{k - 1},1,{k},0,0").matrix
