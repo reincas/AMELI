@@ -19,7 +19,7 @@ if __name__ == "__main__":
 
     logger = logging.getLogger()
     names = lanthanide_matrices()
-    for num_electrons in [9, 6, 8, 7]:#range(1, 14):
+    for num_electrons in [1, 13, 2, 12, 3, 11, 4, 10, 5, 9, 6, 8, 7]:
         config_name = f"f{num_electrons}"
         for dtype in ("symbolic", "float64"):
             for space in ("Product", "SLJM"):
