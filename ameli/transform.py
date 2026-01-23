@@ -1011,7 +1011,7 @@ class SljmStates:
         else:
             assert all(name in self.tensor_chain for name in names)
 
-        # Prepare and return the eigenvalue dictonaries
+        # Prepare and return the eigenvalue dictionaries
         eigenvalues = self.eigenvalue_lists()
         states = [{name: eigenvalues[name][i] for name in names} for i in range(self.num_states)]
         return states
@@ -1027,7 +1027,7 @@ class SljmStates:
         else:
             assert all(name in self.tensor_chain for name in names)
 
-        # Prepare and return the eigenvalue dictonary
+        # Prepare and return the eigenvalue dictionary
         values = {}
         for i, name in enumerate(self.tensor_chain):
             values[name] = [self.eigenvalues[name][state[i]] for state in self.indices]
