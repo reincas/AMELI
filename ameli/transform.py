@@ -1016,10 +1016,18 @@ class SljmStates:
         states = [{name: eigenvalues[name][i] for name in names} for i in range(self.num_states)]
         return states
 
-    def eigenvalue_lists(self) -> dict:
+    def eigenvalue_lists(self, names=None) -> dict:
         """ Return a dictionary with tensor names as keys and the respective lists of eigenvalues of all states
-        as values. """
+        as values. Keys of the dictionaries are either the given tensor names or the full chain of symmetry
+        tensors. """
 
+        # Tensor names of the eigenvalue dictionary
+        if names is None:
+            names = self.tensor_chain
+        else:
+            assert all(name in self.tensor_chain for name in names)
+
+        # Prepare and return the eigenvalue dictonary
         values = {}
         for i, name in enumerate(self.tensor_chain):
             values[name] = [self.eigenvalues[name][state[i]] for state in self.indices]
