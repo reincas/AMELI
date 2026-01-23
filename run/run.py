@@ -5,6 +5,7 @@
 ##########################################################################
 
 import logging
+import time
 from ameli import Matrix, lanthanide_matrices
 from logger import log_console, log_file
 
@@ -25,5 +26,12 @@ if __name__ == "__main__":
                 for name, min_electrons in names:
                     if num_electrons < min_electrons:
                         continue
-                    logger.info(f"================ Matrix({dtype}, {config_name}, {name}, {space}) ================")
-                    matrix = Matrix(dtype, config_name, name, space)
+                    matrix_str = f"Matrix({dtype}, {config_name}, {name}, {space})"
+                    if Matrix.exists(dtype, config_name, name, space):
+                        logger.info(f"==== {matrix_str} exists.")
+                    else:
+                        logger.info(f"==== Generate {matrix_str}.")
+                        t = time.time()
+                        matrix = Matrix(dtype, config_name, name, space)
+                        t = time.time() - t
+                        logger.info(f"==== Generating {matrix_str} took {t:.1f} seconds.")
