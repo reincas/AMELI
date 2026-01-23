@@ -528,9 +528,9 @@ MATRICES = {
     "H4": (matrix_H4, ("c",),
            "Effective Coulomb second order perturbation Hamiltonian t_c with index c"),
     "Hss": (matrix_Hss, ("k",),
-           "Spin-spin first order perturbation Hamiltonian mss_k with rank k"),
+            "Spin-spin first order perturbation Hamiltonian mss_k with rank k"),
     "Hsoo": (matrix_Hsoo, ("k",),
-           "Spin-other-orbit first order perturbation Hamiltonian msoo_k with rank k"),
+             "Spin-other-orbit first order perturbation Hamiltonian msoo_k with rank k"),
     "H5": (matrix_H5, ("k",),
            "Spin-spin and spin-other-orbit first order perturbation Hamiltonian m_k with rank k"),
     "H6": (matrix_H6, ("k",),
@@ -583,22 +583,15 @@ class Matrix:
         # Translate alternative name to the canonical form
         if name in ALT_NAMES:
             name = ALT_NAMES[name]
+        self.name = name
 
         # State space
         assert state_space in space_registry, f"Unknown state space '{state_space}'"
         self.state_space = state_space
 
-        # Data container cache and container file name
-        self.vault = get_vault(self.config_name)
-        self.name = name
-        if "/" in name:
-            head, args = name.split("/")
-            args = "_".join(args.split(","))
-            self.file = f"{dtype.name}/{self.state_space}/{head}_{args}.zdc"
-        else:
-            self.file = f"{dtype.name}/{self.state_space}/{name}.zdc"
-
         # Load or generate data container
+        self.vault = get_vault(self.config_name)
+        self.file = self.get_path(dtype, config_name, name, state_space)
         if self.file not in self.vault:
             self.generate_container()
         dc = self.vault[self.file]
@@ -714,3 +707,35 @@ class Matrix:
         self.vault[self.file] = items
         t = time.time() - t
         logger.info(f"Stored {self.config_name} tensor operator matrix {self.name} ({t:.1f} seconds) -> {self.file}")
+
+    @staticmethod
+    def get_path(dtype, config_name, name, state_space):
+        """ Return data container file name. """
+
+        # Store data type
+        if isinstance(dtype, DataType):
+            dtype = dtype.name
+
+        # Translate alternative name to the canonical form
+        if name in ALT_NAMES:
+            name = ALT_NAMES[name]
+
+        # Sanity check for state space
+        assert state_space in space_registry, f"Unknown state space '{state_space}'"
+
+        # Return data container file name
+        if "/" in name:
+            head, args = name.split("/")
+            args = "_".join(args.split(","))
+            file = f"{dtype}/{state_space}/{head}_{args}.zdc"
+        else:
+            file = f"{dtype}/{state_space}/{name}.zdc"
+        return file
+
+    @staticmethod
+    def exists(dtype, config_name, name, state_space):
+        """ Return True if the matrix data container exists. """
+
+        file = Matrix.get_path(dtype, config_name, name, state_space)
+        vault = get_vault(config_name)
+        return file in vault
