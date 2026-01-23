@@ -1001,11 +1001,19 @@ class SljmStates:
         # terms = str_terms(config, self.state_eigenvalues(), f"template_{template}")
         # return terms
 
-    def state_eigenvalues(self) -> list:
-        """ Return a list of eigenvalue dictionaries of all states. """
+    def state_eigenvalues(self, names=None) -> list:
+        """ Return a list of eigenvalue dictionaries of all states. Keys of the dictionaries are either the given
+        tensor names or the full chain of symmetry tensors. """
 
+        # Tensor names of the eigenvalue dictionaries
+        if names is None:
+            names = self.tensor_chain
+        else:
+            assert all(name in self.tensor_chain for name in names)
+
+        # Prepare and return the eigenvalue dictonaries
         eigenvalues = self.eigenvalue_lists()
-        states = [{name: eigenvalues[name][i] for name in self.tensor_chain} for i in range(self.num_states)]
+        states = [{name: eigenvalues[name][i] for name in names} for i in range(self.num_states)]
         return states
 
     def eigenvalue_lists(self) -> dict:
@@ -1032,6 +1040,20 @@ class SljmStates:
         for i, name in enumerate(self.tensor_chain):
             values[name] = [self.representations[name][state[i]] for state in self.indices]
         return values
+
+    def state_spaces(self, name):
+        """ Return all eigenspaces of the given symmetry tensor as (start, stop) index tuples. """
+
+        assert name in self.tensor_chain
+        names = self.tensor_chain[:self.tensor_chain.index(name) + 1]
+        states = self.state_eigenvalues(names)
+        spaces = []
+        i = 0
+        for j in range(1, self.num_states + 1):
+            if j == self.num_states or states[j] != states[i]:
+                spaces.append((i, j))
+                i = j
+        return spaces
 
 
 ###########################################################################
