@@ -1029,7 +1029,7 @@ class SljmStates:
 
         # Prepare and return the eigenvalue dictionary
         values = {}
-        for i, name in enumerate(self.tensor_chain):
+        for i, name in enumerate(names):
             values[name] = [self.eigenvalues[name][state[i]] for state in self.indices]
         return values
 
