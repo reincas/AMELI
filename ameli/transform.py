@@ -1062,7 +1062,8 @@ class SljmStates:
 
         # Prepare and return the representation dictionary
         values = {}
-        for i, name in enumerate(names):
+        for name in names:
+            i = self.tensor_chain.index(name)
             values[name] = [self.representations[name][state[i]] for state in self.indices]
         return values
 
