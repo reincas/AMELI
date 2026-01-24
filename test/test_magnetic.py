@@ -68,7 +68,7 @@ def test_magnetic(data_key):
     for name in eigenvalues.keys():
         eigenvalues[name] = [(sp.sqrt(4 * eigenvalues[name][i] + 1) - 1) / 2 for i in indices]
 
-    # Initialize set of SL states and list of phase signs
+    # Initialize set of LS states and list of phase signs
     sl_states = set()
     phases = []
 
@@ -105,7 +105,7 @@ def test_magnetic(data_key):
                 assert is_zero
                 continue
 
-            # Get respective reduced SL matrix element
+            # Get respective reduced LS matrix element
             if f"{term_a} {term_b}" in elements:
                 reduced = sp.S(elements[f"{term_a} {term_b}"])
                 element = f"< {term_a} | {term_b} >"
@@ -131,21 +131,21 @@ def test_magnetic(data_key):
                 is_positive = abs(value - array[i,j]) < 1000 * matrix.dtype.eps
                 is_negative = abs(value + array[i,j]) < 1000 * matrix.dtype.eps
 
-            # SL diagonal element, sign always +1
+            # LS diagonal element, sign always +1
             if term_a == term_b:
                 if not is_positive:
                     success = False
                     print(f"ERROR: {name}[{i},{j}]: {element} {value} != {array[i, j]}")
                 continue
 
-            # Both SL states with same sign
+            # Both LS states with same sign
             if is_positive:
                 sl_states.add(term_a)
                 sl_states.add(term_b)
                 phases.append((term_a, term_b, 1))
                 continue
 
-            # Both SL states with opposite sign
+            # Both LS states with opposite sign
             if is_negative:
                 sl_states.add(term_a)
                 sl_states.add(term_b)
