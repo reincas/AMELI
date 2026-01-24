@@ -33,7 +33,7 @@ SOURCES = {
 }
 
 MAGNETIC = {
-    "Pr3+|hss/0": {
+    "Pr3+|Hss/0": {
         "num": 2,
         "rank": 2,
         "name": "Hss/0",
@@ -47,7 +47,7 @@ MAGNETIC = {
         "source": "[24]",
         "table": "I",
     },
-    "Pr3+|hss/2": {
+    "Pr3+|Hss/2": {
         "num": 2,
         "rank": 2,
         "name": "Hss/2",
@@ -61,7 +61,7 @@ MAGNETIC = {
         "source": "[24]",
         "table": "I",
     },
-    "Pr3+|hss/4": {
+    "Pr3+|Hss/4": {
         "num": 2,
         "rank": 2,
         "name": "Hss/4",
@@ -75,7 +75,7 @@ MAGNETIC = {
         "source": "[24]",
         "table": "I",
     },
-    "Pr3+|hsoo/0": {
+    "Pr3+|Hsoo/0": {
         "num": 2,
         "rank": 1,
         "name": "Hsoo/0",
@@ -93,7 +93,7 @@ MAGNETIC = {
         "source": "[24]",
         "table": "II",
     },
-    "Pr3+|hsoo/2": {
+    "Pr3+|Hsoo/2": {
         "num": 2,
         "rank": 1,
         "name": "Hsoo/2",
@@ -111,7 +111,7 @@ MAGNETIC = {
         "source": "[24]",
         "table": "II",
     },
-    "Pr3+|hsoo/4": {
+    "Pr3+|Hsoo/4": {
         "num": 2,
         "rank": 1,
         "name": "Hsoo/4",
@@ -201,7 +201,7 @@ MAGNETIC = {
         "source": "[24]",
         "table": "VII",
     },
-    "Tm3+|hss/0": {
+    "Tm3+|Hss/0": {
         "num": 12,
         "rank": 2,
         "name": "Hss/0",
@@ -215,7 +215,7 @@ MAGNETIC = {
         "source": "[24]",
         "table": "I",
     },
-    "Tm3+|hss/2": {
+    "Tm3+|Hss/2": {
         "num": 12,
         "rank": 2,
         "name": "Hss/2",
@@ -229,7 +229,7 @@ MAGNETIC = {
         "source": "[24]",
         "table": "I",
     },
-    "Tm3+|hss/4": {
+    "Tm3+|Hss/4": {
         "num": 12,
         "rank": 2,
         "name": "Hss/4",
@@ -243,7 +243,7 @@ MAGNETIC = {
         "source": "[24]",
         "table": "I",
     },
-    "Tm3+|hsoo/0": {
+    "Tm3+|Hsoo/0": {
         "num": 12,
         "rank": 1,
         "name": "Hsoo/0",
@@ -261,7 +261,7 @@ MAGNETIC = {
         "source": "[25]",
         "table": "III",
     },
-    "Tm3+|hsoo/2": {
+    "Tm3+|Hsoo/2": {
         "num": 12,
         "rank": 1,
         "name": "Hsoo/2",
@@ -279,7 +279,7 @@ MAGNETIC = {
         "source": "[25]",
         "table": "III",
     },
-    "Tm3+|hsoo/4": {
+    "Tm3+|Hsoo/4": {
         "num": 12,
         "rank": 1,
         "name": "Hsoo/4",
