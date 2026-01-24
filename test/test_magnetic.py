@@ -48,11 +48,13 @@ def test_magnetic(data_key):
     assert "reduced" in data
     elements = data["reduced"]
 
-    # Compare tensor operator matrix to the calculation
+    # Tensor operator matrix
     success = True
     matrix = Matrix("symbolic", config_name, name, "SLJM")
-    states = matrix.states
     array = matrix.matrix
+
+    # J space indices
+    states = matrix.states
     j_spaces = states.state_spaces("J2")
 
     # Sanity check for homogeneous J spaces
@@ -60,21 +62,33 @@ def test_magnetic(data_key):
         assert len(set(array[i:j, i:j].diagonal().tolist()[0])) == 1
     assert array.is_symmetric()
 
-    # Collapse the M-space to the stretched states with M = -J
+    # Collapse the J spaces to the stretched states with M = -J
     indices = [i for i, j in j_spaces]
     array = array[indices, indices]
 
+    # Eigenvalues for collapsed J spaces
     eigenvalues = states.eigenvalue_lists(["S2", "L2", "J2"])
     for name in eigenvalues:
         eigenvalues[name] = [(sp.sqrt(4 * eigenvalues[name][i] + 1) - 1) / 2 for i in indices]
 
-    # Initialize set of LS states and list of phase signs
-    sl_states = set()
-    phases = []
+    # Irreducible representations for collapsed J spaces
+    irepr = states.representation_lists(["S2", "L2", "J2", "num"])
+    for name in irepr:
+        irepr[name] = [irepr[name][i] for i in indices]
 
-    # Compare every matrix element
+    # Initialize set of involved J spaces and list of relative space signs
+    spaces = set()
+    phases = set()
+
+    # Loop through all final states
     for i in range(array.shape[0]):
+        term_a = f"{irepr["S2"][i]}{irepr["L2"][i]}{irepr["num"][i]}"
+        state_a = f"{irepr["S2"][i]}{irepr["L2"][i]}{irepr["num"][i]}{irepr["J2"][i]}"
+
+        # Loop through initial states up to the diagonal
         for j in range(i + 1):
+            term_b = f"{irepr["S2"][j]}{irepr["L2"][j]}{irepr["num"][j]}"
+            state_b = f"{irepr["S2"][j]}{irepr["L2"][j]}{irepr["num"][j]}{irepr["J2"][j]}"
 
             # Quantum numbers S, L, J of final and initial states
             Sa = eigenvalues["S2"][i]
@@ -84,15 +98,8 @@ def test_magnetic(data_key):
             Lb = eigenvalues["L2"][j]
             Jb = eigenvalues["J2"][j]
 
-            # LS term names
-            term_a = f"{2 * Sa + 1}{SPECTRAL[La].upper()}"
-            term_b = f"{2 * Sb + 1}{SPECTRAL[Lb].upper()}"
-
             # Test matrix elements for zero value
-            if matrix.dtype.is_symbolic:
-                is_zero = array[i, j] == 0
-            else:
-                is_zero = abs(array[i, j]) < 1000 * matrix.dtype.eps
+            is_zero = array[i, j] == 0
 
             # Matrix element must be zero for Ja != Jb
             if Ja != Jb:
@@ -124,12 +131,9 @@ def test_magnetic(data_key):
             if (Sb + Lb + Ja) % 2 != 0:
                 value = -value
 
-            if matrix.dtype.is_symbolic:
-                is_positive = value == array[i,j]
-                is_negative = value = -array[i,j]
-            else:
-                is_positive = abs(value - array[i,j]) < 1000 * matrix.dtype.eps
-                is_negative = abs(value + array[i,j]) < 1000 * matrix.dtype.eps
+            # Testing both matrix elements for same magnitude and same or opposite sign
+            is_positive = value == array[i,j]
+            is_negative = value = -array[i,j]
 
             # LS diagonal element, sign always +1
             if term_a == term_b:
@@ -140,16 +144,16 @@ def test_magnetic(data_key):
 
             # Both LS states with same sign
             if is_positive:
-                sl_states.add(term_a)
-                sl_states.add(term_b)
-                phases.append((term_a, term_b, 1))
+                spaces.add(state_a)
+                spaces.add(state_b)
+                phases.add((state_a, state_b, 1))
                 continue
 
             # Both LS states with opposite sign
             if is_negative:
-                sl_states.add(term_a)
-                sl_states.add(term_b)
-                phases.append((term_a, term_b, -1))
+                spaces.add(state_a)
+                spaces.add(state_b)
+                phases.add((state_a, state_b, -1))
                 continue
 
             # Different magnitude of given and calculated matrix element
@@ -159,11 +163,11 @@ def test_magnetic(data_key):
     # Stop if one element test failed
     assert success
 
-    # Test for state phases which match the detected matrix element signs
-    sl_states = tuple(sl_states)
+    # Try to find global phases of all involved J spaces matching the signs of the literature states
+    spaces = tuple(spaces)
     success = False
-    for signs in itertools.product((+1, -1), repeat=len(sl_states)):
-        if all(signs[sl_states.index(term_a)] * signs[sl_states.index(term_b)] == sign for term_a, term_b, sign in phases):
+    for signs in itertools.product((+1, -1), repeat=len(spaces)):
+        if all(signs[spaces.index(a)] * signs[spaces.index(b)] == sign for a, b, sign in phases):
             success = True
             break
     assert success
