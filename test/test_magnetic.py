@@ -65,7 +65,7 @@ def test_magnetic(data_key):
     array = array[indices, indices]
 
     eigenvalues = states.eigenvalue_lists(["S2", "L2", "J2"])
-    for name in eigenvalues.keys():
+    for name in eigenvalues:
         eigenvalues[name] = [(sp.sqrt(4 * eigenvalues[name][i] + 1) - 1) / 2 for i in indices]
 
     # Initialize set of LS states and list of phase signs
