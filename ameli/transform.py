@@ -1034,19 +1034,35 @@ class SljmStates:
             values[name] = [self.eigenvalues[name][state[i]] for state in self.indices]
         return values
 
-    def state_representations(self) -> list:
-        """ Return a list of irreducible representations dictionaries of all states. """
+    def state_representations(self, names=None) -> list:
+        """ Return a list of irreducible representations dictionaries of all states. Keys of the dictionaries are
+        either the given tensor names or the full chain of symmetry tensors."""
 
-        eigenvalues = self.representation_lists()
-        states = [{name: eigenvalues[name][i] for name in self.tensor_chain} for i in range(self.num_states)]
+        # Tensor names of the representation dictionaries
+        if names is None:
+            names = self.tensor_chain
+        else:
+            assert all(name in self.tensor_chain for name in names)
+
+        # Prepare and return the representation dictionaries
+        representations = self.representation_lists()
+        states = [{name: representations[name][i] for name in names} for i in range(self.num_states)]
         return states
 
-    def representation_lists(self) -> dict:
+    def representation_lists(self, names=None) -> dict:
         """ Return a dictionary with tensor names as keys and the respective lists of irreducible representations
-        of all states as values. """
+        of all states as values. Keys of the dictionaries are either the given tensor names or the full chain of
+        symmetry tensors. """
 
+        # Tensor names of the representation dictionary
+        if names is None:
+            names = self.tensor_chain
+        else:
+            assert all(name in self.tensor_chain for name in names)
+
+        # Prepare and return the representation dictionary
         values = {}
-        for i, name in enumerate(self.tensor_chain):
+        for i, name in enumerate(names):
             values[name] = [self.representations[name][state[i]] for state in self.indices]
         return values
 
