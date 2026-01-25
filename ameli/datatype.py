@@ -225,7 +225,7 @@ class SymMatrix:
     num_unique: int
 
     # Matrix object
-    matrix: sp.Matrix
+    _matrix: sp.Matrix | None
 
     # Immutable matrix flag
     is_immutable: bool
@@ -263,20 +263,26 @@ class SymMatrix:
         self.values = []
 
         # Empty matrix
-        self.matrix = self.dtype.zeros(self.num_states, self.num_states)
+        self._matrix = None
         self.is_immutable = False
+
+    @property
+    def matrix(self):
+        assert self.is_immutable
+        if self._matrix is None:
+            self._matrix = self.dtype.zeros(self.num_states, self.num_states)
+            if not self.is_empty:
+                for row, col, element in zip(self.rows, self.columns, self.elements):
+                    self._matrix[row, col] = self.values[element]
+                    if self.is_symmetric:
+                        self._matrix[col, row] = self.values[element]
+        return self._matrix
 
     def __setitem__(self, index: tuple, value):
         """ Store matrix element in the matrix object and the sparse matrix structure. """
 
         # Matrix must not be immutable
         assert not self.is_immutable
-
-        # Store value in the matrix object
-        row, column = index
-        self.matrix[row, column] = value
-        if self.is_symmetric and row != column:
-            self.matrix[column, row] = value
 
         # Skip zero value
         if not value:
@@ -303,9 +309,11 @@ class SymMatrix:
         """ Determine and store matrix info and make the matrix immutable. """
 
         # Store or check info flags
-        assert self.matrix.shape[0] == self.matrix.shape[1] == self.num_states
-        self.is_empty = self.matrix.is_zero_matrix
-        assert self.is_symmetric == self.matrix.is_symmetric()
+        assert self._matrix is None
+        assert len(self.rows) == len(self.columns) == len(self.elements) >= len(self.values)
+        self.is_empty = len(self.elements) == 0
+        if self.is_symmetric:
+            assert all(row >= col for row, col in zip(self.rows, self.columns))
 
         # Sort symbolic values
         indices = np.argsort(self.values)
@@ -334,19 +342,19 @@ class SymMatrix:
         obj = cls(dtype, row_space, col_space, is_symmetric, num_states)
 
         # Build sparse matrix structure and matrix object from matrix
-        obj.rows = []
-        obj.columns = []
-        obj.elements = []
-        obj.values = []
+        assert isinstance(matrix, sp.Matrix)
+        assert len(obj.rows) == len(obj.columns) == len(obj.elements) == len(obj.values) == 0
         if not matrix.is_zero_matrix:
             for row in range(obj.num_states):
                 max_col = row + 1 if obj.is_symmetric else obj.num_states
                 for col in range(max_col):
                     obj[row, col] = matrix[row, col]
-        assert obj.matrix == matrix
 
         # Determine matrix info and make the SymMatrix object immutable
         obj.make_immutable()
+
+        # Store matrix object
+        obj._matrix = matrix.copy()
 
         # Return the SymMatrix object
         return obj
