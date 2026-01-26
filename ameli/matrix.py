@@ -431,7 +431,7 @@ def matrix_Hss(dtype, config, k: int):
 
 
 def matrix_Hsoo(dtype, config, k: int):
-    """ Return the dtype matrix <|H5(k)|> of the spin-other-orbit first order perturbation Hamiltonian with rank k as
+    """ Return the dtype matrix <|Hsoo(k)|> of the spin-other-orbit first order perturbation Hamiltonian with rank k as
     product state matrix for the given electron configuration. """
 
     l = config.states.electron_pool[0].l
