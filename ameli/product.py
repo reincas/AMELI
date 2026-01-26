@@ -227,13 +227,17 @@ class ProductElements():
     def __init__(self, config):
         """ Initialize all ProductState objects. """
 
+        self.logger = logging.getLogger()
+
         # Electron configuration
         self.config = config
         self.num_states = self.config.num_states
         self.num_electrons = self.config.info.num_electrons
 
         # Prepare all product states of the configuration for the detection of matching electrons
+        self.logger.debug(f"Initializing {self.num_states} ProductStates")
         self.states = [ProductState(state) for state in self.config.states.indices]
+        self.logger.debug(f"Initialized all {self.num_states} ProductStates")
 
         # List of all potentially non-zero matrix elements
         self.unused = [(i, j) for i in range(self.num_states) for j in range(i, self.num_states)]
@@ -247,6 +251,7 @@ class ProductElements():
 
         # Get next number of different electrons
         num_diff = len(self.len_diff)
+        self.logger.debug(f"Adding elements for {num_diff} different electrons ({len(self.unused)} tests)")
 
         # Determine all pairs of initial and final state which differ in num_diff electrons using and updating
         # the list of unused matrix element indices
@@ -262,6 +267,10 @@ class ProductElements():
                 RuntimeError("Code error: multiple matches!")
             if len(same_electrons) == 0:
                 i += 1
+                r = len(self.unused) - i
+                if r % 10000 == 0:
+                    n = len(self.elements)
+                    self.logger.debug(f"  {self.config.name} | Number of elements: {n}, remaining tests: {r}")
                 continue
 
             # Pick the tuple of matching (same) electrons from the intersection set
@@ -281,6 +290,11 @@ class ProductElements():
 
         # Append the number of potentially non-zero elements, which increments num_diff for the next function call
         self.len_diff.append(len(self.elements))
+        if len(self.len_diff) < 2:
+            sum = self.len_diff[0]
+        else:
+            sum = self.len_diff[-1] - self.len_diff[-2]
+        self.logger.debug(f"Added all {sum} elements for {num_diff} different electrons")
 
     def matrix_elements(self, tensor_size):
         """ Generate and return the list (indices) of potentially non-zero matrix elements for a tensor operator
@@ -299,7 +313,10 @@ class ProductElements():
         # Build the index list and the list of elementary matrix elements
         indices = []
         elements = []
-        for initial_index, final_index, product_element in self.elements[:self.len_diff[tensor_size]]:
+        max_index = self.len_diff[tensor_size]
+        self.logger.debug(f"Collecting {max_index} elements for {tensor_size}-electron operators")
+        i = 0
+        for initial_index, final_index, product_element in self.elements[:max_index]:
             # List of elementary matrix elements to be evaluated
             elementary = product_element.elementary(tensor_size)
 
@@ -308,8 +325,12 @@ class ProductElements():
 
             # Append the elementary matrix elements
             elements += elementary
+            i += 1
+            if i % 10000 == 0:
+                self.logger.debug(f"  {self.config.name} | Collected {len(indices)}/{max_index} elements")
 
         # Return the list of matrix element indices and elementary tensor arguments
+        self.logger.debug(f"Collected all {max_index} elements for {tensor_size}-electron operators")
         return indices, elements
 
 
@@ -420,13 +441,10 @@ class Product:
             self.product_elements = ProductElements(config)
 
         # Generate product state support data
-        logger = logging.getLogger()
-        logger.info(f"Generating {config.name} product states for {tensor_size} electrons")
         t = time.time()
         indices, elements = self.product_elements.matrix_elements(tensor_size)
         product_dict = encode_uint_arrays({"indices": indices, "elements": elements})
         i, e = len(indices), len(elements)
-        logger.debug(f"  {config.name} | Generated {i} ({e}) elements for {tensor_size}-electron states")
 
         # Prepare container description string
         kwargs = {
@@ -464,6 +482,7 @@ class Product:
         file = self.file.format(tensor_size=tensor_size)
         self.vault[file] = items
         t = time.time() - t
+        logger = logging.getLogger()
         logger.info(f"Stored {config.name} product states for {tensor_size} electrons ({t:.1f} seconds) -> {file}")
 
     def electrons(self, indices):
