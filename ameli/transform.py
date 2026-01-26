@@ -1271,7 +1271,7 @@ class Transform:
         row_kwargs = {"states": "row_states", "states_hdf5": "row_states.hdf5"}
         kwargs["row_desc"] = desc_format(config.states_desc, kwargs | row_kwargs)
         col_kwargs = {"states": "col_states", "states_hdf5": "col_states.hdf5"}
-        kwargs["col_desc"] = desc_format(self.states_desc, kwargs | col_kwargs)
+        kwargs["col_desc"] = desc_format(self.states_desc["SLJM"], kwargs | col_kwargs)
         kwargs["matrix_desc"] = desc_format(self.dtype.matrix_desc, kwargs)
         description = desc_format(DESCRIPTION, kwargs)
 
