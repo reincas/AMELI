@@ -211,14 +211,14 @@ class ProductElement():
 
 
 class ProductElements():
-    """ Support class for the the calculation of matrix elements for m-electron tensor operators within a
-    configuration of n electrons, where m <= n. Based on a given electron configuration the object generates
-    a ProductState object for each state of the configuration. This allows for a fast determination of equal
-    electrons for every pair of electrons. Since an m-electron matrix element is zero if the initial and final
-    differ in more than m electrons, the information on equal electrons is used to identify all potentially
-    non-zero matrix elements. A ProductState object is generated for each of those elements, which delivers
-    the terms of the sum of matrix elements of elementary m-electron operators resembling the value of the
-    respective matrix element of the high-level tensor operator.
+    """ Support class for the calculation of matrix elements for m-electron tensor operators within a configuration
+    of n electrons, where m <= n. Based on a given electron configuration the object generates a ProductState object
+    for each state of the configuration. This allows for a fast determination of equal electrons for every pair of
+    electrons. Since an m-electron matrix element is zero if the initial and final differ in more than m electrons,
+    the information on equal electrons is used to identify all potentially non-zero matrix elements. A ProductState
+    object is generated for each of those elements, which delivers the terms of the sum of matrix elements of
+    elementary m-electron operators resembling the value of the respective matrix element of the high-level tensor
+    operator.
 
     The method matrix_elements(m) provides the lists of high-level index pairs and elementary elements. Since
     these lists are physical constants and their calculation can be very time-consuming, they should be calculated
