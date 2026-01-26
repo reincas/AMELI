@@ -14,12 +14,13 @@ import re
 class StateSpace:
     """ Interface class for the abstraction of different coupling spaces. """
 
-    def __init__(self, name, cls, get_transform):
+    def __init__(self, name, cls, get_transform, subspace=None):
         """ Store state space name, transformation class and transformation object getter function. """
 
         self.name = name
         self.cls = cls
         self.get_transform = get_transform
+        self.subspace = subspace
 
         # No transformation object loaded yet
         self.transform = None
@@ -38,6 +39,11 @@ class StateSpace:
     def states_desc(self):
         """ Return meta data description string for the states. """
 
+        if isinstance(self.cls.states_desc, dict):
+            subspace = self.subspace or self.name
+            return self.cls.states_desc[subspace]
+
+        assert self.subspace is None, "Subspace description is missing!"
         return self.cls.states_desc
 
     def from_meta(self, states_dict, info_meta):
@@ -70,6 +76,14 @@ def register_space(space, cls, get_transform):
     state space. """
 
     space_registry[space] = StateSpace(space, cls, get_transform)
+
+
+def register_subspace(space, subspace):
+    """ Register a subspace to the given state space. """
+
+    assert space in space_registry, f"State space {space} is not registered!"
+    parent = space_registry[space]
+    space_registry[subspace] = StateSpace(space, parent.cls, parent.get_transform, subspace=subspace)
 
 
 ##########################################################################

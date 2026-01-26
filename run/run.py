@@ -22,7 +22,7 @@ if __name__ == "__main__":
     for num_electrons in [1, 13, 2, 12, 3, 11, 4, 10, 5, 9, 6, 8, 7]:
         config_name = f"f{num_electrons}"
         for dtype in ("symbolic", "float64"):
-            for space in ("Product", "SLJM"):
+            for space in ("Product", "SLJM", "SLJ"):
                 for name, min_electrons in names:
                     if num_electrons < min_electrons:
                         continue

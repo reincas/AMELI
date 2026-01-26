@@ -23,7 +23,7 @@ from functools import lru_cache
 import numpy as np
 import sympy as sp
 
-from . import space_registry, register_space, desc_format
+from . import space_registry, register_space, register_subspace, desc_format
 from .uintarray import decode_uint_array, encode_uint_array
 from .datatype import DataType
 from .casimir import CASIMIR
@@ -917,7 +917,7 @@ def transform_states(logger, dtype, config):
 # LS states class
 ##########################################################################
 
-class SljmStates:
+class LS_States:
     """ This class represents a list of electron states in LS coupling. """
 
     # State space string
@@ -962,7 +962,7 @@ class SljmStates:
         states.indices = decode_uint_array(states_dict, "indices")
 
         # Sanity checks for redundant information
-        assert states.state_space == "SLJM"
+        assert states.state_space in ("SLJM", "SLJ")
         assert states.state_space == states_dict["stateSpace"]
         assert states.num_states == len(states.indices)
 
@@ -990,16 +990,6 @@ class SljmStates:
 
         # Return dictionaries
         return states_dict, info_meta
-
-    def terms(self, template="term") -> list:
-        """ Return the list of unique LS terms of this configuration. The template can be chosen to be either
-        'short', 'term', or 'full'. """
-
-        raise NotImplemented("Add configName to the state metadata to make this method available again!")
-        # assert template in ("short", "term", "full")
-        # config = get_config(self.config_name)
-        # terms = str_terms(config, self.state_eigenvalues(), f"template_{template}")
-        # return terms
 
     def state_eigenvalues(self, names=None) -> list:
         """ Return a list of eigenvalue dictionaries of all states. Keys of the dictionaries are either the given
@@ -1081,6 +1071,43 @@ class SljmStates:
                 i = j
         return spaces
 
+    def indices_j(self):
+        """ Return the indices of all stretched states with M = -J. """
+
+        assert self.state_space == "SLJM"
+        return [i for i, j in self.state_spaces("J2")]
+
+    def collapse_j(self):
+        """ Return this states object with collapsed J spaces. """
+
+        # Sanity checks
+        assert self.state_space == "SLJM"
+        assert self.tensor_chain[-1] == "Jz"
+
+        # Indices of stretched sttaes with M = -J
+        indices = self.indices_j()
+
+        # Get dictionary representation of the current states object
+        states_dict, info_meta = self.as_meta()
+
+        # Remove the Jz part from the eigenvalue indices
+        assert "indices" in states_dict
+        states_dict["indices"] = states_dict["indices"][indices, :-1]
+        states_dict["stateSpace"] = "SLJ"
+
+        # Remove Jz from the states metadata
+        info_meta["stateSpace"] = "SLJ"
+        info_meta["tensorChain"] = info_meta["tensorChain"][:-1]
+        del info_meta["tensorDescription"]["Jz"]
+        del info_meta["eigenvalues"]["Jz"]
+        del info_meta["irreducibleRepresentations"]["Jz"]
+        info_meta["stateNames"] = [info_meta["stateNames"][i].rpartition(" ")[0] for i in indices]
+        info_meta["globalSigns"] = "None"
+        info_meta["numStates"] = len(indices)
+
+        # Build and return a new states object
+        return self.from_meta(states_dict, info_meta)
+
 
 ###########################################################################
 # Transform class
@@ -1101,8 +1128,18 @@ Stark states with same J, but different M in intermediate coupling based on thes
 """
 
 # Description of the HDF5 container item holding the LS states of a configuration
-LS_DESC = """
+SLJM_DESC = """
 The HDF5 item '{states_hdf5}' contains all electron states in LS coupling.
+Each state (row) within this array is a sequence of indices following the chain of tensor operator names in the
+attribute 'tensorChain' and referencing the respective eigenvalue in '{states}.eigenvalues' in the JSON item {json}.
+Eigenvalues are short rational numbers given as strings.
+The attribute {states} of the JSON item '{json}' also contains the respective irreducible representations as well as a
+description of the tensor operator for each of the names and string representations for all states.
+"""
+
+# Description of the HDF5 container item holding the LS states of a configuration with collapsed J spaces
+SLJ_DESC = """
+The HDF5 item '{states_hdf5}' contains all electron states in LS coupling with collapsed J spaces.
 Each state (row) within this array is a sequence of indices following the chain of tensor operator names in the
 attribute 'tensorChain' and referencing the respective eigenvalue in '{states}.eigenvalues' in the JSON item {json}.
 Eigenvalues are short rational numbers given as strings.
@@ -1117,7 +1154,7 @@ class Transform:
 
     # Description of the HDF5 container item holding the LS states of a configuration required by the transformation
     # interface
-    states_desc = LS_DESC
+    states_desc = {"SLJM": SLJM_DESC, "SLJ": SLJ_DESC}
 
     # Transformation matrix
     matrix: sp.Matrix | np.ndarray = None
@@ -1273,7 +1310,7 @@ class Transform:
     def states_from_meta(states_dict, info_meta):
         """ Return a SljmStates object initialized from its data container dictionaries. """
 
-        return SljmStates.from_meta(states_dict, info_meta)
+        return LS_States.from_meta(states_dict, info_meta)
 
     def states_as_meta(self):
         """ Return the data container dictionaries representing the states in LS coupling. """
@@ -1290,3 +1327,4 @@ def get_transform(dtype, config_name):
 
 # Register space of electron states in LS coupling
 register_space("SLJM", Transform, get_transform)
+register_subspace("SLJM", "SLJ")

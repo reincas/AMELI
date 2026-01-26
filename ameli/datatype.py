@@ -429,6 +429,31 @@ class SymMatrix:
         # Return dictionaries
         return matrix_dict, info_meta
 
+    def collapse(self, indices, space, subspace):
+        """ Return a new SymMatrix object containing only selected elements. """
+
+        # Method is not implemented for transformation matrices yet
+        if not (self.row_space == self.col_space == space):
+            raise NotImplemented
+
+        # Initialize empty SymMatrix object
+        num_states = len(indices)
+        obj = SymMatrix(self.dtype, subspace, subspace, self.is_symmetric, num_states)
+
+        # Store selected matrix elements in the matrix object
+        if not self.is_empty:
+            for row, col, element in zip(self.rows, self.columns, self.elements):
+                if row in indices and col in indices:
+                    i = indices.index(row)
+                    j = indices.index(col)
+                    obj[i, j] = self.values[element]
+
+        # Determine matrix info and make the SymMatrix object immutable
+        obj.make_immutable()
+
+        # Return collapsed SymMatrix object
+        return obj
+
 
 ###########################################################################
 # Floating point state matrix class
@@ -621,3 +646,15 @@ class NumMatrix:
 
         # Return dictionaries
         return matrix_dict, info_meta
+
+    def collapse(self, indices, space, subspace):
+        """ Return a new NumMatrix object containing only selected elements. """
+
+        # Method is not implemented for transformation matrices yet
+        if not (self.row_space == self.col_space == space):
+            raise NotImplemented
+
+        # Pick the selected matrix elements and return a new NumMatrix object
+        matrix = self.matrix[np.ix_(indices, indices)]
+        assert len(matrix.shape) == 2, f"{self.matrix.shape}, {matrix.shape}, {indices}"
+        return self.from_matrix(self.dtype, subspace, subspace, matrix)

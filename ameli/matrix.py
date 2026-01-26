@@ -635,7 +635,7 @@ class Matrix:
         config = get_config(self.config_name)
         config_meta = config.info.as_meta()
 
-        # Calculate matrix elements
+        # Split matrix name
         if "/" in self.name:
             head, args = self.name.split("/")
             args = tuple(map(int, args.split(",")))
@@ -643,22 +643,35 @@ class Matrix:
             head = self.name
             args = ()
         func, keys, tensor_desc = MATRICES[head]
-        matrix = func(self.dtype, config, *args)
-        if not self.dtype.is_symbolic:
-            assert matrix.dtype == self.dtype.dtype, f"Wrong dtype of matrix {head}!"
 
-        # Get states meta dictionaries
-        space = space_registry[self.state_space]
-        space.load(self.dtype, self.config_name)
-        states_dict, states_meta = space.as_meta()
+        # Special case of matrix in LS coupling with collapsed J spaces
+        if self.state_space == "SLJ":
+            parent = Matrix(self.dtype, self.config_name, self.name, "SLJM")
+            states_dict, states_meta = parent.states.collapse_j().as_meta()
+            indices = parent.states.indices_j()
+            matrix_dict, matrix_meta = parent.info.collapse(indices, "SLJM", "SLJ").as_meta()
+            space = space_registry[self.state_space]
 
-        # Transform product space matrix to other coupling
-        if space.matrix is not None:
-            matrix = self.dtype.transform(matrix, space.matrix)
+        # Normal matrix
+        else:
+            # Calculate matrix elements
+            matrix = func(self.dtype, config, *args)
+            if not self.dtype.is_symbolic:
+                assert matrix.dtype == self.dtype.dtype, f"Wrong dtype of matrix {head}!"
 
-        # Get matrix data dictionaries
-        state_matrix = self.dtype.from_matrix(self.state_space, self.state_space, matrix)
-        matrix_dict, matrix_meta = state_matrix.as_meta()
+            # Get states meta dictionaries
+            space = space_registry[self.state_space]
+            space.load(self.dtype, self.config_name)
+            states_dict, states_meta = space.as_meta()
+
+            # Transform product space matrix to other coupling
+            if space.matrix is not None:
+                matrix = self.dtype.transform(matrix, space.matrix)
+
+            # Get matrix data dictionaries
+            state_matrix = self.dtype.from_matrix(self.state_space, self.state_space, matrix)
+            matrix_dict, matrix_meta = state_matrix.as_meta()
+
         logger.debug(f" {self.config_name} | Finished tensor operator matrix {self.name}")
 
         # Prepare container description string
