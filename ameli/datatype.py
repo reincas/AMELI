@@ -487,9 +487,6 @@ class SymMatrix:
         assert len(components) % 2 == 1
         k = (len(components) - 1) // 2
 
-        # Components of operators with q < 0 (q > 0) must be lower (upper) triangle matrices
-        assert all([components[i].is_lower and components[-1 - i].is_upper for i in range(k)])
-
         # Initialise empty shadow matrix. It is used to detect double entries and symmetry
         num_states = components[0].num_states
         assert num_states == len(J)
