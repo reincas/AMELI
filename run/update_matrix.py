@@ -64,7 +64,7 @@ def all_matrices(root_path: pathlib.Path):
     root = pathlib.Path(root_path)
 
     # Using regex to ensure 'f' is followed by a number
-    f_pattern = re.compile(r'^f[0-3]+$')
+    f_pattern = re.compile(r'^f[0-9]+$')
 
     # Level 1: f<n> folders
     for f_dir in root.iterdir():
