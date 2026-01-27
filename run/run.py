@@ -4,6 +4,18 @@
 # This program is free software under the terms of the MIT license.      #
 ##########################################################################
 
+# import psutil
+# def mem_info():
+#     """ Virtual memory information for the detection of memory leaks. """
+#     mem = psutil.virtual_memory()
+#     total = mem.total / 1024 ** 3
+#     used = mem.percent
+#     avail = mem.available / 1024 ** 3
+#     line = f"Virtual memory: {used:.1f} % used, {avail:.2f} / {total:.2f} GB available"
+#     assert used < 85.0, f"*** EMERGENCY STOP: {line} ***"
+#     return line
+# print(f"Starting program --- {mem_info()}")
+
 import logging
 import time
 from ameli import Matrix, lanthanide_matrices
