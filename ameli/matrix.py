@@ -552,6 +552,45 @@ ALT_NAMES = {
     "H3/2": "CR",
 }
 
+
+class MatrixName:
+    """ Data class providing a couple of meta data derived from the components of a matrix name. """
+
+    def __init__(self, name):
+        """ Split the matrix name and initialize the data class. """
+
+        # Name of the matrix
+        self.name = name
+
+        # Split matrix name
+        if "/" in self.name:
+            self.head, args = self.name.split("/")
+            self.args = tuple(map(int, args.split(",")))
+        else:
+            self.head = self.name
+            self.args = ()
+        self.func, self.keys, self.tensor_desc = MATRICES[self.head]
+
+        # Determine tensor rank
+        if "q" not in self.keys:
+            k = 0
+        else:
+            assert self.keys[-1] == "q"
+            if "k" not in self.keys:
+                k = 1
+            else:
+                assert self.keys[-2] == "k"
+                k = self.args[self.keys.index("k")]
+        self.rank = k
+
+        # Missing parameters
+        diff = len(self.keys) - len(self.args)
+        assert diff >= 0
+        self.missing = []
+        if diff > 0:
+            self.missing = self.keys[-diff:]
+
+
 ###########################################################################
 # ProductMatrix class
 ###########################################################################
@@ -559,7 +598,8 @@ ALT_NAMES = {
 TITLE = "Spherical tensor operator matrix"
 
 DESCRIPTION = """
-This container stores the matrix elements of a spherical tensor operator in the given many-electron configuration.
+This container stores the {reduced}matrix elements of a spherical tensor operator in the given many-electron
+configuration.
 <br> {states_desc}
 <br> {matrix_desc}
 """
@@ -569,7 +609,7 @@ class Matrix:
     """ Class representing the symbolic or floating point matrix of a spherical tensor operator in a given state
      space. The matrix object is available in the attribute 'matrix'. """
 
-    def __init__(self, dtype, config_name, name, state_space):
+    def __init__(self, dtype, config_name, name, state_space, reduced=False):
         """ Initialize the spherical tensor operator matrix. """
 
         # Store data type
@@ -587,11 +627,16 @@ class Matrix:
 
         # State space
         assert state_space in space_registry, f"Unknown state space '{state_space}'"
+        assert not reduced or state_space == "SLJ"
         self.state_space = state_space
+        self.reduced = bool(reduced)
+
+        # Determine tensor rank
+        self.rank = MatrixName(self.name).rank
 
         # Load or generate data container
         self.vault = get_vault(self.config_name)
-        self.file = self.get_path(dtype, config_name, name, state_space)
+        self.file = self.get_path(dtype, name, state_space, self.reduced)
         if self.file not in self.vault:
             self.generate_container()
         dc = self.vault[self.file]
@@ -601,8 +646,10 @@ class Matrix:
         self.uuid = dc.uuid
         self.version = meta["version"]
 
-        # Sanity check for data type
+        # Sanity check for data type, rank and reduced flag
         assert self.dtype.name == meta["dataType"]
+        assert self.rank == meta["tensorRank"]
+        assert ("reduced" if self.reduced else "normal") == meta["elementType"]
 
         # Characteristics of the tensor operator
         assert meta["name"] == self.name
@@ -635,29 +682,48 @@ class Matrix:
         config = get_config(self.config_name)
         config_meta = config.info.as_meta()
 
-        # Split matrix name
-        if "/" in self.name:
-            head, args = self.name.split("/")
-            args = tuple(map(int, args.split(",")))
-        else:
-            head = self.name
-            args = ()
-        func, keys, tensor_desc = MATRICES[head]
+        # Decode matrix name
+        name_data = MatrixName(self.name)
+
+        # Normal element type, will be changed for matrix of reduced elements
+        etype = "normal"
 
         # Special case of matrix in LS coupling with collapsed J spaces
-        if self.state_space == "SLJ":
+        if self.state_space == "SLJ" and not self.reduced:
             parent = Matrix(self.dtype, self.config_name, self.name, "SLJM")
+            assert self.rank == parent.rank
             states_dict, states_meta = parent.states.collapse_j().as_meta()
             indices = parent.states.indices_j()
             matrix_dict, matrix_meta = parent.info.collapse(indices, "SLJM", "SLJ").as_meta()
             space = space_registry[self.state_space]
 
+        # Special case of matrix in LS coupling with reduced matrix elements
+        elif self.state_space == "SLJ" and self.reduced:
+            etype = "reduced"
+            if name_data.missing == ("q",):
+                sep = "/" if len(name_data.args) == 0 else ","
+                names = [f"{self.name}{sep}{q}" for q in range(-self.rank, self.rank + 1)]
+                components = [Matrix(self.dtype, self.config_name, name, "SLJ") for name in names]
+            elif not name_data.missing:
+                components = [Matrix(self.dtype, self.config_name, self.name, "SLJ")]
+            else:
+                raise RuntimeError(f"Missing matrix parameters {name_data.missing}!")
+
+            states = components[0].states
+            states_dict, states_meta = states.as_meta()
+            J = [sp.S(value) for value in states.representation_lists(["J2"])["J2"]]
+            matrix = self.dtype.reduced([matrix.info for matrix in components], J)
+            matrix_dict, matrix_meta = matrix.as_meta()
+            space = space_registry[self.state_space]
+
         # Normal matrix
         else:
+            assert not self.reduced
+
             # Calculate matrix elements
-            matrix = func(self.dtype, config, *args)
+            matrix = name_data.func(self.dtype, config, *name_data.args)
             if not self.dtype.is_symbolic:
-                assert matrix.dtype == self.dtype.dtype, f"Wrong dtype of matrix {head}!"
+                assert matrix.dtype == self.dtype.dtype, f"Wrong dtype of matrix {name_data.head}!"
 
             # Get states meta dictionaries
             space = space_registry[self.state_space]
@@ -676,6 +742,7 @@ class Matrix:
 
         # Prepare container description string
         kwargs = {
+            "reduced": "reduced " if self.reduced else "",
             "states": "states",
             "states_hdf5": "states.hdf5",
             "matrix_hdf5": "matrix.hdf5",
@@ -709,8 +776,10 @@ class Matrix:
                 "config": config_meta,
                 "states": states_meta,
                 "matrix": matrix_meta,
-                "tensorParameters": dict(zip(keys, args)),
-                "tensorDescription": tensor_desc,
+                "tensorParameters": dict(zip(name_data.keys, name_data.args)),
+                "tensorDescription": name_data.tensor_desc,
+                "tensorRank": self.rank,
+                "elementType": etype,
             },
             "data/states.hdf5": states_dict,
             "data/matrix.hdf5": matrix_dict,
@@ -722,7 +791,7 @@ class Matrix:
         logger.info(f"Stored {self.config_name} tensor operator matrix {self.name} ({t:.1f} seconds) -> {self.file}")
 
     @staticmethod
-    def get_path(dtype, config_name, name, state_space):
+    def get_path(dtype, name, state_space, reduced):
         """ Return data container file name. """
 
         # Store data type
@@ -735,6 +804,8 @@ class Matrix:
 
         # Sanity check for state space
         assert state_space in space_registry, f"Unknown state space '{state_space}'"
+        if reduced:
+            state_space += "reduced"
 
         # Return data container file name
         if "/" in name:
@@ -746,9 +817,9 @@ class Matrix:
         return file
 
     @staticmethod
-    def exists(dtype, config_name, name, state_space):
+    def exists(dtype, config_name, name, state_space, reduced=False):
         """ Return True if the matrix data container exists. """
 
-        file = Matrix.get_path(dtype, config_name, name, state_space)
+        file = Matrix.get_path(dtype, name, state_space, reduced)
         vault = get_vault(config_name)
         return file in vault

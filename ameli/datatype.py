@@ -161,6 +161,14 @@ class DataType:
             return SymMatrix.from_meta(self, matrix_dict, info_meta)
         return NumMatrix.from_meta(self, matrix_dict, info_meta)
 
+    def reduced(self, components: list, J: list):
+        """ Return a SymMatrix or NumMatrix object containing the reduced matrix elements of a tensor operator based
+        on its given ordered component matrices. """
+
+        if self.is_symbolic:
+            return SymMatrix.reduced(components, J)
+        return NumMatrix.reduced(components, J)
+
     @property
     def matrix_desc(self):
         """ Return meta data description string of the state matrix. """
@@ -310,7 +318,8 @@ class SymMatrix:
 
         # Store or check info flags
         assert self._matrix is None
-        assert len(self.rows) == len(self.columns) == len(self.elements) >= len(self.values)
+        assert len(self.rows) == len(self.columns) == len(self.elements)
+        assert len(self.elements) >= len(self.values), f"{len(self.elements)} >= {len(self.values)}"
         self.is_empty = len(self.elements) == 0
         if self.is_symmetric:
             assert all(row >= col for row, col in zip(self.rows, self.columns))
@@ -453,6 +462,79 @@ class SymMatrix:
 
         # Return collapsed SymMatrix object
         return obj
+
+    @classmethod
+    def reduced(cls, components, J):
+        """ Return a SymMatrix object containing the reduced matrix elements of a tensor operator based its given
+        ordered component matrices. """
+
+        def sym3j(row, col, k, J):
+            Ja, Jb = J[row], J[col]
+            q = Ja - Jb
+            assert -k <= q <= k
+            factor = wigner_3j(Ja, k, Jb, -Ja, q, Jb)
+            assert factor != 0
+            return factor
+
+        # Sanity checks
+        assert all(isinstance(matrix, cls) for matrix in components)
+        assert len(set(matrix.num_states for matrix in components)) == 1
+        assert set(matrix.dtype.name for matrix in components) == {"symbolic"}
+        assert set(matrix.row_space for matrix in components) == {"SLJ"}
+        assert set(matrix.col_space for matrix in components) == {"SLJ"}
+
+        # Rank of the tensor operator
+        assert len(components) % 2 == 1
+        k = (len(components) - 1) // 2
+
+        # Components of operators with q < 0 (q > 0) must be lower (upper) triangle matrices
+        assert all([components[i].is_lower and components[-1 - i].is_upper for i in range(k)])
+
+        # Initialise empty shadow matrix. It is used to detect double entries and symmetry
+        num_states = components[0].num_states
+        assert num_states == len(J)
+        values = sp.zeros(num_states, num_states)
+        indices = []
+
+        # Store all matrix elements in the shadow matrix
+        for matrix in components:
+            if not matrix.is_empty:
+                for row, col, element in zip(matrix.rows, matrix.columns, matrix.elements):
+                    value = matrix.values[element]
+                    assert values[row, col] == 0
+                    values[row, col] = value / sym3j(row, col, k, J)
+                    indices.append((row, col))
+                    if row != col and matrix.is_symmetric:
+                        assert values[col, row] == 0
+                        values[col, row] = value / sym3j(row, col, k, J)
+                        indices.append((col, row))
+
+        # Initialize empty SymMatrix object and store all matrix elements
+        dtype = components[0].dtype
+        is_symmetric = values.is_symmetric()
+        obj = SymMatrix(dtype, "SLJ", "SLJ", is_symmetric, num_states)
+        for row, col in indices:
+            if is_symmetric and row < col:
+                continue
+            obj[row, col] = values[row, col]
+
+        # Determine matrix info and make the SymMatrix object immutable
+        obj.make_immutable()
+
+        # Return new SymMatrix object
+        return obj
+
+    @property
+    def is_lower(self):
+        """ Return if the SymMatrix is a lower triangular matrix. """
+
+        return all(row >= col for row, col in zip(self.rows, self.columns))
+
+    @property
+    def is_upper(self):
+        """ Return if the SymMatrix is a upper triangular matrix. """
+
+        return all(row <= col for row, col in zip(self.rows, self.columns))
 
 
 ###########################################################################
@@ -658,3 +740,42 @@ class NumMatrix:
         matrix = self.matrix[np.ix_(indices, indices)]
         assert len(matrix.shape) == 2, f"{self.matrix.shape}, {matrix.shape}, {indices}"
         return self.from_matrix(self.dtype, subspace, subspace, matrix)
+
+    @classmethod
+    def reduced(cls, components, J):
+        """ Return a NumMatrix object containing the reduced matrix elements of a tensor operator based its given
+        ordered component matrices. """
+
+        # Sanity checks
+        assert all(isinstance(matrix, cls) for matrix in components)
+        assert len(set(matrix.num_states for matrix in components)) == 1
+        assert len(set(matrix.dtype.name for matrix in components)) == 1
+        assert set(matrix.row_space for matrix in components) == {"SLJ"}
+        assert set(matrix.col_space for matrix in components) == {"SLJ"}
+
+        # Rank of the tensor operator
+        assert len(components) % 2 == 1
+        k = (len(components) - 1) // 2
+
+        # Element-wise sum, using the fact that only one component is non-zero for each matrix element
+        dtype = components[0].dtype
+        matrix = np.sum([matrix.matrix for matrix in components], axis=0)
+
+        # Convert sum of components to matrix of reduced elements using the Wigner-Eckart theorem
+        num_states = matrix.shape[0]
+        for i in range(num_states):
+            for j in range(num_states):
+                Ja = J[i]
+                Jb = J[j]
+                q = Ja - Jb
+                if q < -k or q > k:
+                    assert np.abs(matrix[i, j]) < 1000 * dtype.eps
+                    continue
+                factor = wigner_3j(Ja, k, Jb, -Ja, q, Jb)
+                if factor == 0:
+                    assert np.abs(matrix[i, j]) < 1000 * dtype.eps
+                    continue
+                matrix[i, j] /= dtype(factor)
+
+        # Return matrix of reduced elements
+        return cls.from_matrix(dtype, "SLJ", "SLJ", matrix)
