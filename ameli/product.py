@@ -403,6 +403,9 @@ class Product:
     def load_product(self, tensor_size):
         """ Load an existing data container or create a new one. """
 
+        logger = logging.getLogger()
+        logger.info(f"Start loading {self.config_name} product state data for {tensor_size} electrons")
+
         # Sanity check
         if tensor_size != 1:
             assert 1 <= tensor_size <= self.config.num_electrons
@@ -411,27 +414,34 @@ class Product:
         file = self.file.format(tensor_size=tensor_size)
         if file not in self.vault:
             self.generate_container(tensor_size)
+        logger.info(f"  {self.config_name} | load data container for {tensor_size} electrons")
         dc = self.vault[file]
 
         # Store container UUID
         self.uuid[tensor_size] = dc.uuid
 
-        # Store support data in the in-memory HDF5 data structure
-        self.indices[tensor_size] = indices = decode_uint_array(dc["data/product.hdf5"], "indices")
-        self.elements[tensor_size] = elements = decode_uint_array(dc["data/product.hdf5"], "elements")
+        # Support data from HDF5 data structure.
+        # Note: Do not use decode_uint_array. It is too slow, memory consumption too high.
+        logger.info(f"  {self.config_name} | extract data container for {tensor_size} electrons")
+        self.indices[tensor_size] = indices = dc["data/product.hdf5"]["indices"]
+        self.elements[tensor_size] = elements = dc["data/product.hdf5"]["elements"]
         self.num_indices[tensor_size] = len(indices)
         self.num_elements[tensor_size] = len(elements)
 
         # Return data container object for further extractions
+        logger.info(f"Finished loading {self.config_name} product state data for {tensor_size} electrons")
         return dc
 
     def generate_container(self, tensor_size):
         """ Generate the product state support data for tensor operators acting on tensor_size electrons and store
         it in a data container file. """
 
+        logger = logging.getLogger()
+
         # Get electron configuration
         config = get_config(self.config_name)
         config_meta = config.info.as_meta()
+        logger.info(f"Prepare {config.name} product states for {tensor_size} electrons")
 
         # Get product states
         states_dict, states_meta = config.states.as_meta()
@@ -482,7 +492,6 @@ class Product:
         file = self.file.format(tensor_size=tensor_size)
         self.vault[file] = items
         t = time.time() - t
-        logger = logging.getLogger()
         logger.info(f"Stored {config.name} product states for {tensor_size} electrons ({t:.1f} seconds) -> {file}")
 
     def electrons(self, indices):
