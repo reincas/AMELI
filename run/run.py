@@ -7,6 +7,7 @@
 import logging
 import time
 from ameli import Matrix, lanthanide_matrices
+from ameli.matrix import MatrixName
 from logger import log_console, log_file
 
 
@@ -29,11 +30,8 @@ def get_reduced(logger, dtype, config_name, name, space, matrix):
     if space != "SLJ":
         return
 
-    if matrix is None:
-        matrix = Matrix(dtype, config_name, name, space)
-
-    k = matrix.rank
-    if k > 0:
+    name_data = MatrixName(name)
+    if name_data.rank > 0:
         if "," in name:
             name = name[:name.rfind(",")]
         else:
