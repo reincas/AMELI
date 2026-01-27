@@ -18,6 +18,7 @@
 
 import logging
 import time
+import sys
 from ameli import Matrix, lanthanide_matrices
 from ameli.matrix import MatrixName
 from logger import log_console, log_file
@@ -63,8 +64,14 @@ if __name__ == "__main__":
     logger = logging.getLogger()
     logger.setLevel(loglevel)
 
+    if len(sys.argv) > 1:
+        nums = [int(sys.argv[1])]
+    else:
+        nums = [1, 13, 2, 12, 3, 11, 4, 10, 5, 9, 6, 8, 7]
+    logger.info(f"Prepare lanthanides: {nums}")
+
     names = lanthanide_matrices()
-    for num_electrons in [1, 13, 2, 12, 3, 11, 4, 10, 5, 9, 6, 8, 7]:
+    for num_electrons in nums:
         config_name = f"f{num_electrons}"
         for dtype in ("symbolic", "float64"):
             for space in ("Product", "SLJM", "SLJ"):
