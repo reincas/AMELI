@@ -57,17 +57,20 @@ def get_reduced(logger, dtype, config_name, name, space, matrix):
 
 
 if __name__ == "__main__":
+    if len(sys.argv) > 1:
+        nums = [int(sys.argv[1])]
+        file = f"ameli-{nums[0]}.log"
+    else:
+        nums = [1, 13, 2, 12, 3, 11, 4, 10, 5, 9, 6, 8, 7]
+        file = f"ameli.log"
+
     formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
     loglevel = logging.DEBUG
-    log_file("ameli.log", formatter, loglevel)  ####### DEBUG
+    log_file(file, formatter, loglevel)
     log_console(formatter, loglevel)
     logger = logging.getLogger()
     logger.setLevel(loglevel)
 
-    if len(sys.argv) > 1:
-        nums = [int(sys.argv[1])]
-    else:
-        nums = [1, 13, 2, 12, 3, 11, 4, 10, 5, 9, 6, 8, 7]
     logger.info(f"Prepare lanthanides: {nums}")
 
     names = lanthanide_matrices()
