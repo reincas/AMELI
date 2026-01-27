@@ -560,6 +560,8 @@ class MatrixName:
         """ Split the matrix name and initialize the data class. """
 
         # Name of the matrix
+        if name in ALT_NAMES:
+            name = ALT_NAMES[name]
         self.name = name
 
         # Split matrix name
