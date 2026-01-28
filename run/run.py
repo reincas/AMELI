@@ -39,7 +39,7 @@ def get_matrix(logger, dtype, config_name, name, space, reduced=False):
     return matrix
 
 
-def get_reduced(logger, dtype, config_name, name, space, matrix):
+def get_reduced(logger, dtype, config_name, name, space):
     if space != "SLJ":
         return
 
@@ -83,4 +83,4 @@ if __name__ == "__main__":
                         continue
 
                     matrix = get_matrix(logger, dtype, config_name, name, space)
-                    reduced = get_reduced(logger, dtype, config_name, name, space, matrix)
+                    reduced = get_reduced(logger, dtype, config_name, name, space)
