@@ -31,7 +31,7 @@ def max_bytes() -> int:
 MAX_BYTES = max_bytes()
 
 
-def get_dytpe(max_val: int) -> tuple:
+def get_dtype(max_val: int) -> tuple:
     """ Return the smallest uint dtype required for the storage of the given integer value and a boolean flag.
     If the flag is True, all array elements fit into the dtype array. If the flag is False, the higher bits of
     the  elements require another storage array. """
@@ -78,7 +78,7 @@ def encode_uint_array(array, name: str) -> dict:
     arrays = []
     finished = False
     while not finished:
-        dtype, finished = get_dytpe(np.max(array))
+        dtype, finished = get_dtype(np.max(array))
         if finished:
             arrays.append(array.astype(dtype, copy=False))
         else:
