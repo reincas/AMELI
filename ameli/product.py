@@ -10,24 +10,30 @@
 #
 ##########################################################################
 
+import array
 import logging
+import math
 import time
 from functools import lru_cache
 from itertools import combinations
+import numpy as np
 
 from . import space_registry, desc_format
 from .config import ConfigInfo, get_config
-from .uintarray import encode_uint_arrays, decode_uint_array
+from .uintarray import encode_uint_arrays, get_dtype
 from .vault import get_vault
 
 __version__ = "1.0.0"
+
+# Mapping of byte number to uint type codes for array.array
+UINT_TCODES = {1: "B", 2: "H", 4: "L", 8: "Q"}
 
 
 ###########################################################################
 # Product generator objects
 ###########################################################################
 
-class ProductState():
+class ProductState:
     """ Support class of an electron product state. The object represents an ordered tuple of electrons. It supports
     a fast decision if two ProductState objects differ in exactly num_diff electrons from the intersection of the
     sets of potential same electrons delivered by the methods same_electrons(num_diff) of both objects. The respective
@@ -159,7 +165,8 @@ class ProductElement():
         # Start the combination generator
         yield from generate(0, ())
 
-    def determinant(self, electrons):
+    @staticmethod
+    def determinant(electrons):
         """ Generate all permutations with sign from the given sequence of electrons for the construction of
         antisymmetric determinantal product states. """
 
@@ -181,20 +188,18 @@ class ProductElement():
         # Start the permutation generator
         yield from generate(len(electrons), list(electrons), [0])
 
-    def elementary(self, tensor_size):
-        """ Return the list of all combinations and permutations of tensor_size-sequences of initial and final
-        electrons together with their antisymmetry sign for the calculation of this determinantal product state
-        matrix element. """
+    def elementary(self, elements, tensor_size):
+        """ Add all combinations and permutations of tensor_size-sequences of initial and final electrons together
+        with their antisymmetry sign for the calculation of this determinantal product state matrix element to the
+        given array. Return the number of added tuples. """
 
         # Matrix element is zero if initial and final states differ in more electrons than the operator is acting on
         if self.num_diff > tensor_size:
             return
 
-        # Initialize the list of initial and final electrons with sign
-        elementary = []
-
         # Iterate through tensor_size-tuples of initial and final electrons containing all combinations of
         # tensor_size-num_diff same electrons together with the fixed other electrons
+        size = 0
         for initial_electrons, final_electrons in self.iterate(tensor_size):
 
             # Iterate through all permutations of the initial electrons with sign
@@ -204,10 +209,11 @@ class ProductElement():
                 for final, sign_final in self.determinant(final_electrons):
                     # Store initial and final electrons with total sign
                     sign = (self.sign + sign_initial + sign_final) % 2
-                    elementary.append(initial + final + (sign,))
+                    elements.extend(initial + final + (sign,))
+                    size += 1
 
-        # Return the list of initial and final electrons with total sign
-        return elementary
+        # Return the number of tuples
+        return size
 
 
 class ProductElements():
@@ -310,24 +316,33 @@ class ProductElements():
         while len(self.len_diff) <= tensor_size:
             self.add_elements()
 
+        # Determine datatype and type code for the dataset indices by its maximum element
+        max_index = max(self.num_states, math.comb(self.num_electrons, tensor_size) * math.factorial(tensor_size) ** 2)
+        dtype, match = get_dtype(max_index)
+        assert match
+        tcode = UINT_TCODES[np.dtype(dtype).itemsize]
+
         # Build the index list and the list of elementary matrix elements
-        indices = []
-        elements = []
+        indices = array.array(tcode)
+        elements = array.array(UINT_TCODES[1])
         max_index = self.len_diff[tensor_size]
         self.logger.debug(f"Collecting {max_index} elements for {tensor_size}-electron operators")
         i = 0
         for initial_index, final_index, product_element in self.elements[:max_index]:
-            # List of elementary matrix elements to be evaluated
-            elementary = product_element.elementary(tensor_size)
+            # Append list of elementary matrix elements to be evaluated
+            size = product_element.elementary(elements, tensor_size)
 
             # Append state indices and the number of elementary matrix elements
-            indices.append([initial_index, final_index, len(elementary)])
+            indices.extend((initial_index, final_index, size))
 
-            # Append the elementary matrix elements
-            elements += elementary
+            # Log progress
             i += 1
             if i % 10000 == 0:
                 self.logger.debug(f"  {self.config.name} | Collected {len(indices)}/{max_index} elements")
+
+        # Convert arrays to numpy views
+        indices = np.frombuffer(indices, dtype=dtype).reshape(-1, 3)
+        elements = np.frombuffer(elements, dtype=np.uint8).reshape(-1, 2 * tensor_size + 1)
 
         # Return the list of matrix element indices and elementary tensor arguments
         self.logger.debug(f"Collected all {max_index} elements for {tensor_size}-electron operators")
@@ -453,7 +468,7 @@ class Product:
         # Generate product state support data
         t = time.time()
         indices, elements = self.product_elements.matrix_elements(tensor_size)
-        product_dict = encode_uint_arrays({"indices": indices, "elements": elements})
+        product_dict = {"indices": indices, "elements": elements}
         i, e = len(indices), len(elements)
 
         # Prepare container description string
