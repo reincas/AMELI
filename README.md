@@ -1,4 +1,4 @@
-# AMELI 1.0.0 (Angular Matrix Elements of Lanthanide Ions)
+# AMELI 1.1.0 (Angular Matrix Elements of Lanthanide Ions)
 
 This is a Python 3 package to calculate the angular matrix elements of spherical 
 tensor operators of multi-electron systems. The main purpose of this software

@@ -13,6 +13,7 @@
 import logging
 import time
 
+import numpy as np
 import sympy as sp
 
 from . import space_registry, desc_format
@@ -22,6 +23,9 @@ from .config import ConfigInfo, get_config
 from .unit import Unit
 
 __version__ = "1.0.0"
+
+# Force symbolic calculation even for numeric matrices (don't change that!)
+FORCE_SYMBOLIC = True
 
 
 ###########################################################################
@@ -672,6 +676,94 @@ class Matrix:
         assert self.info.row_space == self.state_space
         assert self.info.col_space == self.state_space
 
+    def prepare_sljm(self, config, space):
+        """ Return metadata dictionaries of states and matrix calculated from scratch. """
+
+        # Decode matrix name
+        name_data = MatrixName(self.name)
+
+        # Calculate matrix elements
+        matrix = name_data.func(self.dtype, config, *name_data.args)
+        if not self.dtype.is_symbolic:
+            assert matrix.dtype == self.dtype.dtype, f"Wrong dtype of matrix {name_data.head}!"
+
+        # Get states meta dictionaries
+        space.load(self.dtype, self.config_name)
+        states_dict, states_meta = space.as_meta()
+
+        # Transform product space matrix to other coupling
+        if space.matrix is not None:
+            matrix = self.dtype.transform(matrix, space.matrix)
+
+        # Get matrix metadata dictionaries
+        state_matrix = self.dtype.from_matrix(self.state_space, self.state_space, matrix)
+        matrix_dict, matrix_meta = state_matrix.as_meta()
+
+        # Return metadata
+        return states_dict, states_meta, matrix_dict, matrix_meta
+
+    def prepare_slj(self):
+        """ Return metadata dictionaries of states and matrix derived from the collapsed respective SLJM matrix. """
+
+        # Get SLJM parent matrix
+        parent = Matrix(self.dtype, self.config_name, self.name, "SLJM")
+        assert self.rank == parent.rank
+
+        # Metadata dictionaries of states for collapsed J spaces
+        states_dict, states_meta = parent.states.collapse_j().as_meta()
+        indices = parent.states.indices_j()
+
+        # Metadata dictionaries of matrix with collapsed J spaces
+        matrix_dict, matrix_meta = parent.info.collapse(indices, "SLJM", "SLJ").as_meta()
+
+        # Return metadata
+        return states_dict, states_meta, matrix_dict, matrix_meta
+
+    def prepare_reduced(self):
+        """ Return metadata dictionaries of states and reduced matrix derived from the respective SLJ matrices. """
+
+        # Decode matrix name
+        name_data = MatrixName(self.name)
+
+        # Get component matrices of the tensor operator
+        if name_data.missing == ("q",):
+            sep = "/" if len(name_data.args) == 0 else ","
+            names = [f"{self.name}{sep}{q}" for q in range(-self.rank, self.rank + 1)]
+            components = [Matrix(self.dtype, self.config_name, name, "SLJ") for name in names]
+        elif not name_data.missing:
+            components = [Matrix(self.dtype, self.config_name, self.name, "SLJ")]
+        else:
+            raise RuntimeError(f"Missing matrix parameters {name_data.missing}!")
+
+        # Metadata dictionaries of states
+        states = components[0].states
+        states_dict, states_meta = states.as_meta()
+
+        # Metadata dictionaries of matrix
+        J = [sp.S(value) for value in states.representation_lists(["J2"])["J2"]]
+        matrix = self.dtype.reduced([matrix.info for matrix in components], J)
+        matrix_dict, matrix_meta = matrix.as_meta()
+
+        # Return metadata
+        return states_dict, states_meta, matrix_dict, matrix_meta
+
+    def prepare_float(self):
+        """ Return metadata dictionaries of states and numeric matrix derived from the respective symbolic one. """
+
+        # Get symbolic parent matrix
+        parent = Matrix("symbolic", self.config_name, self.name, self.state_space, self.reduced)
+        assert self.rank == parent.rank
+
+        # Metadata dictionaries of states
+        states_dict, states_meta = parent.states.as_meta()
+
+        # Metadata dictionaries of numeric matrix
+        matrix = np.array(parent.matrix.evalf()).astype(self.dtype.dtype)
+        matrix_dict, matrix_meta = self.dtype.from_matrix(self.state_space, self.state_space, matrix).as_meta()
+
+        # Return metadata
+        return states_dict, states_meta, matrix_dict, matrix_meta
+
     def generate_container(self):
         """ Generate the matrix of the tensor operator and store it in a data container file. """
 
@@ -684,61 +776,26 @@ class Matrix:
         config = get_config(self.config_name)
         config_meta = config.info.as_meta()
 
+        # Get state space info
+        space = space_registry[self.state_space]
+
         # Decode matrix name
         name_data = MatrixName(self.name)
 
-        # Normal element type, will be changed for matrix of reduced elements
-        etype = "normal"
+        # Type of matrix elements
+        element_type = {False: "normal", True: "reduced"}[self.reduced]
 
-        # Special case of matrix in LS coupling with collapsed J spaces
-        if self.state_space == "SLJ" and not self.reduced:
-            parent = Matrix(self.dtype, self.config_name, self.name, "SLJM")
-            assert self.rank == parent.rank
-            states_dict, states_meta = parent.states.collapse_j().as_meta()
-            indices = parent.states.indices_j()
-            matrix_dict, matrix_meta = parent.info.collapse(indices, "SLJM", "SLJ").as_meta()
-            space = space_registry[self.state_space]
-
-        # Special case of matrix in LS coupling with reduced matrix elements
+        # Metadata dictionaries of states and matrix
+        if FORCE_SYMBOLIC and not self.dtype.is_symbolic:
+            states_dict, states_meta, matrix_dict, matrix_meta = self.prepare_float()
+        elif self.state_space == "SLJ" and not self.reduced:
+            states_dict, states_meta, matrix_dict, matrix_meta = self.prepare_slj()
         elif self.state_space == "SLJ" and self.reduced:
-            etype = "reduced"
-            if name_data.missing == ("q",):
-                sep = "/" if len(name_data.args) == 0 else ","
-                names = [f"{self.name}{sep}{q}" for q in range(-self.rank, self.rank + 1)]
-                components = [Matrix(self.dtype, self.config_name, name, "SLJ") for name in names]
-            elif not name_data.missing:
-                components = [Matrix(self.dtype, self.config_name, self.name, "SLJ")]
-            else:
-                raise RuntimeError(f"Missing matrix parameters {name_data.missing}!")
-
-            states = components[0].states
-            states_dict, states_meta = states.as_meta()
-            J = [sp.S(value) for value in states.representation_lists(["J2"])["J2"]]
-            matrix = self.dtype.reduced([matrix.info for matrix in components], J)
-            matrix_dict, matrix_meta = matrix.as_meta()
-            space = space_registry[self.state_space]
-
-        # Normal matrix
+            states_dict, states_meta, matrix_dict, matrix_meta = self.prepare_reduced()
         else:
             assert not self.reduced
-
-            # Calculate matrix elements
-            matrix = name_data.func(self.dtype, config, *name_data.args)
-            if not self.dtype.is_symbolic:
-                assert matrix.dtype == self.dtype.dtype, f"Wrong dtype of matrix {name_data.head}!"
-
-            # Get states meta dictionaries
-            space = space_registry[self.state_space]
-            space.load(self.dtype, self.config_name)
-            states_dict, states_meta = space.as_meta()
-
-            # Transform product space matrix to other coupling
-            if space.matrix is not None:
-                matrix = self.dtype.transform(matrix, space.matrix)
-
-            # Get matrix data dictionaries
-            state_matrix = self.dtype.from_matrix(self.state_space, self.state_space, matrix)
-            matrix_dict, matrix_meta = state_matrix.as_meta()
+            assert not FORCE_SYMBOLIC or self.dtype.is_symbolic
+            states_dict, states_meta, matrix_dict, matrix_meta = self.prepare_sljm(config, space)
 
         logger.debug(f" {self.config_name} | Finished tensor operator matrix {self.name}")
 
@@ -781,7 +838,7 @@ class Matrix:
                 "tensorParameters": dict(zip(name_data.keys, name_data.args)),
                 "tensorDescription": name_data.tensor_desc,
                 "tensorRank": self.rank,
-                "elementType": etype,
+                "elementType": element_type,
             },
             "data/states.hdf5": states_dict,
             "data/matrix.hdf5": matrix_dict,
