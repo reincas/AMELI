@@ -596,6 +596,16 @@ class MatrixName:
         if diff > 0:
             self.missing = self.keys[-diff:]
 
+    def components(self):
+        if self.missing == ("q",):
+            sep = "/" if len(self.args) == 0 else ","
+            names = [f"{self.name}{sep}{q}" for q in range(-self.rank, self.rank + 1)]
+        elif not self.missing:
+            names = [self.name]
+        else:
+            raise RuntimeError(f"Missing matrix parameters {self.missing} for matrix {self.name}!")
+        return names
+
 
 ###########################################################################
 # ProductMatrix class
@@ -722,18 +732,9 @@ class Matrix:
     def prepare_reduced(self):
         """ Return metadata dictionaries of states and reduced matrix derived from the respective SLJ matrices. """
 
-        # Decode matrix name
-        name_data = MatrixName(self.name)
-
         # Get component matrices of the tensor operator
-        if name_data.missing == ("q",):
-            sep = "/" if len(name_data.args) == 0 else ","
-            names = [f"{self.name}{sep}{q}" for q in range(-self.rank, self.rank + 1)]
-            components = [Matrix(self.dtype, self.config_name, name, "SLJ") for name in names]
-        elif not name_data.missing:
-            components = [Matrix(self.dtype, self.config_name, self.name, "SLJ")]
-        else:
-            raise RuntimeError(f"Missing matrix parameters {name_data.missing}!")
+        name_data = MatrixName(self.name)
+        components = [Matrix(self.dtype, self.config_name, name, "SLJ") for name in name_data.components()]
 
         # Metadata dictionaries of states
         states = components[0].states
