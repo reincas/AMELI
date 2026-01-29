@@ -381,30 +381,27 @@ The electron indices are linked to the single electron states in 'states.electro
 class Product:
     """ Class providing support data for the calculation of product state matrix elements of tensor operators. """
 
-    def __init__(self, config_name):
-        """ Initialize the support data structure for one-electron operators and prepare for more operators. """
+    def __init__(self, config_name: str, tensor_size: int):
+        """ Initialize the support data structure for tensor operators acting on tensor_size electrons. """
 
         # Configuration string
         self.config_name = config_name
 
+        # Number of electrons the tensor is acting on
+        self.tensor_size = tensor_size
+
         # Data container cache and container file name
         self.vault = get_vault(self.config_name)
-        self.file = "product_{tensor_size}.zdc"
+        self.file = f"product_{tensor_size}.zdc"
 
-        # Initialize the lists of matrix element indices and elementary element arguments
-        self.indices = {}
-        self.elements = {}
-        self.num_indices = {}
-        self.num_elements = {}
+        # Load data container
+        if self.file not in self.vault:
+            self.generate_container()
+        dc = self.vault[self.file]
 
-        # Load support data for one-electron tensor operators.
-        # Data for more electrons will be loaded on demand.
-        self.product_elements = None
-        self.uuid = {}
-        dc = self.load_product(1)
-
-        # Extract code version from the container
+        # Extract UUID and code version from the container
         meta = dc["data/product.json"]
+        self.uuid = dc.uuid
         self.version = meta["version"]
 
         # Extract electron configuration from the container
@@ -415,39 +412,14 @@ class Product:
         self.states = space_registry["Product"].from_meta(dc["data/states.hdf5"], meta["states"])
         self.num_states = self.states.num_states
 
-    def load_product(self, tensor_size):
-        """ Load an existing data container or create a new one. """
-
-        logger = logging.getLogger()
-        logger.info(f"Start loading {self.config_name} product state data for {tensor_size} electrons")
-
-        # Sanity check
-        if tensor_size != 1:
-            assert 1 <= tensor_size <= self.config.num_electrons
-
-        # Load data container
-        file = self.file.format(tensor_size=tensor_size)
-        if file not in self.vault:
-            self.generate_container(tensor_size)
-        logger.info(f"  {self.config_name} | load data container for {tensor_size} electrons")
-        dc = self.vault[file]
-
-        # Store container UUID
-        self.uuid[tensor_size] = dc.uuid
-
         # Support data from HDF5 data structure.
         # Note: Do not use decode_uint_array. It is too slow, memory consumption too high.
-        logger.info(f"  {self.config_name} | extract data container for {tensor_size} electrons")
-        self.indices[tensor_size] = indices = dc["data/product.hdf5"]["indices"]
-        self.elements[tensor_size] = elements = dc["data/product.hdf5"]["elements"]
-        self.num_indices[tensor_size] = len(indices)
-        self.num_elements[tensor_size] = len(elements)
+        self.indices = dc["data/product.hdf5"]["indices"]
+        self.elements = dc["data/product.hdf5"]["elements"]
+        self.num_indices = len(self.indices)
+        self.num_elements = len(self.elements)
 
-        # Return data container object for further extractions
-        logger.info(f"Finished loading {self.config_name} product state data for {tensor_size} electrons")
-        return dc
-
-    def generate_container(self, tensor_size):
+    def generate_container(self):
         """ Generate the product state support data for tensor operators acting on tensor_size electrons and store
         it in a data container file. """
 
@@ -455,21 +427,20 @@ class Product:
 
         # Get electron configuration
         config = get_config(self.config_name)
+        assert 1 <= self.tensor_size <= config.info.num_electrons
         config_meta = config.info.as_meta()
-        logger.info(f"Prepare {config.name} product states for {tensor_size} electrons")
+        logger.info(f"Prepare {config.name} product states for {self.tensor_size} electrons")
 
         # Get product states
         states_dict, states_meta = config.states.as_meta()
 
         # Get ProductElements object
-        if self.product_elements is None:
-            self.product_elements = ProductElements(config)
+        product_elements = ProductElements(config)
 
         # Generate product state support data
         t = time.time()
-        indices, elements = self.product_elements.matrix_elements(tensor_size)
+        indices, elements = product_elements.matrix_elements(self.tensor_size)
         product_dict = {"indices": indices, "elements": elements}
-        i, e = len(indices), len(elements)
 
         # Prepare container description string
         kwargs = {
@@ -497,24 +468,24 @@ class Product:
                 "version": __version__,
                 "config": config_meta,
                 "states": states_meta,
-                "numTensorElectrons": tensor_size,
+                "numTensorElectrons": self.tensor_size,
             },
             "data/states.hdf5": states_dict,
             "data/product.hdf5": product_dict,
         }
 
         # Create the data container and store it in a file
-        file = self.file.format(tensor_size=tensor_size)
-        self.vault[file] = items
+        self.vault[self.file] = items
         t = time.time() - t
-        logger.info(f"Stored {config.name} product states for {tensor_size} electrons ({t:.1f} seconds) -> {file}")
+        ts = self.tensor_size
+        logger.info(f"Stored {config.name} product states for {ts} electrons ({t:.1f} seconds) -> {self.file}")
 
     def electrons(self, indices):
         """ Convert the given sequence of electron indices into a tuple of Electron objects. """
 
         return tuple(self.states.electron_pool[i] for i in indices)
 
-    def matrix_elements(self, tensor_size):
+    def matrix_elements(self):
         """ Generate indices of every potentially non-zero matrix element together with a generator function for the
         arguments for every elementary tensor matrix element. These arguments are the involved electrons and the
         sign of the elementary element. """
@@ -526,26 +497,18 @@ class Product:
                 sign = args[-1]
                 yield electrons, sign
 
-        # Load support data on demand
-        if tensor_size not in self.num_elements:
-            self.load_product(tensor_size)
-
-        # Indices of potentially non-zero matrix elements and list of all elementary elements
-        indices = self.indices[tensor_size]
-        elements = self.elements[tensor_size]
-
         # Generate indices of matrix elements together with the respective electron generator
         index = 0
-        for initial_index, final_index, size in indices:
+        for initial_index, final_index, size in self.indices:
             initial_index = int(initial_index)
             final_index = int(final_index)
             size = int(size)
-            yield initial_index, final_index, electron_generator(elements[index:index + size])
+            yield initial_index, final_index, electron_generator(self.elements[index:index + size])
             index += size
 
 
-@lru_cache(maxsize=1)
-def get_product(config_name):
+@lru_cache(maxsize=3)
+def get_product(config_name, tensor_size):
     """ Return cached Product object. """
 
-    return Product(config_name)
+    return Product(config_name, tensor_size)

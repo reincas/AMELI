@@ -47,6 +47,7 @@ class BaseUnit(ABC):
 
         # Number of electrons, the operator is acting on
         self.tensor_size = int(tensor_size)
+        assert self.tensor_size == self.product.tensor_size
 
         # Common factor of all matrix elements prepared by the subclass
         factor = factor / dtype.factorial(self.tensor_size)
@@ -59,7 +60,7 @@ class BaseUnit(ABC):
         # Calculate all non-zero matrix elements
         assert isinstance(symmetric, bool)
         self.matrix = self.dtype.state_matrix("Product", "Product", symmetric, self.product.num_states)
-        for initial, final, elements in self.product.matrix_elements(self.tensor_size):
+        for initial, final, elements in self.product.matrix_elements():
 
             # Convert numpy integer objects into Python int
             initial = int(initial)
@@ -278,11 +279,11 @@ class Unit_UUU(BaseUnit):
         return element
 
 
-# Dictionary mapping names to unit matrix classes
+# Dictionary mapping names to unit matrix classes and tensor sizes
 MATRIX = {
-    "UT": Unit_UT,
-    "UTUT": Unit_UTUT,
-    "UUU": Unit_UUU,
+    "UT": (Unit_UT, 1),
+    "UTUT": (Unit_UTUT, 2),
+    "UUU": (Unit_UUU, 3),
 }
 
 ###########################################################################
@@ -365,14 +366,13 @@ class Unit:
         config = get_config(self.config_name)
         config_meta = config.info.as_meta()
 
-        # Load Product object
-        product = get_product(self.config_name)
-
         # Calculate elementary matrix elements
         key, parameters = self.name.split("/")
-        cls = MATRIX[key]
+        cls, tensor_size = MATRIX[key]
         parameters = tuple(map(int, parameters.split(",")))
+        product = get_product(self.config_name, tensor_size)
         unit = cls(self.dtype, product, *parameters)
+        assert unit.tensor_size == tensor_size
 
         # Get product states
         states_dict, states_meta = config.states.as_meta()
