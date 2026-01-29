@@ -24,6 +24,18 @@ from ameli.matrix import MatrixName
 from logger import log_console, log_file
 
 
+def handle_exception(exc_type, exc_value, exc_traceback):
+    """ Safety net for any crash that Python doesn't catch. """
+
+    if issubclass(exc_type, KeyboardInterrupt):
+        sys.__excepthook__(exc_type, exc_value, exc_traceback)
+        return
+    logging.error("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
+
+
+sys.excepthook = handle_exception
+
+
 def get_matrix(logger, dtype, config_name, name, space, reduced=False):
     matrix_str = f"Matrix({dtype}, {config_name}, {name}, {space}, reduced={reduced})"
 
