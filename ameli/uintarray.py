@@ -66,7 +66,7 @@ def encode_uint_array(array, name: str) -> dict:
     result = {}
 
     # Empty array
-    array = np.array(array)
+    array = np.asanyarray(array)
     if 0 in array.shape:
         result[name] = array.astype(np.dtype("uint8"), copy=False)
         return result
