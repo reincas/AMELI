@@ -16,7 +16,8 @@
 ##########################################################################
 
 import math
-from functools import lru_cache
+import operator
+from functools import lru_cache, reduce
 
 import numpy as np
 import sympy as sp
@@ -104,21 +105,14 @@ class DataType:
         """ Return symbolic or floating point matrix of zeros with given number of rows and columns. """
 
         if self.is_symbolic:
-            return sp.zeros(rows, cols)
+            return sp.SparseMatrix(rows, cols, {})
         return np.zeros((rows, cols), dtype=self.dtype)
-
-    def ones(self, rows, cols):
-        """ Return symbolic or floating point matrix of ones with given number of rows and columns. """
-
-        if self.is_symbolic:
-            return sp.ones(rows, cols)
-        return np.ones((rows, cols), dtype=self.dtype)
 
     def eye(self, size):
         """ Return symbolic or floating point quadratic identity matrix with given number of rows and columns. """
 
         if self.is_symbolic:
-            return sp.eye(size)
+            return sp.SparseMatrix.eye(size)
         return np.eye(size, dtype=self.dtype)
 
     def transform(self, matrix, transform):
@@ -147,7 +141,7 @@ class DataType:
             return SymMatrix(self, row_space, col_space, is_symmetric, num_states)
         return NumMatrix(self, row_space, col_space, is_symmetric, num_states)
 
-    def from_matrix(self, row_space: str, col_space: str, matrix: sp.Matrix | np.ndarray):
+    def from_matrix(self, row_space: str, col_space: str, matrix: sp.SparseMatrix | np.ndarray):
         """ Return a SymMatrix or NumMatrix object initialised from the given matrix object. """
 
         if self.is_symbolic:
@@ -180,6 +174,27 @@ class DataType:
 ###########################################################################
 # Symbolic state matrix class
 ###########################################################################
+
+def is_sorted_lex(rows, columns):
+    """ Return True if rows are non-decreasing and columns are increasing within each row (lexicographic order). """
+
+    # Return False if row indices contain a backstep
+    row_diff = np.diff(rows)
+    if np.any(row_diff < 0):
+        return False
+
+    # Mask for all row indices identical to the next one
+    same_row = row_diff == 0
+
+    # Return False if column indices contain a backstep or stay constant where row indices are the same
+    col_diff = np.diff(columns)
+    if np.any(col_diff[same_row] <= 0):
+        return False
+
+    # Row and column indices are in lexicographic order
+    return True
+
+
 SYM_DESC = """
 The HDF5 item '{matrix_hdf5}' contains the {matrix} elements as {dtype} values.
 The matrix is stored in a compressed format, which takes advantage of the sparsity of the matrix and its small number
@@ -233,16 +248,7 @@ class SymMatrix:
     num_unique: int
 
     # Matrix object
-    _matrix: sp.Matrix | None
-
-    # Immutable matrix flag
-    is_immutable: bool
-
-    # Sparse matrix representation for data container export / import
-    rows: list
-    columns: list
-    elements: list
-    values: list
+    matrix: sp.SparseMatrix
 
     # Description of meta data
     meta_desc = SYM_DESC
@@ -264,79 +270,34 @@ class SymMatrix:
         # Store symmetry flag
         self.is_symmetric = bool(is_symmetric)
 
-        # Empty sparse matrix structure
-        self.rows = []
-        self.columns = []
-        self.elements = []
-        self.values = []
-
         # Empty matrix
-        self._matrix = None
+        self.matrix = sp.SparseMatrix(self.num_states, self.num_states, {})
         self.is_immutable = False
 
-    @property
-    def matrix(self):
-        assert self.is_immutable
-        if self._matrix is None:
-            self._matrix = self.dtype.zeros(self.num_states, self.num_states)
-            if not self.is_empty:
-                for row, col, element in zip(self.rows, self.columns, self.elements):
-                    self._matrix[row, col] = self.values[element]
-                    if self.is_symmetric:
-                        self._matrix[col, row] = self.values[element]
-        return self._matrix
-
     def __setitem__(self, index: tuple, value):
-        """ Store matrix element in the matrix object and the sparse matrix structure. """
+        """ Store matrix element in the matrix object. """
 
         # Matrix must not be immutable
         assert not self.is_immutable
 
-        # Skip zero value
-        if not value:
-            return
-
-        # Store row and column indices
+        # Store value in the matrix
         row, column = index
-        if self.is_symmetric:
-            assert row >= column
-        self.rows.append(row)
-        self.columns.append(column)
-
-        # Get value index and store the value, if it is a new one
-        try:
-            element = self.values.index(value)
-        except ValueError:
-            self.values.append(value)
-            element = len(self.values) - 1
-
-        # Store index of the matrix element value
-        self.elements.append(element)
+        self.matrix[row, column] = value
+        if self.is_symmetric and row != column:
+            self.matrix[column, row] = value
 
     def make_immutable(self):
         """ Determine and store matrix info and make the matrix immutable. """
 
         # Store or check info flags
-        assert self._matrix is None
-        assert len(self.rows) == len(self.columns) == len(self.elements)
-        assert len(self.elements) >= len(self.values), f"{len(self.elements)} >= {len(self.values)}"
-        self.is_empty = len(self.elements) == 0
-        if self.is_symmetric:
-            assert all(row >= col for row, col in zip(self.rows, self.columns))
+        assert self.matrix.shape[0] == self.matrix.shape[1] == self.num_states
+        self.is_empty = self.matrix.nnz() == 0
+        assert self.is_symmetric == self.matrix.is_symmetric()
 
-        # Sort symbolic values
-        indices = np.argsort(self.values)
-        self.values = [self.values[i] for i in indices]
-        inv_indices = np.argsort(indices)
-        self.elements = [inv_indices[i] for i in self.elements]
-
-        # Store matrix info
-        self.num_diagonal = sum(1 for row, col in zip(self.rows, self.columns) if row == col)
-        if self.is_symmetric:
-            self.num_elements = 2 * len(self.elements) - self.num_diagonal
-        else:
-            self.num_elements = len(self.elements)
-        self.num_unique = len(self.values)
+        # Statistics of non-zero elements
+        self.num_elements = self.matrix.nnz()
+        self.num_diagonal = self.matrix.diagonal().nnz()
+        self.num_unique = len(set(self.matrix.todok().values()))
 
         # Matrix is immutable now
         self.is_immutable = True
@@ -345,27 +306,19 @@ class SymMatrix:
     def from_matrix(cls, dtype, row_space, col_space, matrix):
         """ Return an immutable SymMatrix object from a matrix object. """
 
-        # Initialize empty SymMatrix object
+        # Initialize empty matrix object
         num_states = matrix.shape[0]
         is_symmetric = matrix.is_symmetric()
         obj = cls(dtype, row_space, col_space, is_symmetric, num_states)
 
-        # Build sparse matrix structure and matrix object from matrix
-        assert isinstance(matrix, sp.Matrix)
-        assert len(obj.rows) == len(obj.columns) == len(obj.elements) == len(obj.values) == 0
-        if not matrix.is_zero_matrix:
-            for row in range(obj.num_states):
-                max_col = row + 1 if obj.is_symmetric else obj.num_states
-                for col in range(max_col):
-                    obj[row, col] = matrix[row, col]
+        # Store sparse SymPy matrix
+        assert isinstance(matrix, sp.SparseMatrix)
+        obj.matrix = matrix
 
-        # Determine matrix info and make the SymMatrix object immutable
+        # Determine matrix info and make the matrix object immutable
         obj.make_immutable()
 
-        # Store matrix object
-        obj._matrix = matrix.copy()
-
-        # Return the SymMatrix object
+        # Return the matrix object
         return obj
 
     @classmethod
@@ -376,27 +329,23 @@ class SymMatrix:
         for key, value in info_meta.items():
             assert matrix_dict[key] == info_meta[key]
 
-        # Initialize empty SymMatrix object
+        # Initialize empty matrix object
         row_space = info_meta["rowSpace"]
         col_space = info_meta["colSpace"]
         num_states = info_meta["numStates"]
         is_symmetric = info_meta["isSymmetric"]
         obj = cls(dtype, row_space, col_space, is_symmetric, num_states)
 
-        # Store matrix elements
+        # Extract and store matrix elements
         if not info_meta["isEmpty"]:
-
-            # Extract sparse matrix elements
             rows = decode_uint_array(matrix_dict, "rows")
             columns = decode_uint_array(matrix_dict, "columns")
             elements = decode_uint_array(matrix_dict, "elements")
             values = [value.expr for value in RationalRadicalList.from_dict(matrix_dict).values]
-
-            # Store sparse matrix elements in the matrix object
             for row, col, element in zip(rows, columns, elements):
                 obj[row, col] = values[element]
 
-        # Determine matrix info and make the SymMatrix object immutable
+        # Determine matrix info and make the matrix object immutable
         obj.make_immutable()
 
         # Sanity checks
@@ -405,7 +354,7 @@ class SymMatrix:
         assert obj.num_diagonal == info_meta["numDiagonalElements"]
         assert obj.num_unique == info_meta["numUniqueValues"]
 
-        # Return SymMatrix object
+        # Return matrix object
         return obj
 
     def as_meta(self):
@@ -427,13 +376,41 @@ class SymMatrix:
             "numUniqueValues": int(self.num_unique),
         }
 
+        # Extract items from the SymPy sparse matrix
+        dok = self.matrix.todok()
+        num_elements = len(dok)
+        coords = np.fromiter(dok.keys(), dtype=np.dtype((int, 2)), count=num_elements)
+        elements = np.fromiter(dok.values(), dtype=object, count=num_elements)
+        rows = coords[:, 0]
+        columns = coords[:, 1]
+
+        # Remove upper triangle of a symmetric matrix
+        if self.is_symmetric:
+            mask = rows >= columns
+            rows = rows[mask]
+            columns = columns[mask]
+            elements = elements[mask]
+
+        # Sort the unique element values
+        values = sorted(set(elements), key=sp.default_sort_key)
+        lookup = {val: i for i, val in enumerate(values)}
+        elements = np.array([lookup[x] for x in elements])
+
+        # Assert canonical order of row and column indices
+        is_sorted = is_sorted_lex(rows, columns)
+        if not is_sorted:
+            sort_idx = np.lexsort((columns, rows))
+            rows = rows[sort_idx]
+            columns = columns[sort_idx]
+            elements = elements[sort_idx]
+
         # Dictionary of sparse matrix elements
         matrix_dict = dict(info_meta)
         if self.num_elements > 0:
-            matrix_dict |= encode_uint_array(self.rows, "rows")
-            matrix_dict |= encode_uint_array(self.columns, "columns")
-            matrix_dict |= encode_uint_array(self.elements, "elements")
-            matrix_dict |= RationalRadicalList(self.values).as_dict()
+            matrix_dict |= encode_uint_array(rows, "rows")
+            matrix_dict |= encode_uint_array(columns, "columns")
+            matrix_dict |= encode_uint_array(elements, "elements")
+            matrix_dict |= RationalRadicalList(values).as_dict()
 
         # Return dictionaries
         return matrix_dict, info_meta
@@ -445,23 +422,9 @@ class SymMatrix:
         if not (self.row_space == self.col_space == space):
             raise NotImplemented
 
-        # Initialize empty SymMatrix object
-        num_states = len(indices)
-        obj = SymMatrix(self.dtype, subspace, subspace, self.is_symmetric, num_states)
-
-        # Store selected matrix elements in the matrix object
-        if not self.is_empty:
-            for row, col, element in zip(self.rows, self.columns, self.elements):
-                if row in indices and col in indices:
-                    i = indices.index(row)
-                    j = indices.index(col)
-                    obj[i, j] = self.values[element]
-
-        # Determine matrix info and make the SymMatrix object immutable
-        obj.make_immutable()
-
-        # Return collapsed SymMatrix object
-        return obj
+        # Pick the selected matrix elements and return a new SymMatrix object
+        matrix = self.matrix.extract(indices, indices)
+        return self.from_matrix(self.dtype, subspace, subspace, matrix)
 
     @classmethod
     def reduced(cls, components, J):
@@ -487,51 +450,14 @@ class SymMatrix:
         assert len(components) % 2 == 1
         k = (len(components) - 1) // 2
 
-        # Initialise empty shadow matrix. It is used to detect double entries and symmetry
-        num_states = components[0].num_states
-        assert num_states == len(J)
-        values = sp.zeros(num_states, num_states)
-        indices = []
+        # Element-wise sum, using the fact that only one component is non-zero for each matrix element
+        matrix = reduce(operator.add, [m.matrix for m in components])
 
-        # Store all matrix elements in the shadow matrix
-        for matrix in components:
-            if not matrix.is_empty:
-                for row, col, element in zip(matrix.rows, matrix.columns, matrix.elements):
-                    value = matrix.values[element]
-                    assert values[row, col] == 0
-                    values[row, col] = value / sym3j(row, col, k, J)
-                    indices.append((row, col))
-                    if row != col and matrix.is_symmetric:
-                        assert values[col, row] == 0
-                        values[col, row] = value / sym3j(row, col, k, J)
-                        indices.append((col, row))
-
-        # Initialize empty SymMatrix object and store all matrix elements
+        # Convert sum of components to matrix of reduced elements using the Wigner-Eckart theorem
+        for (row, col), value in matrix.todok().items():
+            matrix[row, col] = value / sym3j(row, col, k, J)
         dtype = components[0].dtype
-        is_symmetric = values.is_symmetric()
-        obj = SymMatrix(dtype, "SLJ", "SLJ", is_symmetric, num_states)
-        for row, col in indices:
-            if is_symmetric and row < col:
-                continue
-            obj[row, col] = values[row, col]
-
-        # Determine matrix info and make the SymMatrix object immutable
-        obj.make_immutable()
-
-        # Return new SymMatrix object
-        return obj
-
-    @property
-    def is_lower(self):
-        """ Return if the SymMatrix is a lower triangular matrix. """
-
-        return all(row >= col for row, col in zip(self.rows, self.columns))
-
-    @property
-    def is_upper(self):
-        """ Return if the SymMatrix is a upper triangular matrix. """
-
-        return all(row <= col for row, col in zip(self.rows, self.columns))
+        return cls.from_matrix(dtype, "SLJ", "SLJ", matrix)
 
 
 ###########################################################################
@@ -652,22 +578,22 @@ class NumMatrix:
     def from_matrix(cls, dtype, row_space, col_space, matrix):
         """ Create an immutable NumMatrix object from a matrix object. """
 
-        # Initialize empty NumMatrix object
+        # Initialize empty matrix object
         num_states = matrix.shape[0]
         is_symmetric = np.all(matrix.T == matrix)
         obj = cls(dtype, row_space, col_space, is_symmetric, num_states)
 
-        # Store matrix
+        # Store numpy matrix object
         assert matrix.dtype == dtype.dtype
         assert isinstance(obj.matrix, np.ndarray)
         assert len(matrix.shape) == 2
         assert matrix.shape[0] == matrix.shape[1]
         obj.matrix = matrix
 
-        # Determine matrix info and make the NumMatrix object immutable
+        # Determine matrix info and make the matrix object immutable
         obj.make_immutable()
 
-        # Return the NumMatrix object
+        # Return the matrix object
         return obj
 
     @classmethod
@@ -678,7 +604,7 @@ class NumMatrix:
         for key, value in info_meta.items():
             assert matrix_dict[key] == info_meta[key]
 
-        # Initialize empty NumMatrix object
+        # Initialize empty matrix object
         row_space = info_meta["rowSpace"]
         col_space = info_meta["colSpace"]
         num_states = info_meta["numStates"]
@@ -688,7 +614,7 @@ class NumMatrix:
         # Store matrix object
         obj.matrix = matrix_dict["matrix"]
 
-        # Determine matrix info and make the NumMatrix object immutable
+        # Determine matrix info and make the matrix object immutable
         obj.make_immutable()
 
         # Sanity checks
@@ -697,7 +623,7 @@ class NumMatrix:
         assert obj.num_diagonal == info_meta["numDiagonalElements"]
         assert obj.num_unique == info_meta["numUniqueValues"]
 
-        # Return NumMatrix object
+        # Return matrix object
         return obj
 
     def as_meta(self):
@@ -733,14 +659,14 @@ class NumMatrix:
         if not (self.row_space == self.col_space == space):
             raise NotImplemented
 
-        # Pick the selected matrix elements and return a new NumMatrix object
+        # Pick the selected matrix elements and return a new matrix object
         matrix = self.matrix[np.ix_(indices, indices)]
         assert len(matrix.shape) == 2, f"{self.matrix.shape}, {matrix.shape}, {indices}"
         return self.from_matrix(self.dtype, subspace, subspace, matrix)
 
     @classmethod
     def reduced(cls, components, J):
-        """ Return a NumMatrix object containing the reduced matrix elements of a tensor operator based its given
+        """ Return a NumMatrix object containing the reduced matrix elements of a tensor operator based on its given
         ordered component matrices. """
 
         # Sanity checks

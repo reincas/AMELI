@@ -574,7 +574,7 @@ class Result:
 
         return self.names[level]
 
-    def matrix(self, level: int) -> sp.Matrix:
+    def matrix(self, level: int) -> sp.SparseMatrix:
         """ Return the symmetry operator matrix for the given diagonalizing level. """
 
         return self.matrices[level]
@@ -638,7 +638,7 @@ class Result:
         return f"Finished {c} states: {f:>{num}}/{n} = {p:4.1f} %, total: {t}, remaining: {e}"
 
 
-def count_eigenvalues(matrix: sp.Matrix, factor: int) -> list:
+def count_eigenvalues(matrix: sp.SparseMatrix, factor: int) -> list:
     """ Calculate and return a sorted list of all unique eigenvalues of the given symbolic SymPy matrix and their
     respective multiplicity. The given factor is used to determine identical eigenvalues. Each eigenvalue must become
     an integer when multiplied by this factor. """
@@ -669,7 +669,7 @@ def count_eigenvalues(matrix: sp.Matrix, factor: int) -> list:
     return unique_values
 
 
-def matrix_diagonalize(matrix: sp.Matrix, factor: int):
+def matrix_diagonalize(matrix: sp.SparseMatrix, factor: int):
     """ Generator function for eigenvalues and eigenvectors of each eigenspace of the given full-rank MxM SymPy
     matrix. The given factor is used to convert numerically calculated eigenvalues into integers. For each
     eigenspace of size N the function yields the eigenvalue, a MxN matrix of eigenvectors and a NxM matrix of
@@ -1218,7 +1218,7 @@ class Transform:
         transform, states_dict = transform_states(logger, self.dtype, config)
         logger.debug("Creating StateMatrix.")
         t = time.time()
-        state_matrix = self.dtype.from_matrix("Product", "SLJM", transform)
+        state_matrix = self.dtype.from_matrix("Product", "SLJM", sp.SparseMatrix(transform))
         t = time.time() - t
         logger.debug(f"Built StateMatrix. ({t:.1f} seconds)")
         t = time.time()
