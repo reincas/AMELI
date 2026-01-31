@@ -19,8 +19,8 @@ description = "Python 3 package to calculate angular matrix elements of lanthani
 license = "MIT"
 readme = "README.md"
 dependencies = [
-    "diskcache",
-    "numpy>=1.15",
+    "psutil",
+    "numpy",
     "sympy",
 	"h5py",
     "scidatacontainer",
