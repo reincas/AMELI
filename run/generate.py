@@ -39,7 +39,7 @@ if __name__ == "__main__":
         nums = [int(sys.argv[1])]
         file = f"ameli-{nums[0]}.log"
     else:
-        nums = [1]  # [1, 13, 2, 12, 3, 11, 4, 10, 5, 9, 6, 8, 7]
+        nums = [2]  # [1, 13, 2, 12, 3, 11, 4, 10, 5, 9, 6, 8, 7]
         file = f"ameli.log"
 
     # Log format
