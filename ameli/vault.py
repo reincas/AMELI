@@ -8,7 +8,8 @@
 # cache for SciDataContainer objects.
 #
 ##########################################################################
-
+import os
+import time
 from functools import lru_cache
 from pathlib import Path
 
@@ -40,13 +41,23 @@ class Vault:
         dc = Container(items=items)
         path = self.path(name)
         path.parent.mkdir(parents=True, exist_ok=True)
-        dc.write(path)
+        tmp_path = path.with_suffix(".tmp")
+        dc.write(str(tmp_path))
+
+        max_retries = 100
+        for i in range(max_retries):
+            try:
+                os.replace(tmp_path, path)
+                return
+            except PermissionError as exc:
+                time.sleep(0.05 * (i + 1))
+        raise RuntimeError(f"Storage of {path} failed!")
 
     def __getitem__(self, name: str) -> Container:
         """ Load and return the SciDataContainer for the given file name. """
 
         path = self.path(name)
-        return Container(file=path)
+        return Container(file=str(path))
 
     def __contains__(self, name: str) -> bool:
         """ Returns True if a SciDataContainer for given file name is present and False otherwise. """
