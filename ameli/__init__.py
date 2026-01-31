@@ -133,8 +133,9 @@ def lanthanide_matrices():
 # Import main classes
 ##########################################################################
 
-from .config import SPECTRAL, Electron, Config, get_config
-from .product import Product, get_product
+from .config import SPECTRAL, Electron, Config
+from .product import Product
 from .unit import Unit
 from .matrix import Matrix
-from .transform import Transform, get_transform
+from .transform import Transform
+from .vault import container_vault
