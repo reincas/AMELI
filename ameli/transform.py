@@ -18,7 +18,6 @@
 
 import logging
 import time
-from functools import lru_cache
 
 import numpy as np
 import sympy as sp
@@ -27,12 +26,13 @@ from . import space_registry, register_space, register_subspace, desc_format
 from .uintarray import decode_uint_array, encode_uint_array
 from .datatype import DataType
 from .casimir import CASIMIR
-from .vault import get_vault
-from .config import SPECTRAL, ConfigInfo, get_config
+from .vault import container_vault
+from .config import SPECTRAL, ConfigInfo, Config
 from .unit import Unit
 from .matrix import Matrix
 
 __version__ = "1.0.0"
+logger = logging.getLogger("transform")
 ATOL = 1e-12
 
 ###########################################################################
@@ -379,7 +379,6 @@ def correct_signs(dtype, config, transform: sp.Matrix, eigenvalues: dict) -> sp.
     J eigenspace. This allows to construct correct superpositions of M states. The matrix transform is returned with
     adjusted signs for all column vectors. """
 
-    logger = logging.getLogger()
     logger.info(f"Fixing global signs in the J eigenspaces {config.name}")
 
     # Number of states
@@ -729,7 +728,7 @@ def matrix_diagonalize(matrix: sp.SparseMatrix, factor: int):
             yield eigenvalue, eigenvectors, eigenvectors_inv
 
 
-def transform_level(logger, result, level, label="", transform=None, transform_inv=None):
+def transform_level(result, level, label="", transform=None, transform_inv=None):
     """ Determine the eigenspaces of the symmetry operator matrix of this level and recursively determine the
     eigenspaces of the symmetry operator matrices of all higher levels in each eigenspace of this level. Store
     the eigenvalues and eigenvectors of each eigenspace of this level in the result object. """
@@ -769,7 +768,7 @@ def transform_level(logger, result, level, label="", transform=None, transform_i
                 this_transform_inv = eigenvectors_inv * transform_inv
 
             # Determine the eigenspaces of the symmetry matrices of all higher levels in the current eigenspace
-            transform_level(logger, result, level + 1, this_label, this_transform, this_transform_inv)
+            transform_level(result, level + 1, this_label, this_transform, this_transform_inv)
 
         # Final level
         else:
@@ -790,10 +789,10 @@ def transform_level(logger, result, level, label="", transform=None, transform_i
             result.add_vectors(vectors)
 
 
-def transform_sym(logger, dtype, config):
+def transform_sym(dtype, config):
     result = Result(dtype, config)
 
-    transform_level(logger, result, 0)
+    transform_level(result, 0)
     # result.sort()
 
     # Transformation matrix with eigenvectors as columns
@@ -808,7 +807,7 @@ def transform_sym(logger, dtype, config):
     return transform, eigenvalues
 
 
-def transform_num(logger, dtype, config):
+def transform_num(dtype, config):
     t = time.time()
 
     names, matrices, factors = get_sym_matrices(dtype, config)
@@ -880,15 +879,15 @@ def transform_num(logger, dtype, config):
     return transform, eigenvalues
 
 
-def transform_states(logger, dtype, config):
+def transform_states(dtype, config):
     """ Calculate and return the SymPy transformation matrix from electron product states to LS states and a list
     of eigenvalue dictionaries of all states. """
 
     # Diagonalize all eigenspaces simultaneously
     if dtype.is_symbolic:
-        transform, eigenvalues = transform_sym(logger, dtype, config)
+        transform, eigenvalues = transform_sym(dtype, config)
     else:
-        transform, eigenvalues = transform_num(logger, dtype, config)
+        transform, eigenvalues = transform_num(dtype, config)
 
     transform, eigenvalues = sort_states(config, transform, eigenvalues)
 
@@ -1170,14 +1169,11 @@ class Transform:
         # Configuration string
         self.config_name = config_name
 
-        # Data container cache and container file name
-        self.vault = get_vault(self.config_name)
-        self.file = f"{dtype.name}/transform.zdc"
-
         # Load or generate data container
-        if self.file not in self.vault:
+        self.file = self.get_path(self.dtype, self.config_name)
+        if self.file not in container_vault:
             self.generate_container()
-        dc = self.vault[self.file]
+        dc = container_vault[self.file]
 
         # Extract UUID and code version from the container
         meta = dc["data/transform.json"]
@@ -1206,16 +1202,15 @@ class Transform:
     def generate_container(self):
         """ Generate the LS transformation matrix and store it in a data container file. """
 
-        logger = logging.getLogger()
         logger.info(f"Generating {self.config_name} transformation matrix")
         t_all = time.time()
 
         # Get electron configuration
-        config = get_config(self.config_name)
+        config = Config(self.config_name)
         config_meta = config.info.as_meta()
 
         # Build transformation matrix and store it as SparseMatrix object
-        transform, states_dict = transform_states(logger, self.dtype, config)
+        transform, states_dict = transform_states(self.dtype, config)
         logger.debug("Creating StateMatrix.")
         t = time.time()
         state_matrix = self.dtype.from_matrix("Product", "SLJM", sp.SparseMatrix(transform))
@@ -1302,7 +1297,7 @@ class Transform:
         }
 
         # Create data container and store in file
-        self.vault[self.file] = items
+        container_vault[self.file] = items
         t = time.time() - t_all
         logger.info(f"Stored {self.config_name} transformation matrix ({t:.1f} seconds) -> {self.file}")
 
@@ -1317,14 +1312,14 @@ class Transform:
 
         return self.col_states.as_meta()
 
+    @staticmethod
+    def get_path(dtype, config_name):
+        """ Return data container file name. """
 
-@lru_cache(maxsize=None)
-def get_transform(dtype, config_name):
-    """ Return cached Transform object. """
-
-    return Transform(dtype, config_name)
-
+        if isinstance(dtype, DataType):
+            dtype = dtype.name
+        return f"{config_name}/{dtype}/transform.zdc"
 
 # Register space of electron states in LS coupling
-register_space("SLJM", Transform, get_transform)
+register_space("SLJM", Transform, Transform)
 register_subspace("SLJM", "SLJ")

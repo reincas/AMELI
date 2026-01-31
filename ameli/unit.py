@@ -17,11 +17,12 @@ import sympy as sp
 
 from . import space_registry, desc_format
 from .datatype import DataType
-from .vault import get_vault
-from .config import ConfigInfo, get_config
-from .product import get_product
+from .vault import container_vault
+from .config import ConfigInfo, Config
+from .product import Product
 
 __version__ = "1.0.0"
+logger = logging.getLogger("unit")
 
 
 ###########################################################################
@@ -315,17 +316,14 @@ class Unit:
         # Configuration string
         self.config_name = config_name
 
-        # Data container cache and container file name
-        self.vault = get_vault(self.config_name)
+        # Matrix name
         self.name = name
-        key, parameters = name.split("/")
-        parameters = "_".join(parameters.split(","))
-        self.file = f"{dtype.name}/unit/{key}_{parameters}.zdc"
 
         # Load or generate data container
-        if self.file not in self.vault:
+        self.file = self.get_path(dtype, config_name, name)
+        if self.file not in container_vault:
             self.generate_container()
-        dc = self.vault[self.file]
+        dc = container_vault[self.file]
 
         # Extract UUID and code version from the container
         meta = dc["data/unit.json"]
@@ -358,19 +356,18 @@ class Unit:
     def generate_container(self):
         """ Generate the matrix of the unit tensor operator and store it in a data container file. """
 
-        logger = logging.getLogger()
         logger.info(f"Generating {self.config_name} unit matrix {self.name}")
         t = time.time()
 
         # Get electron configuration
-        config = get_config(self.config_name)
+        config = Config(self.config_name)
         config_meta = config.info.as_meta()
 
         # Calculate elementary matrix elements
         key, parameters = self.name.split("/")
         cls, tensor_size = MATRIX[key]
         parameters = tuple(map(int, parameters.split(",")))
-        product = get_product(self.config_name, tensor_size)
+        product = Product(self.config_name, tensor_size)
         unit = cls(self.dtype, product, *parameters)
         assert unit.tensor_size == tensor_size
 
@@ -426,6 +423,17 @@ class Unit:
         }
 
         # Create the data container and store it in a file
-        self.vault[self.file] = items
+        container_vault[self.file] = items
         t = time.time() - t
         logger.info(f"Stored {self.config_name} unit matrix {self.name} ({t:.1f} seconds) -> {self.file}")
+
+    @staticmethod
+    def get_path(dtype, config_name, name):
+        """ Return data container file name. """
+
+        if isinstance(dtype, DataType):
+            dtype = dtype.name
+        key, parameters = name.split("/")
+        parameters = "_".join(parameters.split(","))
+        return f"{config_name}/{dtype}/unit/{key}_{parameters}.zdc"
+

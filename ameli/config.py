@@ -15,7 +15,6 @@
 import logging
 import re
 import time
-from functools import lru_cache
 from itertools import combinations, product
 from collections import namedtuple
 
@@ -24,9 +23,10 @@ import sympy as sp
 
 from . import register_space, desc_format
 from .uintarray import decode_uint_array, encode_uint_array
-from .vault import get_vault
+from .vault import container_vault
 
 __version__ = "1.0.0"
+logger = logging.getLogger("config")
 
 # Spectral letters representing quantum numbers of an orbital angular momentum
 SPECTRAL = "spdfghiklmnoqrtuvwxyz"
@@ -108,7 +108,7 @@ class ProductStates:
 # Generation of the electron configuration data
 ###########################################################################
 
-def generate_config(logger, config_name):
+def generate_config(config_name):
     """ Generate and return all electron configuration data. """
 
     # Split the configuration string into subshells
@@ -127,7 +127,7 @@ def generate_config(logger, config_name):
     for subshell in subshells:
         shell = subshell.shell
         l = subshell.l
-        s = sympy.Rational(1,2)
+        s = sympy.Rational(1, 2)
         magnetic = reversed(list(product(range(-l, l + 1), (-s, +s))))
         quantum = [(sp.S(l), sp.S(ml), s, ms) for ml, ms in magnetic]
         electrons = [Electron(shell=shell, l=l, ml=ml, s=s, ms=ms) for l, ml, s, ms in quantum]
@@ -235,14 +235,11 @@ class Config():
         # Configuration string
         self.name = config_name
 
-        # Data container cache and container file name
-        self.vault = get_vault(self.name)
-        self.file = "config.zdc"
-
         # Load or generate data container
-        if self.file not in self.vault:
+        self.file = self.get_path(config_name)
+        if self.file not in container_vault:
             self.generate_container()
-        dc = self.vault[self.file]
+        dc = container_vault[self.file]
 
         # Extract UUID and code version from the container
         meta = dc["data/config.json"]
@@ -260,12 +257,11 @@ class Config():
     def generate_container(self):
         """ Generate an electron configuration and store it in a data container file. """
 
-        logger = logging.getLogger()
         logger.info(f"Generating {self.name} configuration")
         t = time.time()
 
         # Generate the configuration data
-        states, subshells, electron_pool = generate_config(logger, self.name)
+        states, subshells, electron_pool = generate_config(self.name)
         states_dict = encode_uint_array(states, "indices")
         states_dict["stateSpace"] = "Product"
 
@@ -311,7 +307,7 @@ class Config():
         }
 
         # Create the data container and store it in a file
-        self.vault[self.file] = items
+        container_vault[self.file] = items
         t = time.time() - t
         logger.info(f"Stored {self.name} configuration: ({t:.1f} seconds) -> {self.file}")
 
@@ -331,13 +327,12 @@ class Config():
 
         return self.states.as_meta()
 
+    @staticmethod
+    def get_path(config_name):
+        """ Return data container file name. """
 
-@lru_cache(maxsize=1)
-def get_config(config_name):
-    """ Return cached Config object. """
-
-    return Config(config_name)
+        return f"{config_name}/config.zdc"
 
 
 # Register space of electron product states
-register_space("Product", Config, lambda dtype, config_name: get_config(config_name))
+register_space("Product", Config, lambda dtype, config_name: Config(config_name))

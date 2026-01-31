@@ -18,11 +18,12 @@ import sympy as sp
 
 from . import space_registry, desc_format
 from .datatype import DataType
-from .vault import get_vault
-from .config import ConfigInfo, get_config
+from .vault import container_vault
+from .config import ConfigInfo, Config
 from .unit import Unit
 
 __version__ = "1.0.0"
+logger = logging.getLogger("matrix")
 
 # Force symbolic calculation even for numeric matrices (don't change that!)
 FORCE_SYMBOLIC = True
@@ -651,11 +652,10 @@ class Matrix:
         self.rank = MatrixName(self.name).rank
 
         # Load or generate data container
-        self.vault = get_vault(self.config_name)
-        self.file = self.get_path(dtype, name, state_space, self.reduced)
-        if self.file not in self.vault:
+        self.file = self.get_path(dtype, config_name, name, state_space, self.reduced)
+        if self.file not in container_vault:
             self.generate_container()
-        dc = self.vault[self.file]
+        dc = container_vault[self.file]
 
         # Extract UUID and code version from the container
         meta = dc["data/matrix.json"]
@@ -769,12 +769,11 @@ class Matrix:
         """ Generate the matrix of the tensor operator and store it in a data container file. """
 
         # Get and use a logger object
-        logger = logging.getLogger()
         logger.info(f"Generating {self.config_name} tensor operator matrix {self.name}")
         t = time.time()
 
         # Get electron configuration
-        config = get_config(self.config_name)
+        config = Config(self.config_name)
         config_meta = config.info.as_meta()
 
         # Get state space info
@@ -846,12 +845,12 @@ class Matrix:
         }
 
         # Create the data container and store it in a file
-        self.vault[self.file] = items
+        container_vault[self.file] = items
         t = time.time() - t
         logger.info(f"Stored {self.config_name} tensor operator matrix {self.name} ({t:.1f} seconds) -> {self.file}")
 
     @staticmethod
-    def get_path(dtype, name, state_space, reduced):
+    def get_path(dtype, config_name, name, state_space, reduced):
         """ Return data container file name. """
 
         # Store data type
@@ -871,15 +870,14 @@ class Matrix:
         if "/" in name:
             head, args = name.split("/")
             args = "_".join(args.split(","))
-            file = f"{dtype}/{state_space}/{head}_{args}.zdc"
+            file = f"{config_name}/{dtype}/{state_space}/{head}_{args}.zdc"
         else:
-            file = f"{dtype}/{state_space}/{name}.zdc"
+            file = f"{config_name}/{dtype}/{state_space}/{name}.zdc"
         return file
 
     @staticmethod
     def exists(dtype, config_name, name, state_space, reduced=False):
         """ Return True if the matrix data container exists. """
 
-        file = Matrix.get_path(dtype, name, state_space, reduced)
-        vault = get_vault(config_name)
-        return file in vault
+        file = Matrix.get_path(dtype, config_name, name, state_space, reduced)
+        return file in container_vault

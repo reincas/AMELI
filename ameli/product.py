@@ -14,16 +14,16 @@ import array
 import logging
 import math
 import time
-from functools import lru_cache
 from itertools import combinations
 import numpy as np
 
 from . import space_registry, desc_format
-from .config import ConfigInfo, get_config
-from .uintarray import encode_uint_arrays, get_dtype
-from .vault import get_vault
+from .config import ConfigInfo, Config
+from .uintarray import get_dtype
+from .vault import container_vault
 
 __version__ = "1.0.0"
+logger = logging.getLogger("product")
 
 # Mapping of byte number to uint type codes for array.array
 UINT_TCODES = {1: "B", 2: "H", 4: "L", 8: "Q"}
@@ -233,17 +233,15 @@ class ProductElements():
     def __init__(self, config):
         """ Initialize all ProductState objects. """
 
-        self.logger = logging.getLogger()
-
         # Electron configuration
         self.config = config
         self.num_states = self.config.num_states
         self.num_electrons = self.config.info.num_electrons
 
         # Prepare all product states of the configuration for the detection of matching electrons
-        self.logger.debug(f"Initializing {self.num_states} ProductStates")
+        logger.debug(f"Initializing {self.num_states} ProductStates")
         self.states = [ProductState(state) for state in self.config.states.indices]
-        self.logger.debug(f"Initialized all {self.num_states} ProductStates")
+        logger.debug(f"Initialized all {self.num_states} ProductStates")
 
         # List of all potentially non-zero matrix elements
         self.unused = [(i, j) for i in range(self.num_states) for j in range(i, self.num_states)]
@@ -257,7 +255,7 @@ class ProductElements():
 
         # Get next number of different electrons
         num_diff = len(self.len_diff)
-        self.logger.debug(f"Adding elements for {num_diff} different electrons ({len(self.unused)} tests)")
+        logger.debug(f"Adding elements for {num_diff} different electrons ({len(self.unused)} tests)")
 
         # Determine all pairs of initial and final state which differ in num_diff electrons using and updating
         # the list of unused matrix element indices
@@ -276,7 +274,7 @@ class ProductElements():
                 r = len(self.unused) - i
                 if r % 10000 == 0:
                     n = len(self.elements)
-                    self.logger.debug(f"  {self.config.name} | Number of elements: {n}, remaining tests: {r}")
+                    logger.debug(f"  {self.config.name} | Number of elements: {n}, remaining tests: {r}")
                 continue
 
             # Pick the tuple of matching (same) electrons from the intersection set
@@ -300,7 +298,7 @@ class ProductElements():
             sum = self.len_diff[0]
         else:
             sum = self.len_diff[-1] - self.len_diff[-2]
-        self.logger.debug(f"Added all {sum} elements for {num_diff} different electrons")
+        logger.debug(f"Added all {sum} elements for {num_diff} different electrons")
 
     def matrix_elements(self, tensor_size):
         """ Generate and return the list (indices) of potentially non-zero matrix elements for a tensor operator
@@ -326,7 +324,7 @@ class ProductElements():
         indices = array.array(tcode)
         elements = array.array(UINT_TCODES[1])
         max_index = self.len_diff[tensor_size]
-        self.logger.debug(f"Collecting {max_index} elements for {tensor_size}-electron operators")
+        logger.debug(f"Collecting {max_index} elements for {tensor_size}-electron operators")
         i = 0
         for initial_index, final_index, product_element in self.elements[:max_index]:
             # Append list of elementary matrix elements to be evaluated
@@ -338,14 +336,14 @@ class ProductElements():
             # Log progress
             i += 1
             if i % 10000 == 0:
-                self.logger.debug(f"  {self.config.name} | Collected {len(indices)}/{max_index} elements")
+                logger.debug(f"  {self.config.name} | Collected {len(indices)}/{max_index} elements")
 
         # Convert arrays to numpy views
         indices = np.frombuffer(indices, dtype=dtype).reshape(-1, 3)
         elements = np.frombuffer(elements, dtype=np.uint8).reshape(-1, 2 * tensor_size + 1)
 
         # Return the list of matrix element indices and elementary tensor arguments
-        self.logger.debug(f"Collected all {max_index} elements for {tensor_size}-electron operators")
+        logger.debug(f"Collected all {max_index} elements for {tensor_size}-electron operators")
         return indices, elements
 
 
@@ -390,14 +388,11 @@ class Product:
         # Number of electrons the tensor is acting on
         self.tensor_size = tensor_size
 
-        # Data container cache and container file name
-        self.vault = get_vault(self.config_name)
-        self.file = f"product_{tensor_size}.zdc"
-
         # Load data container
-        if self.file not in self.vault:
+        self.file = self.get_path(config_name, tensor_size)
+        if self.file not in container_vault:
             self.generate_container()
-        dc = self.vault[self.file]
+        dc = container_vault[self.file]
 
         # Extract UUID and code version from the container
         meta = dc["data/product.json"]
@@ -423,10 +418,8 @@ class Product:
         """ Generate the product state support data for tensor operators acting on tensor_size electrons and store
         it in a data container file. """
 
-        logger = logging.getLogger()
-
         # Get electron configuration
-        config = get_config(self.config_name)
+        config = Config(self.config_name)
         assert 1 <= self.tensor_size <= config.info.num_electrons
         config_meta = config.info.as_meta()
         logger.info(f"Prepare {config.name} product states for {self.tensor_size} electrons")
@@ -475,7 +468,7 @@ class Product:
         }
 
         # Create the data container and store it in a file
-        self.vault[self.file] = items
+        container_vault[self.file] = items
         t = time.time() - t
         ts = self.tensor_size
         logger.info(f"Stored {config.name} product states for {ts} electrons ({t:.1f} seconds) -> {self.file}")
@@ -506,9 +499,8 @@ class Product:
             yield initial_index, final_index, electron_generator(self.elements[index:index + size])
             index += size
 
+    @staticmethod
+    def get_path(config_name, tensor_size):
+        """ Return data container file name. """
 
-@lru_cache(maxsize=3)
-def get_product(config_name, tensor_size):
-    """ Return cached Product object. """
-
-    return Product(config_name, tensor_size)
+        return f"{config_name}/product_{tensor_size}.zdc"
