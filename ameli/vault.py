@@ -10,7 +10,6 @@
 ##########################################################################
 import os
 import time
-from functools import lru_cache
 from pathlib import Path
 
 from scidatacontainer import Container
@@ -23,17 +22,12 @@ VAULT_PATH = Path(__file__).resolve().parent / "vault"
 ###########################################################################
 
 class Vault:
-    """ File cache for SciDataContainer files. """
-
-    def __init__(self, config_name: str):
-        """ Store electron configuration name. """
-
-        self.config_name = Path(config_name)
+    """ Interface class for data container files. """
 
     def path(self, name: str) -> Path:
         """ Return Path object for the given file name. """
 
-        return VAULT_PATH / self.config_name / Path(name)
+        return VAULT_PATH / Path(name)
 
     def __setitem__(self, name: str, items: dict):
         """ Create and store a SciDataContainer from the given items dictionary. """
@@ -60,14 +54,10 @@ class Vault:
         return Container(file=str(path))
 
     def __contains__(self, name: str) -> bool:
-        """ Returns True if a SciDataContainer for given file name is present and False otherwise. """
+        """ Returns True if the given file exists and False otherwise. """
 
-        path = VAULT_PATH / self.config_name / name
-        return path.exists()
+        return self.path(name).exists()
 
 
-@lru_cache(maxsize=1)
-def get_vault(config_name):
-    """ Return cached Vault object. """
-
-    return Vault(config_name)
+# Global interface
+container_vault = Vault()
