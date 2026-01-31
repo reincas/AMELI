@@ -17,8 +17,9 @@ import time
 from itertools import combinations
 import numpy as np
 
-from . import space_registry, desc_format
+from . import desc_format
 from .config import ConfigInfo, Config
+from .states import space_registry
 from .uintarray import get_dtype
 from .vault import container_vault
 

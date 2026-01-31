@@ -22,7 +22,8 @@ import time
 import numpy as np
 import sympy as sp
 
-from . import space_registry, register_space, register_subspace, desc_format
+from . import desc_format
+from .states import space_registry, register_space, register_subspace
 from .uintarray import decode_uint_array, encode_uint_array
 from .datatype import DataType
 from .casimir import CASIMIR

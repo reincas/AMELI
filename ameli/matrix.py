@@ -16,8 +16,9 @@ import time
 import numpy as np
 import sympy as sp
 
-from . import space_registry, desc_format
+from . import desc_format
 from .datatype import DataType
+from .states import space_registry
 from .vault import container_vault
 from .config import ConfigInfo, Config
 from .unit import Unit

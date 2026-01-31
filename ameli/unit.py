@@ -15,7 +15,8 @@ from abc import ABC, abstractmethod
 
 import sympy as sp
 
-from . import space_registry, desc_format
+from . import desc_format
+from .states import space_registry
 from .datatype import DataType
 from .vault import container_vault
 from .config import ConfigInfo, Config

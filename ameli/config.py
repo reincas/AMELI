@@ -21,7 +21,8 @@ from collections import namedtuple
 import sympy
 import sympy as sp
 
-from . import register_space, desc_format
+from . import desc_format
+from .states import register_space
 from .uintarray import decode_uint_array, encode_uint_array
 from .vault import container_vault
 
