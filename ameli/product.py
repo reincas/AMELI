@@ -10,11 +10,13 @@
 #
 ##########################################################################
 
-import array
 import logging
 import math
+import os
+import tempfile
 import time
 from itertools import combinations
+import h5py
 import numpy as np
 
 from . import desc_format
@@ -25,9 +27,6 @@ from .vault import container_vault
 
 __version__ = "1.0.0"
 logger = logging.getLogger("product")
-
-# Mapping of byte number to uint type codes for array.array
-UINT_TCODES = {1: "B", 2: "H", 4: "L", 8: "Q"}
 
 
 ###########################################################################
@@ -189,18 +188,23 @@ class ProductElement():
         # Start the permutation generator
         yield from generate(len(electrons), list(electrons), [0])
 
-    def elementary(self, elements, tensor_size):
-        """ Add all combinations and permutations of tensor_size-sequences of initial and final electrons together
-        with their antisymmetry sign for the calculation of this determinantal product state matrix element to the
-        given array. Return the number of added tuples. """
+    def elementary(self, tensor_size, dtype):
+        """ Return array of all combinations and permutations of tensor_size-sequences of initial and final
+        electrons together with their antisymmetry sign for the calculation of this determinantal product state
+        matrix element. """
 
         # Matrix element is zero if initial and final states differ in more electrons than the operator is acting on
         if self.num_diff > tensor_size:
             return
 
-        # Iterate through tensor_size-tuples of initial and final electrons containing all combinations of
-        # tensor_size-num_diff same electrons together with the fixed other electrons
-        size = 0
+        # Calculate number of elementary elements
+        size = math.comb(self.num_electrons - self.num_diff, tensor_size - self.num_diff)
+        size *= math.factorial(tensor_size) ** 2
+
+        # Store all tuples of initial and final electrons containing all combinations of tensor_size-num_diff
+        # same electrons together with the fixed other electrons
+        elements = np.zeros((size, 2 * tensor_size + 1), dtype=dtype)
+        index = 0
         for initial_electrons, final_electrons in self.iterate(tensor_size):
 
             # Iterate through all permutations of the initial electrons with sign
@@ -210,14 +214,82 @@ class ProductElement():
                 for final, sign_final in self.determinant(final_electrons):
                     # Store initial and final electrons with total sign
                     sign = (self.sign + sign_initial + sign_final) % 2
-                    elements.extend(initial + final + (sign,))
-                    size += 1
+                    elements[index, :] = initial + final + (sign,)
+                    index += 1
 
-        # Return the number of tuples
-        return size
+        # Return the array of elementary elements
+        return elements
 
 
-class ProductElements():
+class ElementStorage:
+    def __init__(self, index_dtype, element_dtype, index_size, element_cols):
+        """ Create temporary HDF5 file with datasets 'indices' and 'elements'. """
+
+        self.index_dtype = index_dtype
+        self.element_dtype = element_dtype
+        self.index_size = index_size
+        self.element_cols = element_cols
+
+        # Generate temporary HDF5 file
+        fd, self.path = tempfile.mkstemp(suffix=".hdf5", prefix="elements_")
+        os.close(fd)
+        self.fp = h5py.File(self.path, 'w', libver='latest')
+
+        # Initialise empty resizable dataset 'indices'
+        self.indices = self.fp.create_dataset(
+            "indices",
+            shape=(self.index_size, 3),
+            maxshape=(None, 3),
+            dtype=self.index_dtype,
+            chunks=(1024, 3),
+            compression="gzip"
+        )
+
+        # Initialise empty resizable dataset 'elements'
+        self.elements = self.fp.create_dataset(
+            "elements",
+            shape=(128 * 1024, self.element_cols),
+            maxshape=(None, self.element_cols),
+            dtype=self.element_dtype,
+            chunks=(128 * 1024, self.element_cols),
+            compression="gzip"
+        )
+
+        # Initialise index and element counters
+        self.num_indices = 0
+        self.num_elements = 0
+        self.immutable = False
+
+    def append(self, initial, final, elements):
+        """ Append row to dataset 'indices' and chunk to dataset 'elements'. """
+
+        assert not self.immutable
+        assert len(elements.shape) == 2
+        assert elements.shape[1] == self.element_cols
+
+        size = int(elements.shape[0])
+        self.indices[self.num_indices, :] = (initial, final, size)
+        self.elements[self.num_elements:self.num_elements + size, :] = elements
+        self.num_indices += 1
+        self.num_elements += size
+
+    def finalize(self):
+        """ Fix final sizes of the datasets and make the object immutable. """
+
+        assert not self.immutable
+        self.indices.resize(self.num_indices, axis=0)
+        self.elements.resize(self.num_elements, axis=0)
+        self.immutable = True
+
+    def close(self):
+        """ Close and remove the temporary HDF5 file. """
+
+        self.fp.close()
+        if os.path.exists(self.path):
+            os.remove(self.path)
+
+
+class ProductElements:
     """ Support class for the calculation of matrix elements for m-electron tensor operators within a configuration
     of n electrons, where m <= n. Based on a given electron configuration the object generates a ProductState object
     for each state of the configuration. This allows for a fast determination of equal electrons for every pair of
@@ -315,37 +387,35 @@ class ProductElements():
         while len(self.len_diff) <= tensor_size:
             self.add_elements()
 
-        # Determine datatype and type code for the dataset indices by its maximum element
-        max_index = max(self.num_states, math.comb(self.num_electrons, tensor_size) * math.factorial(tensor_size) ** 2)
-        dtype, match = get_dtype(max_index)
+        # Determine datatype and type code for the dataset 'indices' by its maximum element
+        max_value = max(self.num_states, math.comb(self.num_electrons, tensor_size) * math.factorial(tensor_size) ** 2)
+        index_dtype, match = get_dtype(max_value)
         assert match
-        tcode = UINT_TCODES[np.dtype(dtype).itemsize]
+
+        # Determine datatype and type code for the dataset 'elements' by its maximum element
+        max_value = self.config.states.pool_size - 1
+        element_dtype, match = get_dtype(max_value)
+        assert match
 
         # Build the index list and the list of elementary matrix elements
-        indices = array.array(tcode)
-        elements = array.array(UINT_TCODES[1])
         max_index = self.len_diff[tensor_size]
+        element_cols = 2 * tensor_size + 1
+        storage = ElementStorage(index_dtype, element_dtype, max_index, element_cols)
         logger.debug(f"Collecting {max_index} elements for {tensor_size}-electron operators")
         i = 0
         for initial_index, final_index, product_element in self.elements[:max_index]:
-            # Append list of elementary matrix elements to be evaluated
-            size = product_element.elementary(elements, tensor_size)
-
-            # Append state indices and the number of elementary matrix elements
-            indices.extend((initial_index, final_index, size))
+            elements = product_element.elementary(tensor_size, element_dtype)
+            storage.append(initial_index, final_index, elements)
 
             # Log progress
             i += 1
             if i % 10000 == 0:
-                logger.debug(f"  {self.config.name} | Collected {len(indices)}/{max_index} elements")
-
-        # Convert arrays to numpy views
-        indices = np.frombuffer(indices, dtype=dtype).reshape(-1, 3)
-        elements = np.frombuffer(elements, dtype=np.uint8).reshape(-1, 2 * tensor_size + 1)
+                logger.debug(f"  {self.config.name} | Collected {i}/{max_index} elements")
 
         # Return the list of matrix element indices and elementary tensor arguments
         logger.debug(f"Collected all {max_index} elements for {tensor_size}-electron operators")
-        return indices, elements
+        storage.finalize()
+        return storage
 
 
 ###########################################################################
@@ -433,8 +503,9 @@ class Product:
 
         # Generate product state support data
         t = time.time()
-        indices, elements = product_elements.matrix_elements(self.tensor_size)
-        product_dict = {"indices": indices, "elements": elements}
+        storage = product_elements.matrix_elements(self.tensor_size)
+        # product_dict = {"indices": storage.indices, "elements": storage.elements}
+        product_dict = {"indices": np.array(storage.indices), "elements": np.array(storage.elements)}
 
         # Prepare container description string
         kwargs = {
@@ -470,6 +541,10 @@ class Product:
 
         # Create the data container and store it in a file
         container_vault[self.file] = items
+
+        # Delete the temporary HDF5 file
+        storage.close()
+
         t = time.time() - t
         ts = self.tensor_size
         logger.info(f"Stored {config.name} product states for {ts} electrons ({t:.1f} seconds) -> {self.file}")

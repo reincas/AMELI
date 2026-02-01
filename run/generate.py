@@ -9,7 +9,7 @@ import time
 import sys
 from ameli.lanthanide.build import run_sync, run_pool
 
-POOL = False
+POOL = True
 
 
 ##########################################################################
