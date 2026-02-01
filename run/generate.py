@@ -7,7 +7,7 @@
 import logging
 import time
 import sys
-from ameli.lanthanide.build import run_sync, run_pool
+from ameli import run_sync, run_pool
 
 POOL = True
 
