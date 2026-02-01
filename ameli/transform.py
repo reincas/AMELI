@@ -1166,6 +1166,7 @@ class Transform:
         if isinstance(dtype, str):
             dtype = DataType(dtype)
         self.dtype = dtype
+        assert self.dtype.is_symbolic
 
         # Configuration string
         self.config_name = config_name

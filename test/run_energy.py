@@ -129,7 +129,7 @@ def calc_energies(config_name, radial):
     # Build the full perturbation Hamiltonian
     H = np.zeros((num_states, num_states), dtype=np.float64)
     for matrix, factor in matrices:
-        array = np.array(matrix.matrix.evalf()).astype(np.float64)
+        array = matrix.info.array(np.float64)
         H += factor * array
     energies, eigenvectors = np.linalg.eigh(H)
     return energies, eigenvectors, irepr
@@ -226,8 +226,8 @@ def check_coulomb(data):
         for k in (2, 4, 6):
             name = f"U/{k}"
             assert Matrix.exists("symbolic", config_name, name, "SLJ", reduced=True)
-            reduced = Matrix("symbolic", config_name, name, "SLJ", reduced=True).matrix
-            reduced = np.array(reduced.evalf()).astype(np.float64)
+            reduced = Matrix("symbolic", config_name, name, "SLJ", reduced=True)
+            reduced = reduced.info.array(np.float64)
             reduced = intermediate.T @ reduced @ intermediate
             reduced = np.power(reduced, 2)
             U_real[k] = reduced

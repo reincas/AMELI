@@ -459,6 +459,10 @@ class SymMatrix:
         dtype = components[0].dtype
         return cls.from_matrix(dtype, "SLJ", "SLJ", matrix)
 
+    def array(self, dtype):
+        """ Return matrix as numpy array. """
+
+        return np.array(self.matrix.evalf()).astype(dtype)
 
 ###########################################################################
 # Floating point state matrix class

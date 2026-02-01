@@ -4,9 +4,9 @@
 # This program is free software under the terms of the MIT license.      #
 ##########################################################################
 #
-# Compare 2st order Coulomb interaction matrix elements for three
-# electrons (H4) from the literature for the f3 configuration with
-# results from the Lanthanide package.
+# Exact symbolic comparison of 2st order Coulomb interaction matrix
+# elements for three electrons (H4) from the literature for the f3
+# configuration.
 #
 ##########################################################################
 

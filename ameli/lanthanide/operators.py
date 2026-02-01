@@ -41,29 +41,29 @@ def matrix_args(num_electrons):
 
     # Loop through all types and names of tensor matrices
     config_name = f"f{num_electrons}"
-    for dtype in ("symbolic", "float64"):
-        for state_space in ("Product", "SLJM", "SLJ"):
-            for name, min_electrons in matrix_names():
-                if num_electrons < min_electrons:
-                    continue
+    dtype = "symbolic"
+    for state_space in ("Product", "SLJM", "SLJ"):
+        for name, min_electrons in matrix_names():
+            if num_electrons < min_electrons:
+                continue
 
-                # Yield initialisation arguments of a normal matrix
-                kwargs = {
-                    "dtype": dtype,
-                    "config_name": config_name,
-                    "name": name,
-                    "state_space": state_space,
-                }
+            # Yield initialisation arguments of a normal matrix
+            kwargs = {
+                "dtype": dtype,
+                "config_name": config_name,
+                "name": name,
+                "state_space": state_space,
+            }
+            yield kwargs
+
+            # Yield initialisation arguments of a matrix of reduced elements
+            if state_space == "SLJ":
+                name_data = MatrixName(name)
+                if name_data.rank > 0:
+                    if "," in name:
+                        name = name[:name.rfind(",")]
+                    else:
+                        name = name[:name.rfind("/")]
+                kwargs["name"] = name
+                kwargs["reduced"] = True
                 yield kwargs
-
-                # Yield initialisation arguments of a matrix of reduced elements
-                if state_space == "SLJ":
-                    name_data = MatrixName(name)
-                    if name_data.rank > 0:
-                        if "," in name:
-                            name = name[:name.rfind(",")]
-                        else:
-                            name = name[:name.rfind("/")]
-                    kwargs["name"] = name
-                    kwargs["reduced"] = True
-                    yield kwargs

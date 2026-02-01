@@ -4,9 +4,9 @@
 # This program is free software under the terms of the MIT license.      #
 ##########################################################################
 #
-# Compare 1st order spin-spin and spin-other-orbit (H5) and 2nd order
-# spin-orbit (H6) matrix elements from the literature for the f2 and f12
-# configurations with results from the AMELI package.
+# Exact symbolic comparison of 1st order spin-spin and spin-other-orbit
+# (H5) and 2nd order spin-orbit (H6) matrix elements from the literature
+# for the f2 and f12 configurations with results from the AMELI package.
 #
 # Note: We use equation (3) in [24] for the comparison. This equation
 # contains a typo. The correct sign factor is (-1)^(S'+L'+J) with L'.
@@ -17,7 +17,7 @@ import itertools
 import pytest
 import sympy as sp
 from sympy.physics.wigner import wigner_6j
-from ameli import SPECTRAL, Matrix
+from ameli import Matrix
 from data_magnetic import SOURCES, MAGNETIC
 
 
