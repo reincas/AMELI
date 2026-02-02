@@ -504,8 +504,7 @@ class Product:
         # Generate product state support data
         t = time.time()
         storage = product_elements.matrix_elements(self.tensor_size)
-        # product_dict = {"indices": storage.indices, "elements": storage.elements}
-        product_dict = {"indices": np.array(storage.indices), "elements": np.array(storage.elements)}
+        product_dict = {"indices": storage.indices, "elements": storage.elements}
 
         # Prepare container description string
         kwargs = {
