@@ -29,8 +29,7 @@ def test_states(num_electrons: int):
 
     # States determined by AMELI
     config_name = f"f{num_electrons}"
-    dtype = "symbolic"
-    transform = Transform(dtype, config_name)
+    transform = Transform(config_name)
     states = transform.col_states.names
 
     # Terms from literature

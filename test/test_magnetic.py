@@ -18,6 +18,7 @@ import pytest
 import sympy as sp
 from sympy.physics.wigner import wigner_6j
 from ameli import Matrix
+
 from data_magnetic import SOURCES, MAGNETIC
 
 
@@ -50,7 +51,7 @@ def test_magnetic(data_key):
 
     # Tensor operator matrix
     success = True
-    matrix = Matrix("symbolic", config_name, name, "SLJM")
+    matrix = Matrix(config_name, name, "SLJM")
     array = matrix.matrix
 
     # J space indices

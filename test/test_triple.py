@@ -14,6 +14,7 @@ import itertools
 import pytest
 import sympy as sp
 from ameli import Matrix
+
 from data_triple import SOURCES, TRIPLE
 
 
@@ -46,7 +47,7 @@ def test_triple(data_key):
 
     # Tensor operator matrix
     success = True
-    matrix = Matrix("symbolic", config_name, name, "SLJM")
+    matrix = Matrix(config_name, name, "SLJM")
     array = matrix.matrix
 
     # J space indices

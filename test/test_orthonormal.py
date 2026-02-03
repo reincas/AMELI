@@ -19,9 +19,7 @@ def test_orthonormal(num_electrons: int):
 
     # Transformation object
     config_name = f"f{num_electrons}"
-    dtype = "symbolic"
-    transform = Transform(dtype, config_name)
-    dtype = transform.dtype
+    transform = Transform(config_name)
 
     # Symbolic transformation test
     V = transform.matrix

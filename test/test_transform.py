@@ -20,9 +20,7 @@ def test_transform(num_electrons: int):
 
     # Transformation object
     config_name = f"f{num_electrons}"
-    dtype = "symbolic"
-    transform = Transform(dtype, config_name)
-    dtype = transform.dtype
+    transform = Transform(config_name)
 
     # Test every tensor operator in the symmetry chain
     for i, name in enumerate(transform.col_states.tensor_chain):
@@ -30,7 +28,7 @@ def test_transform(num_electrons: int):
             continue
 
         # Operator matrix and eigenvalues
-        matrix = Matrix(dtype, config_name, name, "Product").matrix
+        matrix = Matrix(config_name, name, "Product").matrix
         eigenvalues = transform.col_states.eigenvalue_lists()[name]
 
         # Symbolic test
