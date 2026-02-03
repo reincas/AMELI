@@ -17,15 +17,18 @@ are also supported by numpy, namely 'float16', 'float32', and 'float64'. AMELI
 is also able to use SymPy to calculate and store matrices with symbolic elements.
 Each matrix element is the square root of a rational number.
 
-**Note:** This is the final release which contains the code to calculate floating
-point matrices, although it is not used any more. This code will be removed in
-the next version. Floating point matrices can always be derived directly from
-their exact symbolic counterparts. See [Lanthanide](https://github.com/reincas/Lanthanide)
-if you are interested in pure floating point calculations. 
-
 Operator matrices and other intermediate calculation results are stored as 
 [SciDataContainer](https://scidatacontainer.readthedocs.io) files enriched with
 plenty of meta data and descriptions. Following the FAIR data principles of
 data management the container content is easily accessible to humans and machines.
 A SciDataContainer file is a ZIP folder containing JSON files for the meta data
 and HDF5 files for the numerical data.
+
+## Note
+
+This is the final release which contains the code to calculate floating
+point matrices, although it is not used any more. This code will be removed in
+the next version. Floating point matrices can always be derived directly from
+their exact symbolic counterparts. See [Lanthanide](https://github.com/reincas/Lanthanide)
+if you are interested in pure floating point calculations. 
+
