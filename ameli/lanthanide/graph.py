@@ -68,7 +68,7 @@ def matrix_dry_run(func, *args, **kwargs):
 
     # Initialise list of arguments and dummy config object
     trace = []
-    config = args[1]
+    config = args[0]
 
     def mock_unit(config_name, name):
         """ Return stunt double of a Matrix object. """

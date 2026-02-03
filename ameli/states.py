@@ -11,12 +11,11 @@
 class StateSpace:
     """ Interface class for the abstraction of different coupling spaces. """
 
-    def __init__(self, name, cls, get_transform, subspace=None):
+    def __init__(self, name, cls, subspace=None):
         """ Store state space name, transformation class and transformation object getter function. """
 
         self.name = name
         self.cls = cls
-        self.get_transform = get_transform
         self.subspace = subspace
 
         # No transformation object loaded yet
@@ -27,10 +26,10 @@ class StateSpace:
         for attr in attributes:
             assert hasattr(self.cls, attr), f"Attribute {self.cls.__name__}.{attr} missing!"
 
-    def load(self, dtype, config_name):
+    def load(self, config_name):
         """ Load a transformation object. """
 
-        self.transform = self.get_transform(dtype, config_name)
+        self.transform = self.cls(config_name)
 
     @property
     def states_desc(self):
@@ -68,11 +67,11 @@ class StateSpace:
 space_registry = {}
 
 
-def register_space(space, cls, get_transform):
+def register_space(space, cls):
     """ Register the state space name, transformation class and transformation object getter function for the given
     state space. """
 
-    space_registry[space] = StateSpace(space, cls, get_transform)
+    space_registry[space] = StateSpace(space, cls)
 
 
 def register_subspace(space, subspace):
@@ -80,6 +79,6 @@ def register_subspace(space, subspace):
 
     assert space in space_registry, f"State space {space} is not registered!"
     parent = space_registry[space]
-    space_registry[subspace] = StateSpace(space, parent.cls, parent.get_transform, subspace=subspace)
+    space_registry[subspace] = StateSpace(space, parent.cls, subspace=subspace)
 
 

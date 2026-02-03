@@ -336,4 +336,4 @@ class Config():
 
 
 # Register space of electron product states
-register_space("Product", Config, lambda dtype, config_name: Config(config_name))
+register_space("Product", Config)

@@ -425,7 +425,6 @@ class SymMatrix:
         # Sanity checks
         assert all(isinstance(matrix, cls) for matrix in components)
         assert len(set(matrix.num_states for matrix in components)) == 1
-        assert set(matrix.dtype.name for matrix in components) == {"symbolic"}
         assert set(matrix.row_space for matrix in components) == {"SLJ"}
         assert set(matrix.col_space for matrix in components) == {"SLJ"}
 

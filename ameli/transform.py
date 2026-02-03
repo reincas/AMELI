@@ -1226,5 +1226,5 @@ class Transform:
 
 
 # Register space of electron states in LS coupling
-register_space("SLJM", Transform, Transform)
+register_space("SLJM", Transform)
 register_subspace("SLJM", "SLJ")

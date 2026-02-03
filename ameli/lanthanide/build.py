@@ -48,18 +48,18 @@ def memory():
 # Synchronous direct build process (no graph)
 ##########################################################################
 
-def build_matrix(dtype, config_name, name, state_space, reduced=False):
+def build_matrix(config_name, name, state_space, reduced=False):
     logger = logging.getLogger("build")
 
-    matrix_str = f"Matrix({dtype}, {config_name}, {name}, {state_space}, reduced={reduced})"
+    matrix_str = f"Matrix({config_name}, {name}, {state_space}, {reduced})"
 
-    if Matrix.exists(dtype, config_name, name, state_space, reduced):
+    if Matrix.exists(config_name, name, state_space, reduced):
         logger.info(f"{matrix_str} exists.")
         return
 
     logger.info(f"Generate {matrix_str}.")
     t = time.time()
-    Matrix(dtype, config_name, name, state_space, reduced)
+    Matrix(config_name, name, state_space, reduced)
     t = time.time() - t
     logger.info(f"Matrix generation took {t:.1f} seconds / {memory()}")
 
@@ -292,6 +292,14 @@ class PoolScheduler:
         rss = self.max_rss(node_id)
         if vmem.available - rss < MEM_CRITICAL:
             heapq.heappush(self.active_heap, (priority, node_id))
+
+            # Terminate an idle worker
+            if len(self.idle_workers) > 0:
+                pid = self.idle_workers[0]
+                rss = self.get_rss(pid) / 1024 ** 2
+                self.logger.warning(f"Terminating idle PID {pid} using {rss:.0f}MB")
+                node_id = self.terminate(pid)
+                assert node_id is None
             return
 
         # Get free worker
