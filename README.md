@@ -9,13 +9,19 @@ in a Zenodo repository.
 AMELI calculates operator matrices in the product state space, but it is able to
 transform them to LS coupling. All characteristic eigenvalues and irreducible
 representations for each state are provided. Global signs are synchronized for
-states inside a Stark group (same J). This allows for intermediate coupling
-in amorphous materials.
+states inside a Stark group (same J). This allows to use reduced matrices for
+intermediate coupling in amorphous materials.
 
 For numerical calculation AMELI supports all floating point data types which
 are also supported by numpy, namely 'float16', 'float32', and 'float64'. AMELI
 is also able to use SymPy to calculate and store matrices with symbolic elements.
 Each matrix element is the square root of a rational number.
+
+**Note:** This is the final release which contains the code to calculate floating
+point matrices, although it is not used any more. This code will be removed in
+the next version. Floating point matrices can always be derived directly from
+their exact symbolic counterparts. See [Lanthanide](https://github.com/reincas/Lanthanide)
+if you are interested in pure floating point calculations. 
 
 Operator matrices and other intermediate calculation results are stored as 
 [SciDataContainer](https://scidatacontainer.readthedocs.io) files enriched with
