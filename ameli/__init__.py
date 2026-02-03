@@ -10,7 +10,7 @@ from sympy.physics.wigner import wigner_3j
 
 
 def desc_format(description, kwargs):
-    """ Basic transformation for mata data description strings. """
+    """ Basic transformation for metadata description strings. """
 
     desc = str(description)
     desc = re.sub(r"\s*\n\s*", " ", desc)
