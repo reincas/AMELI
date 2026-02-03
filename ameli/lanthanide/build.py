@@ -344,20 +344,19 @@ class PoolScheduler:
         self.logger.info(f"Number of unfinished nodes: {uf} ({ac} active).")
 
     @property
-    def memory_status(self):
+    def status(self):
         avail = psutil.virtual_memory().available / 1024 ** 2
         limit = MEM_MAXIMAL / 1024 ** 2
         hard = MEM_CRITICAL / 1024 ** 2
-        return f"available: {avail:.0f} MB, limit: {limit:.0f} MB, hard limit: {hard:.0f} MB"
+        status = f"Mem avail: {avail:.0f} MB (limits: {limit:.0f}/{hard:.0f} MB)"
 
-    @property
-    def task_status(self):
         w = len(self.workers)
         r = len(self.busy_workers)
         a = len(self.active_heap)
         t = self.registry.unfinished
         assert a <= t
-        return f"workers: {w} ({r} busy), tasks: {t} ({a} active)"
+        status += f" -- Workers: {w} ({r} busy) -- Tasks: {t} ({a} active)"
+        return status
 
     def run(self, nums_electrons: list):
         self.logger.info(f"Build nodes in a pool of {self.max_workers} workers.")
@@ -367,18 +366,12 @@ class PoolScheduler:
             self.register(nums_electrons.pop(0))
 
         # Run until all nodes are completed
-        last_mem_status = ""
-        last_task_status = ""
+        last_status = ""
         while self.registry.unfinished and not self.stop_event.is_set():
-            status = self.memory_status
-            if status != last_mem_status:
-                self.logger.info(f"Memory status: {status}")
-                last_mem_status = status
-
-            status = self.task_status
-            if status != last_task_status:
-                self.logger.info(f"Task status: {status}")
-                last_task_status = status
+            status = self.status
+            if status != last_status:
+                self.logger.info(f"Status: {status}")
+                last_status = status
 
             self.update_rss()
             free_space = self.memory_watchdog()
