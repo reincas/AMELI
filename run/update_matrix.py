@@ -59,31 +59,18 @@ def update_matrix(file: pathlib.Path):
 
 
 def all_matrices(root_path: pathlib.Path):
-
-    # Ensure we are working with a Path object
     root = pathlib.Path(root_path)
-
-    # Using regex to ensure 'f' is followed by a number
     f_pattern = re.compile(r'^f[0-9]+$')
-
-    # Level 1: f<n> folders
     for f_dir in root.iterdir():
         if f_dir.is_dir() and f_pattern.match(f_dir.name):
+            sym_dir = f_dir / "symbolic"
+            if sym_dir.is_dir():
+                target_subs = ["Product", "SLJM", "SLJ", "SLJreduced"]
+                for sub_name in target_subs:
+                    sub_dir = sym_dir / sub_name
+                    if sub_dir.is_dir():
+                        yield from sub_dir.rglob("*.zdc")
 
-            # Level 2: New intermediate layer (optional folders)
-            types_of_data = ["symbolic", "float64"]
-            for type_name in types_of_data:
-                type_dir = f_dir / type_name
-
-                if type_dir.is_dir():
-                    # Level 3: Product, SLJM, or SLJ
-                    target_subs = ["Product", "SLJM", "SLJ"]
-                    for sub_name in target_subs:
-                        sub_dir = type_dir / sub_name
-
-                        if sub_dir.is_dir():
-                            # Level 4: Final recursive yield
-                            yield from sub_dir.rglob("*.zdc")
 
 for file in all_matrices(VAULT_PATH):
     update_matrix(file)
