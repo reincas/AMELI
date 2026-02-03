@@ -20,9 +20,8 @@ import sympy as sp
 from ameli.config import generate_config, ConfigInfo, Config
 from ameli.product import Product
 from ameli.unit import MATRIX, Unit
-from ameli.matrix import FORCE_SYMBOLIC, MatrixName, Matrix
+from ameli.matrix import MatrixName, Matrix
 from ameli.transform import SYM_INFO, SYM_CHAIN, config_key, Transform
-from ameli.datatype import DataType
 from ameli.vault import container_vault
 
 
@@ -71,15 +70,11 @@ def matrix_dry_run(func, *args, **kwargs):
     trace = []
     config = args[1]
 
-    def mock_unit(dtype, config_name, name):
+    def mock_unit(config_name, name):
         """ Return stunt double of a Matrix object. """
 
         # Store Uatrix initialisation arguments
-        kwargs = {
-            "dtype": dtype.name,
-            "config_name": config_name,
-            "name": name,
-        }
+        kwargs = {"config_name": config_name, "name": name}
         trace.append(("Unit", kwargs))
 
         # Return stunt double for the Unit object with empty matrix
@@ -88,12 +83,11 @@ def matrix_dry_run(func, *args, **kwargs):
         stunt_double.matrix = sp.zeros(num_states, num_states)
         return stunt_double
 
-    def mock_matrix(dtype, config_name, name, state_space, reduced=False):
+    def mock_matrix(config_name, name, state_space, reduced=False):
         """ Return stunt double of a Matrix object. """
 
         # Store Matrix initialisation arguments
         kwargs = {
-            "dtype": dtype.name,
             "config_name": config_name,
             "name": name,
             "state_space": state_space,
@@ -212,19 +206,14 @@ class Node:
 
 class ConfigNode(Node):
     def __init__(self, registry, node_id, config_name):
-        kwargs = {
-            "config_name": config_name,
-        }
+        kwargs = {"config_name": config_name}
         file = Config.get_path(config_name)
         super().__init__(registry, node_id, Config, file, **kwargs)
 
 
 class ProductNode(Node):
     def __init__(self, registry, node_id, config_name, tensor_size):
-        kwargs = {
-            "config_name": config_name,
-            "tensor_size": tensor_size,
-        }
+        kwargs = {"config_name": config_name, "tensor_size": tensor_size}
         file = Product.get_path(config_name, tensor_size)
         super().__init__(registry, node_id, Product, file, **kwargs)
 
@@ -232,15 +221,9 @@ class ProductNode(Node):
 
 
 class UnitNode(Node):
-    def __init__(self, registry, node_id, dtype, config_name, name):
-        if isinstance(dtype, str):
-            dtype = DataType(dtype)
-        kwargs = {
-            "dtype": dtype.name,
-            "config_name": config_name,
-            "name": name,
-        }
-        file = Unit.get_path(dtype, config_name, name)
+    def __init__(self, registry, node_id, config_name, name):
+        kwargs = {"config_name": config_name, "name": name}
+        file = Unit.get_path(config_name, name)
         super().__init__(registry, node_id, Unit, file, **kwargs)
 
         self.register_parent(ConfigNode, config_name=config_name)
@@ -250,15 +233,10 @@ class UnitNode(Node):
 
 
 class TransformNode(Node):
-    def __init__(self, registry, node_id, dtype, config_name):
+    def __init__(self, registry, node_id, config_name):
 
-        if isinstance(dtype, str):
-            dtype = DataType(dtype)
-        kwargs = {
-            "dtype": dtype.name,
-            "config_name": config_name,
-        }
-        file = Transform.get_path(dtype, config_name)
+        kwargs = {"config_name": config_name}
+        file = Transform.get_path(config_name)
         super().__init__(registry, node_id, Transform, file, **kwargs)
 
         self.register_parent(ConfigNode, config_name=config_name)
@@ -268,7 +246,6 @@ class TransformNode(Node):
         names = [SYM_INFO[name]["matrix"] for name in chain if SYM_INFO[name]["matrix"] is not None]
         for name in names:
             kwargs = {
-                "dtype": dtype.name,
                 "config_name": config_name,
                 "name": name,
                 "state_space": "Product",
@@ -278,34 +255,21 @@ class TransformNode(Node):
 
 
 class MatrixNode(Node):
-    def __init__(self, registry, node_id, dtype, config_name, name, state_space, reduced=False):
+    def __init__(self, registry, node_id, config_name, name, state_space, reduced=False):
         if reduced:
             assert state_space == "SLJ"
-        if isinstance(dtype, str):
-            dtype = DataType(dtype)
         kwargs = {
-            "dtype": dtype.name,
             "config_name": config_name,
             "name": name,
             "state_space": state_space,
             "reduced": reduced,
         }
-        file = Matrix.get_path(dtype, config_name, name, state_space, reduced)
+        file = Matrix.get_path(config_name, name, state_space, reduced)
         super().__init__(registry, node_id, Matrix, file, **kwargs)
 
         self.register_parent(ConfigNode, config_name=config_name)
-        if FORCE_SYMBOLIC and not dtype.is_symbolic:
+        if state_space == "SLJ" and not reduced:
             kwargs = {
-                "dtype": "symbolic",
-                "config_name": config_name,
-                "name": name,
-                "state_space": state_space,
-                "reduced": reduced,
-            }
-            self.register_parent(MatrixNode, **kwargs)
-        elif state_space == "SLJ" and not reduced:
-            kwargs = {
-                "dtype": dtype.name,
                 "config_name": config_name,
                 "name": name,
                 "state_space": "SLJM",
@@ -316,7 +280,6 @@ class MatrixNode(Node):
             name_data = MatrixName(name)
             for name in name_data.components():
                 kwargs = {
-                    "dtype": dtype.name,
                     "config_name": config_name,
                     "name": name,
                     "state_space": "SLJ",
@@ -326,8 +289,8 @@ class MatrixNode(Node):
         else:
             config = MockConfig(config_name)
             name_data = MatrixName(name)
-            for mtype, kwargs in matrix_dry_run(name_data.func, dtype, config, *name_data.args):
+            for mtype, kwargs in matrix_dry_run(name_data.func, config, *name_data.args):
                 node = {"Unit": UnitNode, "Matrix": MatrixNode}[mtype]
                 self.register_parent(node, **kwargs)
             if state_space == "SLJM":
-                self.register_parent(TransformNode, dtype=dtype.name, config_name=config_name)
+                self.register_parent(TransformNode, config_name=config_name)

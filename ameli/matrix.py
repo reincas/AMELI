@@ -4,20 +4,18 @@
 # This program is free software under the terms of the MIT license.      #
 ##########################################################################
 #
-# This module provides the class Matrix, which represents the symbolic
-# or floating point matrix of a spherical tensor operator in a given
+# This module provides the class Matrix, which represents the exact
+# symbolic matrix of a angular spherical tensor operator in a given
 # state space.
 #
 ##########################################################################
 
 import logging
 import time
-
-import numpy as np
 import sympy as sp
 
-from . import desc_format
-from .datatype import DataType
+from . import desc_format, sym3j
+from .sparse import SymMatrix
 from .states import space_registry
 from .vault import container_vault
 from .config import ConfigInfo, Config
@@ -26,17 +24,14 @@ from .unit import Unit
 __version__ = "1.0.0"
 logger = logging.getLogger("matrix")
 
-# Force symbolic calculation even for numeric matrices (don't change that!)
-FORCE_SYMBOLIC = True
-
 
 ###########################################################################
 # Unit spherical tensor operators
 ###########################################################################
 
-def matrix_U(dtype, config, k: int, q: int):
-    """ Return the dtype matrix <|Uk_q|> of the q-component of the unit tensor operator of rank k acting in the
-    orbital angular momentum space as product state matrix for the given electron configuration. """
+def matrix_U(config, k: int, q: int):
+    """ Return the matrix <|Uk_q|> of the q-component of the unit tensor operator of rank k acting in the orbital
+    angular momentum space as product state matrix for the given electron configuration. """
 
     # The current code works only for a single-shell configuration
     assert config.info.num_subshells == 1
@@ -47,16 +42,16 @@ def matrix_U(dtype, config, k: int, q: int):
     assert 0 <= k <= 2 * l
 
     # One-electron matrix
-    matrix = Unit(dtype, config.name, f"UT/{k},0,{k},{q}").matrix
-    matrix *= dtype.sqrt(2 * s + 1)
+    matrix = Unit(config.name, f"UT/{k},0,{k},{q}").matrix
+    matrix *= sp.sqrt(2 * s + 1)
 
     # Return matrix
     return matrix
 
 
-def matrix_T(dtype, config, k: int, q: int):
-    """ Return the dtype matrix <|Tk_q|> of the q-component of the unit tensor operator of rank k acting in the
-    spin angular momentum space as product state matrix for the given electron configuration. """
+def matrix_T(config, k: int, q: int):
+    """ Return the matrix <|Tk_q|> of the q-component of the unit tensor operator of rank k acting in the spin angular
+    momentum space as product state matrix for the given electron configuration. """
 
     # The current code works only for a single-shell configuration
     assert config.info.num_subshells == 1
@@ -67,15 +62,15 @@ def matrix_T(dtype, config, k: int, q: int):
     assert 0 <= k <= 2 * s
 
     # One-electron matrix
-    matrix = Unit(dtype, config.name, f"UT/0,{k},{k},{q}").matrix
-    matrix *= dtype.sqrt(2 * l + 1)
+    matrix = Unit(config.name, f"UT/0,{k},{k},{q}").matrix
+    matrix *= sp.sqrt(2 * l + 1)
 
     # Return matrix
     return matrix
 
 
-def matrix_UU(dtype, config, k: int):
-    """ Return the dtype matrix <|Uk*Uk|> of the squared unit tensor operator of rank k acting in the orbital angular
+def matrix_UU(config, k: int):
+    """ Return the matrix <|Uk*Uk|> of the squared unit tensor operator of rank k acting in the orbital angular
     momentum space as product state matrix for the given electron configuration. """
 
     # The current code works only for a single-shell configuration
@@ -85,26 +80,26 @@ def matrix_UU(dtype, config, k: int):
     s = config.states.electron_pool[0].s
     l = config.states.electron_pool[0].l
     num = config.info.num_electrons
-    ident = dtype.eye(config.num_states)
+    ident = sp.SparseMatrix.eye(config.num_states)
     assert 0 <= k <= 2 * l
     sign = (-1) ** k
 
     # One-electron matrix
-    matrix = dtype(num) * ident / dtype(2 * l + 1)
+    matrix = num * ident / (2 * l + 1)
 
     # Two-electron matrix
     if num > 1:
-        factor = dtype(sign * 2 * (2 * s + 1) * dtype.sqrt(2 * k + 1))
-        unit = Unit(dtype, config.name, f"UTUT/{k},0,{k},{k},0,{k},0,0").matrix
+        factor = sign * 2 * (2 * s + 1) * sp.sqrt(2 * k + 1)
+        unit = Unit(config.name, f"UTUT/{k},0,{k},{k},0,{k},0,0").matrix
         matrix += factor * unit
 
     # Return matrix
     return matrix
 
 
-def matrix_TT(dtype, config, k: int):
-    """ Return the dtype matrix <|Sk*Sk|> of the squared unit tensor operator of rank k acting in the spin angular
-    momentum space as product state matrix for the given electron configuration. """
+def matrix_TT(config, k: int):
+    """ Return the matrix <|Sk*Sk|> of the squared unit tensor operator of rank k acting in the spin angular momentum
+    space as product state matrix for the given electron configuration. """
 
     # The current code works only for a single-shell configuration
     assert config.info.num_subshells == 1, "One sub-shell only!"
@@ -113,26 +108,26 @@ def matrix_TT(dtype, config, k: int):
     s = config.states.electron_pool[0].s
     l = config.states.electron_pool[0].l
     num = config.info.num_electrons
-    ident = dtype.eye(config.num_states)
+    ident = sp.SparseMatrix.eye(config.num_states)
     assert 0 <= k <= 2 * s
     sign = (-1) ** k
 
     # One-electron matrix
-    matrix = dtype(num) * ident / dtype(2 * s + 1)
+    matrix = num * ident / (2 * s + 1)
 
     # Two-electron matrix
     if num > 1:
-        factor = dtype(sign * 2 * (2 * l + 1) * dtype.sqrt(2 * k + 1))
-        unit = Unit(dtype, config.name, f"UTUT/0,{k},{k},0,{k},{k},0,0").matrix
+        factor = sign * 2 * (2 * l + 1) * sp.sqrt(2 * k + 1)
+        unit = Unit(config.name, f"UTUT/0,{k},{k},0,{k},{k},0,0").matrix
         matrix += factor * unit
 
     # Return matrix
     return matrix
 
 
-def matrix_UT(dtype, config, k: int):
-    """ Return the dtype matrix <|Uk*Sk|> of the scalar product of the unit tensor operators of rank k acting in the
-    orbital and the spin angular momentum space as product state matrix for the given electron configuration. """
+def matrix_UT(config, k: int):
+    """ Return the matrix <|Uk*Sk|> of the scalar product of the unit tensor operators of rank k acting in the orbital
+    and the spin angular momentum space as product state matrix for the given electron configuration. """
 
     # The current code works only for a single-shell configuration
     assert config.info.num_subshells == 1, "One sub-shell only!"
@@ -145,14 +140,14 @@ def matrix_UT(dtype, config, k: int):
     sign = (-1) ** k
 
     # One-electron matrix
-    factor = dtype(sign * dtype.sqrt(2 * k + 1))
-    unit = Unit(dtype, config.name, f"UT/{k},{k},0,0").matrix
+    factor = sign * sp.sqrt(2 * k + 1)
+    unit = Unit(config.name, f"UT/{k},{k},0,0").matrix
     matrix = factor * unit
 
     # Two-electron matrix
     if num > 1:
-        factor = dtype(sign * 2 * dtype.sqrt((2 * s + 1) * (2 * l + 1) * (2 * k + 1)))
-        unit = Unit(dtype, config.name, f"UTUT/{k},0,{k},0,{k},{k},0,0").matrix
+        factor = sign * 2 * sp.sqrt((2 * s + 1) * (2 * l + 1) * (2 * k + 1))
+        unit = Unit(config.name, f"UTUT/{k},0,{k},0,{k},{k},0,0").matrix
         matrix += factor * unit
 
     # Return matrix
@@ -163,73 +158,73 @@ def matrix_UT(dtype, config, k: int):
 # Angular momentum spherical tensor operators
 ###########################################################################
 
-def matrix_L(dtype, config, q: int):
-    """ Return the dtype matrix <|L_q|> of the q-component of the total orbital angular momentum operator as product
-    state matrix for the given electron configuration. """
-
-    l = config.states.electron_pool[0].l
-    matrix = Matrix(dtype, config.name, f"U/1,{q}", "Product").matrix
-    matrix *= dtype.sqrt(l * (l + 1) * (2 * l + 1))
-    return matrix
-
-
-def matrix_S(dtype, config, q: int):
-    """ Return the dtype matrix <|S_q|> of the q-component of the total spin angular momentum operator as product
-    state matrix for the given electron configuration. """
-
-    s = config.states.electron_pool[0].s
-    matrix = Matrix(dtype, config.name, f"T/1,{q}", "Product").matrix
-    matrix *= dtype.sqrt(s * (s + 1) * (2 * s + 1))
-    return matrix
-
-
-def matrix_J(dtype, config, q: int):
-    """ Return the dtype matrix <|J_q|> of the q-component of the total angular momentum operator as product state
+def matrix_L(config, q: int):
+    """ Return the matrix <|L_q|> of the q-component of the total orbital angular momentum operator as product state
     matrix for the given electron configuration. """
 
-    matrix = Matrix(dtype, config.name, f"L/{q}", "Product").matrix
-    matrix += Matrix(dtype, config.name, f"S/{q}", "Product").matrix
+    l = config.states.electron_pool[0].l
+    matrix = Matrix(config.name, f"U/1,{q}", "Product").matrix
+    matrix *= sp.sqrt(l * (l + 1) * (2 * l + 1))
     return matrix
 
 
-def matrix_SS(dtype, config):
-    """ Return the dtype matrix <|S*S|> of the squared total spin angular momentum operator as product state matrix
-    for the given electron configuration. """
+def matrix_S(config, q: int):
+    """ Return the matrix <|S_q|> of the q-component of the total spin angular momentum operator as product state
+    matrix for the given electron configuration. """
 
     s = config.states.electron_pool[0].s
-    matrix = Matrix(dtype, config.name, "TT/1", "Product").matrix
-    matrix *= dtype(s * (s + 1) * (2 * s + 1))
+    matrix = Matrix(config.name, f"T/1,{q}", "Product").matrix
+    matrix *= sp.sqrt(s * (s + 1) * (2 * s + 1))
     return matrix
 
 
-def matrix_LL(dtype, config):
-    """ Return the dtype matrix <|L*L|> of the squared total orbital angular momentum operator as product state matrix
-    for the given electron configuration. """
-
-    l = config.states.electron_pool[0].l
-    matrix = Matrix(dtype, config.name, "UU/1", "Product").matrix
-    matrix *= dtype(l * (l + 1) * (2 * l + 1))
-    return matrix
-
-
-def matrix_LS(dtype, config):
-    """ Return the dtype matrix <|L*S|> of the scalar product of the total orbital and spin angular momentum operators
-    as product state matrix for the given electron configuration. """
-
-    s = config.states.electron_pool[0].s
-    l = config.states.electron_pool[0].l
-    matrix = Matrix(dtype, config.name, "UT/1", "Product").matrix
-    matrix *= dtype.sqrt(s * (s + 1) * (2 * s + 1) * l * (l + 1) * (2 * l + 1))
-    return matrix
-
-
-def matrix_JJ(dtype, config):
-    """ Return the dtype matrix <|J*J|> of the squared total angular momentum operator as product state matrix for
+def matrix_J(config, q: int):
+    """ Return the matrix <|J_q|> of the q-component of the total angular momentum operator as product state matrix for
     the given electron configuration. """
 
-    matrix = Matrix(dtype, config.name, "LL", "Product").matrix
-    matrix += 2 * Matrix(dtype, config.name, "LS", "Product").matrix
-    matrix += Matrix(dtype, config.name, "SS", "Product").matrix
+    matrix = Matrix(config.name, f"L/{q}", "Product").matrix
+    matrix += Matrix(config.name, f"S/{q}", "Product").matrix
+    return matrix
+
+
+def matrix_SS(config):
+    """ Return the matrix <|S*S|> of the squared total spin angular momentum operator as product state matrix for the
+    given electron configuration. """
+
+    s = config.states.electron_pool[0].s
+    matrix = Matrix(config.name, "TT/1", "Product").matrix
+    matrix *= s * (s + 1) * (2 * s + 1)
+    return matrix
+
+
+def matrix_LL(config):
+    """ Return the matrix <|L*L|> of the squared total orbital angular momentum operator as product state matrix for
+    the given electron configuration. """
+
+    l = config.states.electron_pool[0].l
+    matrix = Matrix(config.name, "UU/1", "Product").matrix
+    matrix *= l * (l + 1) * (2 * l + 1)
+    return matrix
+
+
+def matrix_LS(config):
+    """ Return the matrix <|L*S|> of the scalar product of the total orbital and spin angular momentum operators as
+    product state matrix for the given electron configuration. """
+
+    s = config.states.electron_pool[0].s
+    l = config.states.electron_pool[0].l
+    matrix = Matrix(config.name, "UT/1", "Product").matrix
+    matrix *= sp.sqrt(s * (s + 1) * (2 * s + 1) * l * (l + 1) * (2 * l + 1))
+    return matrix
+
+
+def matrix_JJ(config):
+    """ Return the matrix <|J*J|> of the squared total angular momentum operator as product state matrix for the given
+    electron configuration. """
+
+    matrix = Matrix(config.name, "LL", "Product").matrix
+    matrix += 2 * Matrix(config.name, "LS", "Product").matrix
+    matrix += Matrix(config.name, "SS", "Product").matrix
     return matrix
 
 
@@ -237,8 +232,8 @@ def matrix_JJ(dtype, config):
 # Casimirs spherical tensor operators
 ###########################################################################
 
-def matrix_CR(dtype, config):
-    """ Return the dtype matrix <|C2(SO(2l+1))|> of the Casimir operator of the special orthogonal (rotational) group
+def matrix_CR(config):
+    """ Return the matrix <|C2(SO(2l+1))|> of the Casimir operator of the special orthogonal (rotational) group
     SO(2*l+1) as product state matrix for the given electron configuration. """
 
     # The current code works only for a single-shell configuration
@@ -248,29 +243,29 @@ def matrix_CR(dtype, config):
     s = config.states.electron_pool[0].s
     l = config.states.electron_pool[0].l
     num = config.info.num_electrons
-    ident = dtype.eye(config.num_states)
+    ident = sp.SparseMatrix.eye(config.num_states)
 
     # One-electron matrix
-    factor = dtype.zero
+    factor = sp.S(0)
     for k in range(1, 2 * l, 2):
         factor += 2 * k + 1
-    matrix = dtype(num * factor / (2 * l + 1)) * ident
+    matrix = (num * factor / (2 * l + 1)) * ident
 
     # Two-electron matrix
     if num > 1:
         for k in range(1, 2 * l, 2):
-            factor = dtype((-1) ** k * 2 * (2 * s + 1) * (2 * k + 1) * dtype.sqrt(2 * k + 1))
-            unit = Unit(dtype, config.name, f"UTUT/{k},0,{k},{k},0,{k},0,0").matrix
+            factor = (-1) ** k * 2 * (2 * s + 1) * (2 * k + 1) * sp.sqrt(2 * k + 1)
+            unit = Unit(config.name, f"UTUT/{k},0,{k},{k},0,{k},0,0").matrix
             matrix += factor * unit
 
     # Return matrix
-    matrix /= dtype(2 * l - 1)
+    matrix /= (2 * l - 1)
     return matrix
 
 
-def matrix_C2(dtype, config):
-    """ Return the dtype matrix <|C2(G2)|> of the Casimir operator of the special group G2 as product state matrix
-    for the given electron configuration. """
+def matrix_C2(config):
+    """ Return the matrix <|C2(G2)|> of the Casimir operator of the special group G2 as product state matrix for the
+    given electron configuration. """
 
     # The current code works only for a single-shell configuration
     assert config.info.num_subshells == 1, "One sub-shell only!"
@@ -280,19 +275,19 @@ def matrix_C2(dtype, config):
     l = config.states.electron_pool[0].l
     assert l == 3
     num = config.info.num_electrons
-    ident = dtype.eye(config.num_states)
+    ident = sp.SparseMatrix.eye(config.num_states)
 
     # One-electron matrix
-    factor = dtype.zero
+    factor = sp.S(0)
     for k in [1, 5]:
         factor += 2 * k + 1
-    matrix = dtype(num * factor / (2 * l + 1)) * ident
+    matrix = (num * factor / (2 * l + 1)) * ident
 
     # Two-electron matrix
     if num > 1:
         for k in [1, 5]:
-            factor = dtype((-1) ** k * 2 * (2 * s + 1) * (2 * k + 1) * dtype.sqrt(2 * k + 1))
-            unit = Unit(dtype, config.name, f"UTUT/{k},0,{k},{k},0,{k},0,0").matrix
+            factor = (-1) ** k * 2 * (2 * s + 1) * (2 * k + 1) * sp.sqrt(2 * k + 1)
+            unit = Unit(config.name, f"UTUT/{k},0,{k},{k},0,{k},0,0").matrix
             matrix += factor * unit
 
     # Return matrix
@@ -304,9 +299,9 @@ def matrix_C2(dtype, config):
 # Perturbation Hamilton spherical tensor operators
 ###########################################################################
 
-def matrix_H1(dtype, config, k: int):
-    """ Return the dtype matrix <|H1(k)|> of the Coulomb first order perturbation Hamiltonian with rank k as product
-    state matrix for the given electron configuration. """
+def matrix_H1(config, k: int):
+    """ Return the matrix <|H1(k)|> of the Coulomb first order perturbation Hamiltonian with rank k as product state
+    matrix for the given electron configuration. """
 
     s = config.states.electron_pool[0].s
     l = config.states.electron_pool[0].l
@@ -314,22 +309,22 @@ def matrix_H1(dtype, config, k: int):
     assert num >= 2
     assert k % 2 == 0
     assert 0 <= k <= 2 * l
-    matrix = Unit(dtype, config.name, f"UTUT/{k},0,{k},{k},0,{k},0,0").matrix
-    matrix *= dtype((-1) ** k * (2 * s + 1) * dtype.sqrt(2 * k + 1))
-    matrix *= (dtype((-1) ** l * (2 * l + 1)) * dtype.sym3j(l, k, l, 0, 0, 0)) ** 2
+    matrix = Unit(config.name, f"UTUT/{k},0,{k},{k},0,{k},0,0").matrix
+    matrix *= (-1) ** k * (2 * s + 1) * sp.sqrt(2 * k + 1)
+    matrix *= ((-1) ** l * (2 * l + 1) * sym3j(l, k, l, 0, 0, 0)) ** 2
     return matrix
 
 
-def matrix_H2(dtype, config):
-    """ Return the dtype matrix <|H2|> of the spin-orbit first order perturbation Hamiltonian as product state
+def matrix_H2(config):
+    """ Return the matrix <|H2|> of the spin-orbit first order perturbation Hamiltonian as product state
     matrix for the given electron configuration. """
 
     s = config.states.electron_pool[0].s
     l = config.states.electron_pool[0].l
     k = 1
-    matrix = Unit(dtype, config.name, f"UT/{k},{k},0,0").matrix
-    matrix *= dtype((-1) ** k * dtype.sqrt(2 * k + 1))
-    matrix *= dtype.sqrt(s * (s + 1) * (2 * s + 1) * l * (l + 1) * (2 * l + 1))
+    matrix = Unit(config.name, f"UT/{k},{k},0,0").matrix
+    matrix *= (-1) ** k * sp.sqrt(2 * k + 1)
+    matrix *= sp.sqrt(s * (s + 1) * (2 * s + 1) * l * (l + 1) * (2 * l + 1))
     return matrix
 
 
@@ -383,18 +378,18 @@ JUDD_TABLE = [[
 ]]
 
 
-def matrix_H4(dtype, config, c: int):
-    """ Return the dtype matrix <|H4(c)|> of the effective Coulomb second order perturbation Hamiltonian with index c
-    as product state matrix for the given electron configuration. """
+def matrix_H4(config, c: int):
+    """ Return the matrix <|H4(c)|> of the effective Coulomb second order perturbation Hamiltonian with index c as
+    product state matrix for the given electron configuration. """
 
     def judd_factor(i: int, c: int):
         """ Extract tensor ranks and factor from row i and column c of the Judd table. """
 
         ranks = JUDD_TABLE[i][0]
-        factor = dtype.factorial(len(ranks))
+        factor = sp.factorial(len(ranks))
         for rank in set(ranks):
-            factor /= dtype.factorial(ranks.count(rank))
-        factor *= dtype(sp.S(JUDD_TABLE[i][c]))
+            factor /= sp.factorial(ranks.count(rank))
+        factor *= sp.S(JUDD_TABLE[i][c])
         return ranks, factor
 
     # Jud table has 9 columns
@@ -407,18 +402,18 @@ def matrix_H4(dtype, config, c: int):
     # Calculate and return the operator matrix as linear combination of triple-scalar products
     l = config.states.electron_pool[0].l
     assert l == 3
-    matrix = dtype.zeros(config.num_states, config.num_states)
+    matrix = sp.SparseMatrix(config.num_states, config.num_states, {})
     for i in range(len(JUDD_TABLE)):
         (k1, k2, k3), factor = judd_factor(i, c)
-        unit = Unit(dtype, config.name, f"UUU/{k1},{k2},{k3}").matrix
-        matrix += factor * dtype.sqrt((2 * k1 + 1) * (2 * k2 + 1) * (2 * k3 + 1)) * unit
+        unit = Unit(config.name, f"UUU/{k1},{k2},{k3}").matrix
+        matrix += factor * sp.sqrt((2 * k1 + 1) * (2 * k2 + 1) * (2 * k3 + 1)) * unit
     matrix *= 6
     return matrix
 
 
-def matrix_Hss(dtype, config, k: int):
-    """ Return the dtype matrix <|Hss(k)|> of the spin-spin first order perturbation Hamiltonian with rank k as
-    product state matrix for the given electron configuration. """
+def matrix_Hss(config, k: int):
+    """ Return the matrix <|Hss(k)|> of the spin-spin first order perturbation Hamiltonian with rank k as product state
+    matrix for the given electron configuration. """
 
     l = config.states.electron_pool[0].l
     num = config.info.num_electrons
@@ -426,18 +421,18 @@ def matrix_Hss(dtype, config, k: int):
     assert k % 2 == 0
     assert 0 <= k <= 2 * l - 2
 
-    ck0 = dtype((-1) ** l * (2 * l + 1)) * dtype.sym3j(l, k, l, 0, 0, 0)
-    ck2 = dtype((-1) ** l * (2 * l + 1)) * dtype.sym3j(l, k + 2, l, 0, 0, 0)
+    ck0 = (-1) ** l * (2 * l + 1) * sym3j(l, k, l, 0, 0, 0)
+    ck2 = (-1) ** l * (2 * l + 1) * sym3j(l, k + 2, l, 0, 0, 0)
 
-    factor = -12 * ck0 * ck2 * dtype.sqrt((k + 1) * (k + 2) * (2 * k + 1) * (2 * k + 3) * (2 * k + 5))
-    unit = Unit(dtype, config.name, f"UTUT/{k},1,{k + 1},{k + 2},1,{k + 1},0,0").matrix
+    factor = -12 * ck0 * ck2 * sp.sqrt((k + 1) * (k + 2) * (2 * k + 1) * (2 * k + 3) * (2 * k + 5))
+    unit = Unit(config.name, f"UTUT/{k},1,{k + 1},{k + 2},1,{k + 1},0,0").matrix
     matrix = factor * unit
 
     return matrix
 
 
-def matrix_Hsoo(dtype, config, k: int):
-    """ Return the dtype matrix <|Hsoo(k)|> of the spin-other-orbit first order perturbation Hamiltonian with rank k as
+def matrix_Hsoo(config, k: int):
+    """ Return the matrix <|Hsoo(k)|> of the spin-other-orbit first order perturbation Hamiltonian with rank k as
     product state matrix for the given electron configuration. """
 
     l = config.states.electron_pool[0].l
@@ -446,34 +441,34 @@ def matrix_Hsoo(dtype, config, k: int):
     assert k % 2 == 0
     assert 0 <= k <= 2 * l - 2
 
-    ck0 = dtype((-1) ** l * (2 * l + 1)) * dtype.sym3j(l, k, l, 0, 0, 0)
-    ck2 = dtype((-1) ** l * (2 * l + 1)) * dtype.sym3j(l, k + 2, l, 0, 0, 0)
+    ck0 = (-1) ** l * (2 * l + 1) * sym3j(l, k, l, 0, 0, 0)
+    ck2 = (-1) ** l * (2 * l + 1) * sym3j(l, k + 2, l, 0, 0, 0)
 
-    factor = ck0 ** 2 * dtype.sqrt((2 * l + k + 2) * (2 * l - k) * (k + 1) * (2 * k + 1))
-    unit = Unit(dtype, config.name, f"UTUT/{k},0,{k},{k + 1},1,{k},0,0").matrix
-    unit += 2 * Unit(dtype, config.name, f"UTUT/{k + 1},0,{k + 1},{k},1,{k + 1},0,0").matrix
+    factor = ck0 ** 2 * sp.sqrt((2 * l + k + 2) * (2 * l - k) * (k + 1) * (2 * k + 1))
+    unit = Unit(config.name, f"UTUT/{k},0,{k},{k + 1},1,{k},0,0").matrix
+    unit += 2 * Unit(config.name, f"UTUT/{k + 1},0,{k + 1},{k},1,{k + 1},0,0").matrix
     matrix = factor * unit
-    factor = ck2 ** 2 * dtype.sqrt((2 * l + k + 3) * (2 * l - k - 1) * (k + 2) * (2 * k + 5))
-    unit = Unit(dtype, config.name, f"UTUT/{k + 2},0,{k + 2},{k + 1},1,{k + 2},0,0").matrix
-    unit += 2 * Unit(dtype, config.name, f"UTUT/{k + 1},0,{k + 1},{k + 2},1,{k + 1},0,0").matrix
+    factor = ck2 ** 2 * sp.sqrt((2 * l + k + 3) * (2 * l - k - 1) * (k + 2) * (2 * k + 5))
+    unit = Unit(config.name, f"UTUT/{k + 2},0,{k + 2},{k + 1},1,{k + 2},0,0").matrix
+    unit += 2 * Unit(config.name, f"UTUT/{k + 1},0,{k + 1},{k + 2},1,{k + 1},0,0").matrix
     matrix += factor * unit
-    matrix *= 2 * dtype.sqrt(3 * (2 * k + 3))
+    matrix *= 2 * sp.sqrt(3 * (2 * k + 3))
     return matrix
 
 
-def matrix_H5(dtype, config, k: int):
-    """ Return the dtype matrix <|H5(k)|> of the spin-spin and spin-other-orbit first order perturbation Hamiltonian
-    with rank k as product state matrix for the given electron configuration. """
+def matrix_H5(config, k: int):
+    """ Return the matrix <|H5(k)|> of the spin-spin and spin-other-orbit first order perturbation Hamiltonian with
+    rank k as product state matrix for the given electron configuration. """
 
-    matrix_ss = Matrix(dtype, config.name, f"Hss/{k}", "Product").matrix
-    matrix_soo = Matrix(dtype, config.name, f"Hsoo/{k}", "Product").matrix
+    matrix_ss = Matrix(config.name, f"Hss/{k}", "Product").matrix
+    matrix_soo = Matrix(config.name, f"Hsoo/{k}", "Product").matrix
     matrix = matrix_ss + matrix_soo
     return matrix
 
 
-def matrix_H6(dtype, config, k: int):
-    """ Return the dtype matrix <|H6(k)|> of the effective electrostatic spin-orbit second order perturbation
-    Hamiltonian with rank k as product state matrix for the given electron configuration. """
+def matrix_H6(config, k: int):
+    """ Return the matrix <|H6(k)|> of the effective electrostatic spin-orbit second order perturbation Hamiltonian
+    with rank k as product state matrix for the given electron configuration. """
 
     l = config.states.electron_pool[0].l
     num = config.info.num_electrons
@@ -482,17 +477,17 @@ def matrix_H6(dtype, config, k: int):
     assert k % 2 == 0
     assert 0 <= k <= 2 * l
 
-    factor = dtype.sqrt((2 * l + k + 1) * (2 * l - k + 1) * k * (2 * k - 1))
-    unit = Unit(dtype, config.name, f"UTUT/{k},0,{k},{k - 1},1,{k},0,0").matrix
+    factor = sp.sqrt((2 * l + k + 1) * (2 * l - k + 1) * k * (2 * k - 1))
+    unit = Unit(config.name, f"UTUT/{k},0,{k},{k - 1},1,{k},0,0").matrix
     matrix = factor * unit
 
     if k < 2 * l:
-        factor = -dtype.sqrt((2 * l + k + 2) * (2 * l - k) * (k + 1) * (2 * k + 3))
-        unit = Unit(dtype, config.name, f"UTUT/{k},0,{k},{k + 1},1,{k},0,0").matrix
+        factor = -sp.sqrt((2 * l + k + 2) * (2 * l - k) * (k + 1) * (2 * k + 3))
+        unit = Unit(config.name, f"UTUT/{k},0,{k},{k + 1},1,{k},0,0").matrix
         matrix += factor * unit
 
-    ck = dtype((-1) ** l * (2 * l + 1)) * dtype.sym3j(l, k, l, 0, 0, 0)
-    factor = -ck ** 2 / dtype.sqrt(3 * (2 * k + 1))
+    ck = (-1) ** l * (2 * l + 1) * sym3j(l, k, l, 0, 0, 0)
+    factor = -ck ** 2 / sp.sqrt(3 * (2 * k + 1))
     matrix *= factor
     return matrix
 
@@ -627,14 +622,8 @@ class Matrix:
     """ Class representing the symbolic or floating point matrix of a spherical tensor operator in a given state
      space. The matrix object is available in the attribute 'matrix'. """
 
-    def __init__(self, dtype, config_name, name, state_space, reduced=False):
+    def __init__(self, config_name, name, state_space, reduced=False):
         """ Initialize the spherical tensor operator matrix. """
-
-        # Store data type
-        if isinstance(dtype, str):
-            dtype = DataType(dtype)
-        self.dtype = dtype
-        assert self.dtype.is_symbolic
 
         # Configuration string
         self.config_name = config_name
@@ -654,7 +643,7 @@ class Matrix:
         self.rank = MatrixName(self.name).rank
 
         # Load or generate data container
-        self.file = self.get_path(dtype, config_name, name, state_space, self.reduced)
+        self.file = self.get_path(config_name, name, state_space, self.reduced)
         if self.file not in container_vault:
             self.generate_container()
         dc = container_vault[self.file]
@@ -665,7 +654,7 @@ class Matrix:
         self.version = meta["version"]
 
         # Sanity check for data type, rank and reduced flag
-        assert self.dtype.name == meta["dataType"]
+        assert meta["dataType"] == "symbolic"
         assert self.rank == meta["tensorRank"]
         assert ("reduced" if self.reduced else "normal") == meta["elementType"]
 
@@ -683,7 +672,7 @@ class Matrix:
         assert self.states.state_space == state_space
 
         # Extract matrix
-        self.info = self.dtype.from_meta(dc["data/matrix.hdf5"], meta["matrix"])
+        self.info = SymMatrix.from_meta(dc["data/matrix.hdf5"], meta["matrix"])
         self.matrix = self.info.matrix
         assert self.info.row_space == self.state_space
         assert self.info.col_space == self.state_space
@@ -695,20 +684,19 @@ class Matrix:
         name_data = MatrixName(self.name)
 
         # Calculate matrix elements
-        matrix = name_data.func(self.dtype, config, *name_data.args)
-        if not self.dtype.is_symbolic:
-            assert matrix.dtype == self.dtype.dtype, f"Wrong dtype of matrix {name_data.head}!"
+        matrix = name_data.func(config, *name_data.args)
 
         # Get states meta dictionaries
-        space.load(self.dtype, self.config_name)
+        space.load(self.config_name)
         states_dict, states_meta = space.as_meta()
 
         # Transform product space matrix to other coupling
         if space.matrix is not None:
-            matrix = self.dtype.transform(matrix, space.matrix)
+            transform = space.matrix
+            matrix = transform.T * matrix * transform
 
         # Get matrix metadata dictionaries
-        state_matrix = self.dtype.from_matrix(self.state_space, self.state_space, matrix)
+        state_matrix = SymMatrix.from_matrix(self.state_space, self.state_space, matrix)
         matrix_dict, matrix_meta = state_matrix.as_meta()
 
         # Return metadata
@@ -718,7 +706,7 @@ class Matrix:
         """ Return metadata dictionaries of states and matrix derived from the collapsed respective SLJM matrix. """
 
         # Get SLJM parent matrix
-        parent = Matrix(self.dtype, self.config_name, self.name, "SLJM")
+        parent = Matrix(self.config_name, self.name, "SLJM")
         assert self.rank == parent.rank
 
         # Metadata dictionaries of states for collapsed J spaces
@@ -736,7 +724,7 @@ class Matrix:
 
         # Get component matrices of the tensor operator
         name_data = MatrixName(self.name)
-        components = [Matrix(self.dtype, self.config_name, name, "SLJ") for name in name_data.components()]
+        components = [Matrix(self.config_name, name, "SLJ") for name in name_data.components()]
 
         # Metadata dictionaries of states
         states = components[0].states
@@ -744,25 +732,8 @@ class Matrix:
 
         # Metadata dictionaries of matrix
         J = [sp.S(value) for value in states.representation_lists(["J2"])["J2"]]
-        matrix = self.dtype.reduced([matrix.info for matrix in components], J)
+        matrix = SymMatrix.reduced([matrix.info for matrix in components], J)
         matrix_dict, matrix_meta = matrix.as_meta()
-
-        # Return metadata
-        return states_dict, states_meta, matrix_dict, matrix_meta
-
-    def prepare_float(self):
-        """ Return metadata dictionaries of states and numeric matrix derived from the respective symbolic one. """
-
-        # Get symbolic parent matrix
-        parent = Matrix("symbolic", self.config_name, self.name, self.state_space, self.reduced)
-        assert self.rank == parent.rank
-
-        # Metadata dictionaries of states
-        states_dict, states_meta = parent.states.as_meta()
-
-        # Metadata dictionaries of numeric matrix
-        matrix = np.array(parent.matrix.evalf()).astype(self.dtype.dtype)
-        matrix_dict, matrix_meta = self.dtype.from_matrix(self.state_space, self.state_space, matrix).as_meta()
 
         # Return metadata
         return states_dict, states_meta, matrix_dict, matrix_meta
@@ -788,15 +759,12 @@ class Matrix:
         element_type = {False: "normal", True: "reduced"}[self.reduced]
 
         # Metadata dictionaries of states and matrix
-        if FORCE_SYMBOLIC and not self.dtype.is_symbolic:
-            states_dict, states_meta, matrix_dict, matrix_meta = self.prepare_float()
-        elif self.state_space == "SLJ" and not self.reduced:
+        if self.state_space == "SLJ" and not self.reduced:
             states_dict, states_meta, matrix_dict, matrix_meta = self.prepare_slj()
         elif self.state_space == "SLJ" and self.reduced:
             states_dict, states_meta, matrix_dict, matrix_meta = self.prepare_reduced()
         else:
             assert not self.reduced
-            assert not FORCE_SYMBOLIC or self.dtype.is_symbolic
             states_dict, states_meta, matrix_dict, matrix_meta = self.prepare_sljm(config, space)
 
         logger.debug(f" {self.config_name} | Finished tensor operator matrix {self.name}")
@@ -808,13 +776,12 @@ class Matrix:
             "states_hdf5": "states.hdf5",
             "matrix_hdf5": "matrix.hdf5",
             "matrix": "matrix",
-            "dtype": self.dtype.name,
             "row_hdf5": "states.hdf5",
             "col_hdf5": "states.hdf5",
             "json": "matrix.json",
         }
         kwargs["states_desc"] = desc_format(space.states_desc, kwargs)
-        kwargs["matrix_desc"] = desc_format(self.dtype.matrix_desc, kwargs)
+        kwargs["matrix_desc"] = desc_format(SymMatrix.meta_desc, kwargs)
         description = desc_format(DESCRIPTION, kwargs)
 
         # Initialise container structure
@@ -832,7 +799,7 @@ class Matrix:
             },
             "data/matrix.json": {
                 "version": __version__,
-                "dataType": self.dtype.name,
+                "dataType": "symbolic",
                 "name": self.name,
                 "config": config_meta,
                 "states": states_meta,
@@ -852,12 +819,8 @@ class Matrix:
         logger.info(f"Stored {self.config_name} tensor operator matrix {self.name} ({t:.1f} seconds) -> {self.file}")
 
     @staticmethod
-    def get_path(dtype, config_name, name, state_space, reduced):
+    def get_path(config_name, name, state_space, reduced):
         """ Return data container file name. """
-
-        # Store data type
-        if isinstance(dtype, DataType):
-            dtype = dtype.name
 
         # Translate alternative name to the canonical form
         if name in ALT_NAMES:
@@ -872,14 +835,14 @@ class Matrix:
         if "/" in name:
             head, args = name.split("/")
             args = "_".join(args.split(","))
-            file = f"{config_name}/{dtype}/{state_space}/{head}_{args}.zdc"
+            file = f"{config_name}/symbolic/{state_space}/{head}_{args}.zdc"
         else:
-            file = f"{config_name}/{dtype}/{state_space}/{name}.zdc"
+            file = f"{config_name}/symbolic/{state_space}/{name}.zdc"
         return file
 
     @staticmethod
-    def exists(dtype, config_name, name, state_space, reduced=False):
+    def exists(config_name, name, state_space, reduced=False):
         """ Return True if the matrix data container exists. """
 
-        file = Matrix.get_path(dtype, config_name, name, state_space, reduced)
+        file = Matrix.get_path(config_name, name, state_space, reduced)
         return file in container_vault

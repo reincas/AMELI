@@ -4,12 +4,12 @@
 # This program is free software under the terms of the MIT license.      #
 ##########################################################################
 #
-# This module provides the class Transform, which represents the
-# orthonormal transformation matrix V from electron product states to
-# LS coupling for a given many-electron configuration. The signs of the
-# LS states are correctly correlated within the J spaces, which allows
-# to build superpositions of Stark states with same J, but different M
-# in intermediate coupling based on these LS states.
+# This module provides the class Transform, which represents the exact
+# symbolic orthonormal transformation matrix V from electron product
+# states to LS coupling for a given many-electron configuration. The signs
+# of the LS states are correctly correlated within the J spaces, which
+# allows to build superpositions of Stark states with same J, but
+# different M in intermediate coupling based on these LS states.
 #
 # The module also provides the class SljmStates, which represents all
 # LS states of a configuration.
@@ -22,10 +22,10 @@ import time
 import numpy as np
 import sympy as sp
 
-from . import desc_format
+from . import desc_format, sym3j
 from .states import space_registry, register_space, register_subspace
 from .uintarray import decode_uint_array, encode_uint_array
-from .datatype import DataType
+from .sparse import SymMatrix
 from .casimir import CASIMIR
 from .vault import container_vault
 from .config import SPECTRAL, ConfigInfo, Config
@@ -282,7 +282,7 @@ def get_states(config, eigenvalues: dict) -> list:
 # Global sign correction
 ###########################################################################
 
-def reduced(dtype, index_a, index_b, operator, k, transform, J, Ma, Mb):
+def reduced(index_a, index_b, operator, k, transform, J, Ma, Mb):
     """ Return a reduced matrix element <J||Q||J> of the given tensor operator Q of rank k by application of the
     Wigner-Eckart theorem on the matrix element <J,Ma|Q|J,Mb>. Return SymPy.nan if the Wigner-Eckart theorem
     can't be used for this matrix element. The function expects the product state matrices of the tensor coordinates
@@ -295,27 +295,24 @@ def reduced(dtype, index_a, index_b, operator, k, transform, J, Ma, Mb):
         return sp.nan
 
     # 3j-symbol with sign factor from the Wigner-Eckart theorem
-    denominator = dtype.sym3j(J, k, J, -Ma, q, Mb)
+    denominator = sym3j(J, k, J, -Ma, q, Mb)
     if denominator == 0:
         return sp.nan
     if (J - Ma) % 2:
         denominator = -denominator
 
     # Matrix element of the q-component of the tensor operator in LS coupling
-    if dtype.is_symbolic:
-        numerator = transform.col(index_a).T * operator[q] * transform.col(index_b)
-        assert numerator.shape == (1, 1)
-        numerator = numerator[0, 0]
-    else:
-        numerator = transform[:, index_a].T @ operator[q] @ transform[:, index_b]
-    if dtype.is_zero(numerator, 4):
+    numerator = transform.col(index_a).T * operator[q] * transform.col(index_b)
+    assert numerator.shape == (1, 1)
+    numerator = numerator[0, 0]
+    if numerator == 0:
         return sp.nan
 
     # Return valid non-zero reduced matrix element
     return numerator / denominator
 
 
-def update_signs(dtype, slices, operator, k, transform, J, M, known, signs):
+def update_signs(slices, operator, k, transform, J, M, known, signs):
     """ Fix as many global signs in each of the J eigenspaces as possible using the Wigner-Eckart theorem on
     the given tensor operator of rank k. The eigenspaces are defined by the given list 'slices'. The dictionary
     'operator' contains the Sympy matrices of components of a tensor operator of rank k in the product space. Keys
@@ -338,7 +335,7 @@ def update_signs(dtype, slices, operator, k, transform, J, M, known, signs):
             continue
 
         # Take the reduced matrix of the stretched state M = -J as reference, if it is not zero
-        diagonal = reduced(dtype, i, i, operator, k, transform, J[i], M[i], M[i])
+        diagonal = reduced(i, i, operator, k, transform, J[i], M[i], M[i])
         if diagonal is sp.nan:
             continue
         known[i] = True
@@ -355,7 +352,7 @@ def update_signs(dtype, slices, operator, k, transform, J, M, known, signs):
 
                 # Try to get a value for the reduced matrix element
                 assert J[row] == J[col]
-                element = reduced(dtype, row, col, operator, k, transform, J[row], M[row], M[col])
+                element = reduced(row, col, operator, k, transform, J[row], M[row], M[col])
                 if element is sp.nan:
                     continue
 
@@ -364,9 +361,9 @@ def update_signs(dtype, slices, operator, k, transform, J, M, known, signs):
                     element = -element
 
                 # Fix sign of this eigenvector and proceed with the next one
-                if dtype.is_zero(element - diagonal, 100):
+                if element - diagonal == 0:
                     signs[col] = 0
-                elif dtype.is_zero(element + diagonal, 100):
+                elif element + diagonal == 0:
                     signs[col] = 1
                 else:
                     print(element, diagonal)
@@ -375,7 +372,7 @@ def update_signs(dtype, slices, operator, k, transform, J, M, known, signs):
                 break
 
 
-def correct_signs(dtype, config, transform: sp.Matrix, eigenvalues: dict) -> sp.Matrix:
+def correct_signs(config, transform: sp.Matrix, eigenvalues: dict) -> sp.Matrix:
     """ Use the Wigner-Eckart theorem in the JM space to obtain consistent global signs of the eigenvectors in each
     J eigenspace. This allows to construct correct superpositions of M states. The matrix transform is returned with
     adjusted signs for all column vectors. """
@@ -412,8 +409,8 @@ def correct_signs(dtype, config, transform: sp.Matrix, eigenvalues: dict) -> sp.
 
         # Use the components of the unit tensor operator of rank k in the orbital angular momentum space to correct
         # as many signs as possible. The function update_signs() uses only non-positive components.
-        operator = {q: Unit(dtype, config.name, "UT/{k},0,{k},{q}".format(k=k, q=q)).matrix for q in range(-k, 1)}
-        update_signs(dtype, slices, operator, k, transform, J, M, known, signs)
+        operator = {q: Unit(config.name, "UT/{k},0,{k},{q}".format(k=k, q=q)).matrix for q in range(-k, 1)}
+        update_signs(slices, operator, k, transform, J, M, known, signs)
         logger.info(f"Global signs U({k}) in {config.name}: {sum(known)}/{len(known)} fixed")
         if np.all(known):
             break
@@ -424,8 +421,8 @@ def correct_signs(dtype, config, transform: sp.Matrix, eigenvalues: dict) -> sp.
 
         # Use the unit tensor operator of rank k in the spin angular momentum space to correct as many signs
         # as possible
-        operator = {q: Unit(dtype, config.name, "UT/0,{k},{k},{q}".format(k=k, q=q)).matrix for q in range(-k, 1)}
-        update_signs(dtype, slices, operator, k, transform, J, M, known, signs)
+        operator = {q: Unit(config.name, "UT/0,{k},{k},{q}".format(k=k, q=q)).matrix for q in range(-k, 1)}
+        update_signs(slices, operator, k, transform, J, M, known, signs)
         logger.info(f"Global signs T({k}) in {config.name}: {sum(known)}/{len(known)} fixed")
         if np.all(known):
             break
@@ -461,14 +458,14 @@ def duration(seconds: float) -> str:
     return f"{hours}:{minutes:02}:{seconds:02}"
 
 
-def get_sym_matrices(dtype, config):
+def get_sym_matrices(config):
     """ Return three lists: the tensor keys of the symmetry chain, all symmetry matrices and all factors to obtain
     integer eigenvalues. """
 
     # Load or generate the symmetry operator matrix for every diagonalizing level
     chain = SYM_CHAIN[config_key(config)]["chain"]
     names = [name for name in chain if SYM_INFO[name]["matrix"]]
-    matrices = [Matrix(dtype, config.name, SYM_INFO[name]["matrix"], "Product").matrix for name in names]
+    matrices = [Matrix(config.name, SYM_INFO[name]["matrix"], "Product").matrix for name in names]
 
     # The product of the eigenvalues of each symmetry matrix with the respective factor results in integers
     factors = [SYM_INFO[name]["factor"] for name in names]
@@ -520,10 +517,7 @@ class Result:
     operator matrix for each level of the diagonalizing chain and accumulates the partial results received from the
     step-wise algorithm. """
 
-    def __init__(self, dtype, config):
-
-        # Store data type
-        self.dtype = dtype
+    def __init__(self, config):
 
         # Store the Config object which is required for the calculation of the symmetry matrices
         self.config = config
@@ -532,7 +526,7 @@ class Result:
         self.num_states = self.config.num_states
 
         # Tensor keys of the symmetry chain, symmetry matrices and factors to obtain integer eigenvalues
-        self.names, self.matrices, self.factors = get_sym_matrices(self.dtype, self.config)
+        self.names, self.matrices, self.factors = get_sym_matrices(self.config)
 
         # The product of the eigenvalues of each symmetry matrix with the respective factor results in integers
         self.factors = [SYM_INFO[name]["factor"] for name in self.names]
@@ -790,106 +784,23 @@ def transform_level(result, level, label="", transform=None, transform_inv=None)
             result.add_vectors(vectors)
 
 
-def transform_sym(dtype, config):
-    result = Result(dtype, config)
+def transform_states(config):
+    """ Calculate and return the sparse SymPy transformation matrix from electron product states to LS states and a
+    list of eigenvalue dictionaries of all states. """
 
+    # Initialise the results collector object
+    result = Result(config)
+
+    # Determine all eigenspaces (symbolic diagonalisation algorithm)
     transform_level(result, 0)
-    # result.sort()
-
-    # Transformation matrix with eigenvectors as columns
     transform = result.transform
+    t = result.total_time
+    logger.info(f"Prepared {config.name} transformation matrix ({t:.1f} seconds)")
 
     # Build a dictionary containing lists of the eigenvalues of all states for each symmetry operator name
     eigenvalues = dict(zip(result.names, result.eigenvalues))
 
-    t = result.total_time
-    logger.info(f"Prepared {config.name} transformation matrix ({t:.1f} seconds)")
-
-    return transform, eigenvalues
-
-
-def transform_num(dtype, config):
-    t = time.time()
-
-    names, matrices, factors = get_sym_matrices(dtype, config)
-
-    # Initialize the eigenvalue matrix, the transformation matrix, and the dictionary of SymmetryList objects
-    transform = None
-    eigenvalues = {}
-
-    # Initialize the list of sub-spaces which will be split by the algorithm
-    slices = [(0, config.num_states)]
-
-    # Follow the chain or symmetry operators, but skip the pseudo operators "tau" and "num". Build a transformation
-    # matrix from product states to SLJM coupling together with the eigenvalues of all symmetry operators.
-    for name, matrix, factor in zip(names, matrices, factors):
-
-        # Get the matrix of the current symmetry operator in the determinantal product space and apply the current
-        # transformation matrix
-        if transform is None:
-            M = matrix
-        else:
-            M = transform.T @ matrix @ transform
-
-        # Initialize eigenvalues and eigenvectors of the current symmetry operator
-        values = []
-        eigenvectors = dtype.eye(config.num_states)
-
-        # Calculate eigenvalues and eigenvectors of the current symmetry operator by diagonalising its pre-transformed
-        # matrix in each of the current sub-spaces
-        for i, j in slices:
-            if j - i > 1:
-                V, U = np.linalg.eigh(M[i:j, i:j])
-                values.extend(list(V))
-                eigenvectors[i:j, i:j] = U
-            elif j - i == 1:
-                values.append(M[i, i])
-            else:
-                raise RuntimeError("Empty slice!")
-
-        # Store SymmetryList object containing the eigenvalues of the current symmetry operator for all states
-        values_float = dtype.array(values) * factor
-        values = np.round(values_float).astype(int)
-        assert np.allclose(values_float, values, atol=1000 * dtype.eps)
-        values = [sp.S(value) / factor for value in values]
-
-        # Split the sub-spaces in such a way that all states inside the new sub-spaces have the same eigenvalue of
-        # the current symmetry operator
-        slices_new = []
-        for start, stop in slices:
-            i = start
-            for j in range(i + 1, stop + 1):
-                if j == stop or values[j] != values[i]:
-                    slices_new.append((i, j))
-                    i = j
-        slices = slices_new
-
-        # Use the eigenvectors of the current symmetry operator to update the transformation matrix
-        if transform is None:
-            transform = np.array(eigenvectors)
-        else:
-            transform = transform @ eigenvectors
-
-        eigenvalues[name] = values
-        reprs = ", ".join(SYM_INFO[name]["repr"](x) for x in set(values))
-        logger.info(f"  {config.name} | level {name} finished: {reprs} ({len(slices)} eigenspaces)")
-
-    # Return orthonormal transformation matrix and eigenvalues
-    t = time.time() - t
-    logger.info(f"Prepared {config.name} transformation matrix ({t:.1f} seconds)")
-    return transform, eigenvalues
-
-
-def transform_states(dtype, config):
-    """ Calculate and return the SymPy transformation matrix from electron product states to LS states and a list
-    of eigenvalue dictionaries of all states. """
-
-    # Diagonalize all eigenspaces simultaneously
-    if dtype.is_symbolic:
-        transform, eigenvalues = transform_sym(dtype, config)
-    else:
-        transform, eigenvalues = transform_num(dtype, config)
-
+    # Sort states in canonical order
     transform, eigenvalues = sort_states(config, transform, eigenvalues)
 
     # Add certain classification numbers to the dictionary of eigenvalues
@@ -900,7 +811,7 @@ def transform_states(dtype, config):
     states = get_states(config, eigenvalues)
 
     # Fix the global signs of the states in each J eigenspace
-    transform = correct_signs(dtype, config, transform, eigenvalues)
+    transform = correct_signs(config, transform, eigenvalues)
 
     # Send the list of all LS terms to the log
     terms = str_terms(config, states)
@@ -910,7 +821,7 @@ def transform_states(dtype, config):
 
     # Return the transformation matrix and the list of state dictionaries
     logger.info(f"Finished {config.name} transformation matrix")
-    return transform, states
+    return sp.SparseMatrix(transform), states
 
 
 ##########################################################################
@@ -1116,8 +1027,8 @@ class LS_States:
 TITLE = "Transformation matrix from product states to LS coupling"
 
 DESCRIPTION = """
-This container stores the orthonormal transformation matrix V from electron product states to LS coupling for a
-given many-electron configuration.
+This container stores the exact symbolic orthonormal transformation matrix V from electron product states to LS 
+coupling for a given many-electron configuration.
 An operator matrix M can be transformed from the product to the LS state space by calculating the matrix product
 M' = V^T * M * V, with the transposed transformation matrix V^T.
 The signs of the LS states are correctly correlated within the J spaces, which allows to build superpositions of
@@ -1149,30 +1060,24 @@ description of the tensor operator for each of the names and string representati
 
 
 class Transform:
-    """ Class of the transformation matrix from product states to LS coupling. It provides the SymPy matrix in the
-    attribute 'matrix' and the respective floating point NumPy array from the method 'array(dtype)'. """
+    """ Class of the exact symbolic transformation matrix from product states to LS coupling. It provides the SymPy
+    matrix in the attribute 'matrix' and the respective floating point NumPy array from the method 'array(dtype)'. """
 
     # Description of the HDF5 container item holding the LS states of a configuration required by the transformation
     # interface
     states_desc = {"SLJM": SLJM_DESC, "SLJ": SLJ_DESC}
 
     # Transformation matrix
-    matrix: sp.Matrix | np.ndarray = None
+    matrix: sp.Matrix = None
 
-    def __init__(self, dtype, config_name):
+    def __init__(self, config_name):
         """ Initialize the orthonormal transformation matrix from the product space to LS coupling. """
-
-        # Store data type
-        if isinstance(dtype, str):
-            dtype = DataType(dtype)
-        self.dtype = dtype
-        assert self.dtype.is_symbolic
 
         # Configuration string
         self.config_name = config_name
 
         # Load or generate data container
-        self.file = self.get_path(self.dtype, self.config_name)
+        self.file = self.get_path(self.config_name)
         if self.file not in container_vault:
             self.generate_container()
         dc = container_vault[self.file]
@@ -1183,7 +1088,7 @@ class Transform:
         self.version = meta["version"]
 
         # Sanity check for data type
-        assert self.dtype.name == meta["dataType"]
+        assert meta["dataType"] == "symbolic"
 
         # Extract electron configuration from the container
         self.config = ConfigInfo.from_meta(meta["config"])
@@ -1196,7 +1101,7 @@ class Transform:
         self.num_states = self.row_states.num_states
 
         # Extract transformation matrix
-        self.info = self.dtype.from_meta(dc["data/matrix.hdf5"], meta["matrix"])
+        self.info = SymMatrix.from_meta(dc["data/matrix.hdf5"], meta["matrix"])
         self.matrix = self.info.matrix
         assert self.info.row_space == self.row_states.state_space
         assert self.info.col_space == self.col_states.state_space
@@ -1212,10 +1117,10 @@ class Transform:
         config_meta = config.info.as_meta()
 
         # Build transformation matrix and store it as SparseMatrix object
-        transform, states_dict = transform_states(self.dtype, config)
+        transform, states_dict = transform_states(config)
         logger.debug("Creating StateMatrix.")
         t = time.time()
-        state_matrix = self.dtype.from_matrix("Product", "SLJM", sp.SparseMatrix(transform))
+        state_matrix = SymMatrix.from_matrix("Product", "SLJM", transform)
         t = time.time() - t
         logger.debug(f"Built StateMatrix. ({t:.1f} seconds)")
         t = time.time()
@@ -1260,7 +1165,6 @@ class Transform:
         kwargs = {
             "matrix_hdf5": "matrix.hdf5",
             "matrix": "orthonormal transformation matrix",
-            "dtype": self.dtype.name,
             "row_hdf5": "row_states.hdf5",
             "col_hdf5": "col_states.hdf5",
             "json": "transform.json",
@@ -1269,7 +1173,7 @@ class Transform:
         kwargs["row_desc"] = desc_format(config.states_desc, kwargs | row_kwargs)
         col_kwargs = {"states": "col_states", "states_hdf5": "col_states.hdf5"}
         kwargs["col_desc"] = desc_format(self.states_desc["SLJM"], kwargs | col_kwargs)
-        kwargs["matrix_desc"] = desc_format(self.dtype.matrix_desc, kwargs)
+        kwargs["matrix_desc"] = desc_format(SymMatrix.meta_desc, kwargs)
         description = desc_format(DESCRIPTION, kwargs)
 
         # Initialise container structure
@@ -1287,7 +1191,7 @@ class Transform:
             },
             "data/transform.json": {
                 "version": __version__,
-                "dataType": self.dtype.name,
+                "dataType": "symbolic",
                 "config": config_meta,
                 "row_states": row_meta,
                 "col_states": col_meta,
@@ -1315,12 +1219,11 @@ class Transform:
         return self.col_states.as_meta()
 
     @staticmethod
-    def get_path(dtype, config_name):
+    def get_path(config_name):
         """ Return data container file name. """
 
-        if isinstance(dtype, DataType):
-            dtype = dtype.name
-        return f"{config_name}/{dtype}/transform.zdc"
+        return f"{config_name}/symbolic/transform.zdc"
+
 
 # Register space of electron states in LS coupling
 register_space("SLJM", Transform, Transform)

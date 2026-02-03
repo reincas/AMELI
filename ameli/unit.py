@@ -15,12 +15,12 @@ from abc import ABC, abstractmethod
 
 import sympy as sp
 
-from . import desc_format
+from . import desc_format, sym3j
 from .states import space_registry
-from .datatype import DataType
-from .vault import container_vault
+from .sparse import SymMatrix
 from .config import ConfigInfo, Config
 from .product import Product
+from .vault import container_vault
 
 __version__ = "1.0.0"
 logger = logging.getLogger("unit")
@@ -37,11 +37,8 @@ class BaseUnit(ABC):
     as_dict() returns a dictionary with all matrix elements in a compact form ready for storage in a data
     container, which takes advantage of the sparsity and low number of different values. """
 
-    def __init__(self, dtype, product, tensor_size, parameters, symmetric, factor, template):
-        """ Calculate all matrix elements and store them in a SymMatrix or NumMatrix object. """
-
-        # Store data type
-        self.dtype = dtype
+    def __init__(self, product, tensor_size, parameters, symmetric, factor, template):
+        """ Calculate all matrix elements and store them in a SymMatrix object. """
 
         # Product object used to get all potentially non-zero matrix elements
         self.product = product
@@ -52,7 +49,7 @@ class BaseUnit(ABC):
         assert self.tensor_size == self.product.tensor_size
 
         # Common factor of all matrix elements prepared by the subclass
-        factor = factor / dtype.factorial(self.tensor_size)
+        factor = factor / sp.factorial(self.tensor_size)
 
         # Generate string expression of the elementary tensor
         self.parameters = parameters
@@ -61,7 +58,7 @@ class BaseUnit(ABC):
 
         # Calculate all non-zero matrix elements
         assert isinstance(symmetric, bool)
-        self.matrix = self.dtype.state_matrix("Product", "Product", symmetric, self.product.num_states)
+        self.matrix = SymMatrix("Product", "Product", symmetric, self.product.num_states)
         for initial, final, elements in self.product.matrix_elements():
 
             # Convert numpy integer objects into Python int
@@ -73,7 +70,7 @@ class BaseUnit(ABC):
 
             # Diagonal element or element of a symmetric matrix
             if initial == final or symmetric:
-                value = self.dtype.zero
+                value = sp.S(0)
                 for electrons, sign in elements:
                     value += self.element(electrons, sign, swapped=True)
                 self.matrix[final, initial] = value * factor
@@ -81,8 +78,8 @@ class BaseUnit(ABC):
             # Element of an asymmetric matrix
             # Note: The generator elements can be used only once!
             else:
-                value_ll = self.dtype.zero
-                value_ur = self.dtype.zero
+                value_ll = sp.S(0)
+                value_ur = sp.S(0)
                 for electrons, sign in elements:
                     value_ll += self.element(electrons, sign, swapped=True)
                     value_ur += self.element(electrons, sign, swapped=False)
@@ -114,7 +111,7 @@ class Unit_UT(BaseUnit):
     operator Q is the product of a unit tensor operator u^(k1) of rank k1 in the orbital space and a unit tensor
     operator t^(k2) of rank k2 in the spin space: Q^(k)_q = {u^(k1) x t^(k2)}^(k)_q """
 
-    def __init__(self, dtype, product, k1, k2, k, q):
+    def __init__(self, product, k1, k2, k, q):
         """ Calculate and store all matrix elements. """
 
         # Tensor ranks and component q
@@ -127,9 +124,9 @@ class Unit_UT(BaseUnit):
         tensor_size = 1
         parameters = {"k1": k1, "k2": k2, "k": k, "q": q}
         symmetric = q == 0
-        factor = dtype.sqrt(2 * self.k + 1)
+        factor = sp.sqrt(2 * self.k + 1)
         template = "{{u({k1}) x t({k2})}}({k})_{q}"
-        super().__init__(dtype, product, tensor_size, parameters, symmetric, factor, template)
+        super().__init__(product, tensor_size, parameters, symmetric, factor, template)
 
     def calc_element(self, a, b):
         """ Return the SymPy value of the one-electron matrix element <a|Q|b> of component q of the rank-k
@@ -144,12 +141,12 @@ class Unit_UT(BaseUnit):
 
         # Avoid unnecessary evaluations if a factor is zero
         def factors():
-            yield self.dtype.sym3j(self.k1, self.k, self.k2, a.ml - b.ml, -self.q, a.ms - b.ms)
-            yield self.dtype.sym3j(a.l, self.k1, b.l, -a.ml, a.ml - b.ml, b.ml)
-            yield self.dtype.sym3j(a.s, self.k2, b.s, -a.ms, a.ms - b.ms, b.ms)
+            yield sym3j(self.k1, self.k, self.k2, a.ml - b.ml, -self.q, a.ms - b.ms)
+            yield sym3j(a.l, self.k1, b.l, -a.ml, a.ml - b.ml, b.ml)
+            yield sym3j(a.s, self.k2, b.s, -a.ms, a.ms - b.ms, b.ms)
 
         # Calculate product of 3j-symbols
-        element = self.dtype.one
+        element = sp.S(1)
         for factor in factors():
             element *= factor
             if not element:
@@ -167,7 +164,7 @@ class Unit_UTUT(BaseUnit):
     another tensor operator {u_2^(k3) x t_2^(k4)}^(k_34) acting on a second electron. In total:
     Q^(k)_q = {{u_1^(k1) x t_1^(k2)}^(k_12) x {u_2^(k3) x t_2^(k4)}^(k_34)}^(k)_q """
 
-    def __init__(self, dtype, product, k1, k2, k12, k3, k4, k34, k, q):
+    def __init__(self, product, k1, k2, k12, k3, k4, k34, k, q):
         """ Calculate and store all matrix elements. """
 
         # Tensor ranks and component q
@@ -184,9 +181,9 @@ class Unit_UTUT(BaseUnit):
         tensor_size = 2
         parameters = {"k1": k1, "k2": k2, "k12": k12, "k3": k3, "k4": k4, "k34": k34, "k": k, "q": q}
         symmetric = q == 0
-        factor = dtype.sqrt((2 * self.k + 1) * (2 * self.k12 + 1) * (2 * self.k34 + 1))
+        factor = sp.sqrt((2 * self.k + 1) * (2 * self.k12 + 1) * (2 * self.k34 + 1))
         template = "{{{{u1({k1}) x t1({k2})}}({k12}) x {{u2({k3}) x t2({k4})}}({k34})}}({k})_{q}"
-        super().__init__(dtype, product, tensor_size, parameters, symmetric, factor, template)
+        super().__init__(product, tensor_size, parameters, symmetric, factor, template)
 
     def calc_element(self, a, b, c, d):
         """ Return the SymPy value of the two-electron matrix element <a,b|Q|c,d> of component q of the rank-k
@@ -203,17 +200,16 @@ class Unit_UTUT(BaseUnit):
 
         # Avoid unnecessary evaluations if a factor is zero
         def factors():
-            yield self.dtype.sym3j(self.k12, self.k, self.k34, a.ml - c.ml + a.ms - c.ms, -self.q,
-                                   b.ml - d.ml + b.ms - d.ms)
-            yield self.dtype.sym3j(self.k1, self.k12, self.k2, a.ml - c.ml, -a.ml + c.ml - a.ms + c.ms, a.ms - c.ms)
-            yield self.dtype.sym3j(a.l, self.k1, c.l, -a.ml, a.ml - c.ml, c.ml)
-            yield self.dtype.sym3j(a.s, self.k2, c.s, -a.ms, a.ms - c.ms, c.ms)
-            yield self.dtype.sym3j(self.k3, self.k34, self.k4, b.ml - d.ml, -b.ml + d.ml - b.ms + d.ms, b.ms - d.ms)
-            yield self.dtype.sym3j(b.l, self.k3, d.l, -b.ml, b.ml - d.ml, d.ml)
-            yield self.dtype.sym3j(b.s, self.k4, d.s, -b.ms, b.ms - d.ms, d.ms)
+            yield sym3j(self.k12, self.k, self.k34, a.ml - c.ml + a.ms - c.ms, -self.q, b.ml - d.ml + b.ms - d.ms)
+            yield sym3j(self.k1, self.k12, self.k2, a.ml - c.ml, -a.ml + c.ml - a.ms + c.ms, a.ms - c.ms)
+            yield sym3j(a.l, self.k1, c.l, -a.ml, a.ml - c.ml, c.ml)
+            yield sym3j(a.s, self.k2, c.s, -a.ms, a.ms - c.ms, c.ms)
+            yield sym3j(self.k3, self.k34, self.k4, b.ml - d.ml, -b.ml + d.ml - b.ms + d.ms, b.ms - d.ms)
+            yield sym3j(b.l, self.k3, d.l, -b.ml, b.ml - d.ml, d.ml)
+            yield sym3j(b.s, self.k4, d.s, -b.ms, b.ms - d.ms, d.ms)
 
         # Calculate product of 3j-symbols
-        element = self.dtype.one
+        element = sp.S(1)
         for factor in factors():
             element *= factor
             if not element:
@@ -230,7 +226,7 @@ class Unit_UUU(BaseUnit):
     tensor operators u_1^(k1), u_2^(k2), and u_3^(k3) of ranks k1, k2, and k3 in the orbital space:
     Q = (u_1^(k1) · u_2^(k2) · u_3^(k3)). """
 
-    def __init__(self, dtype, product, k1, k2, k3):
+    def __init__(self, product, k1, k2, k3):
         """ Calculate and store all matrix elements. """
 
         # Tensor ranks
@@ -242,9 +238,9 @@ class Unit_UUU(BaseUnit):
         tensor_size = 3
         parameters = {"k1": k1, "k2": k2, "k3": k3}
         symmetric = True
-        factor = dtype.one
+        factor = sp.S(1)
         template = "(u1({k1}) · u2({k2}) · u3({k3}))"
-        super().__init__(dtype, product, tensor_size, parameters, symmetric, factor, template)
+        super().__init__(product, tensor_size, parameters, symmetric, factor, template)
 
     def calc_element(self, a, b, c, d, e, f):
         """ Return the SymPy value of the three-electron matrix element <a,b,c|Q|d,e,f> of the triple scalar
@@ -263,13 +259,13 @@ class Unit_UUU(BaseUnit):
 
         # Avoid unnecessary evaluations if a factor is zero
         def factors():
-            yield self.dtype.sym3j(self.k1, self.k2, self.k3, a.ml - d.ml, b.ml - e.ml, c.ml - f.ml)
-            yield self.dtype.sym3j(a.l, self.k1, d.l, -a.ml, a.ml - d.ml, d.ml)
-            yield self.dtype.sym3j(b.l, self.k2, e.l, -b.ml, b.ml - e.ml, e.ml)
-            yield self.dtype.sym3j(c.l, self.k3, f.l, -c.ml, c.ml - f.ml, f.ml)
+            yield sym3j(self.k1, self.k2, self.k3, a.ml - d.ml, b.ml - e.ml, c.ml - f.ml)
+            yield sym3j(a.l, self.k1, d.l, -a.ml, a.ml - d.ml, d.ml)
+            yield sym3j(b.l, self.k2, e.l, -b.ml, b.ml - e.ml, e.ml)
+            yield sym3j(c.l, self.k3, f.l, -c.ml, c.ml - f.ml, f.ml)
 
         # Calculate product of 3j-symbols
-        element = self.dtype.one
+        element = sp.S(1)
         for factor in factors():
             element *= factor
             if not element:
@@ -304,16 +300,10 @@ many-electron configuration.
 
 class Unit:
     """ Class of the product state matrix of a mixed unit spherical tensor operator. It provides the SymPy matrix in
-    the attribute 'matrix' and the respective floating point NumPy array from the method 'array(dtype)'. """
+    the attribute 'matrix'. """
 
-    def __init__(self, dtype, config_name, name):
+    def __init__(self, config_name, name):
         """ Initialize the spherical unit tensor operator matrix. """
-
-        # Store data type
-        if isinstance(dtype, str):
-            dtype = DataType(dtype)
-        self.dtype = dtype
-        assert self.dtype.is_symbolic
 
         # Configuration string
         self.config_name = config_name
@@ -322,7 +312,7 @@ class Unit:
         self.name = name
 
         # Load or generate data container
-        self.file = self.get_path(dtype, config_name, name)
+        self.file = self.get_path(config_name, name)
         if self.file not in container_vault:
             self.generate_container()
         dc = container_vault[self.file]
@@ -333,7 +323,7 @@ class Unit:
         self.version = meta["version"]
 
         # Sanity check for data type
-        assert self.dtype.name == meta["dataType"]
+        assert meta["dataType"] == "symbolic"
 
         # Characteristics of the unit tensor operator
         assert meta["name"] == self.name
@@ -350,7 +340,7 @@ class Unit:
         self.states = space_registry["Product"].from_meta(dc["data/states.hdf5"], meta["states"])
 
         # Extract unit matrix
-        self.info = self.dtype.from_meta(dc["data/matrix.hdf5"], meta["matrix"])
+        self.info = SymMatrix.from_meta(dc["data/matrix.hdf5"], meta["matrix"])
         self.matrix = self.info.matrix
         assert self.info.row_space == self.states.state_space
         assert self.info.col_space == self.states.state_space
@@ -370,7 +360,7 @@ class Unit:
         cls, tensor_size = MATRIX[key]
         parameters = tuple(map(int, parameters.split(",")))
         product = Product(self.config_name, tensor_size)
-        unit = cls(self.dtype, product, *parameters)
+        unit = cls(product, *parameters)
         assert unit.tensor_size == tensor_size
 
         # Get product states
@@ -386,13 +376,12 @@ class Unit:
             "states_hdf5": "states.hdf5",
             "matrix_hdf5": "matrix.hdf5",
             "matrix": "unit tensor matrix",
-            "dtype": self.dtype.name,
             "row_hdf5": "states.hdf5",
             "col_hdf5": "states.hdf5",
             "json": "unit.json",
         }
         kwargs["states_desc"] = desc_format(config.states_desc, kwargs)
-        kwargs["matrix_desc"] = desc_format(self.dtype.matrix_desc, kwargs)
+        kwargs["matrix_desc"] = desc_format(SymMatrix.meta_desc, kwargs)
         description = desc_format(DESCRIPTION, kwargs)
 
         # Initialise container structure
@@ -410,7 +399,7 @@ class Unit:
             },
             "data/unit.json": {
                 "version": __version__,
-                "dataType": self.dtype.name,
+                "dataType": "symbolic",
                 "name": self.name,
                 "config": config_meta,
                 "states": states_meta,
@@ -430,12 +419,10 @@ class Unit:
         logger.info(f"Stored {self.config_name} unit matrix {self.name} ({t:.1f} seconds) -> {self.file}")
 
     @staticmethod
-    def get_path(dtype, config_name, name):
+    def get_path(config_name, name):
         """ Return data container file name. """
 
-        if isinstance(dtype, DataType):
-            dtype = dtype.name
         key, parameters = name.split("/")
         parameters = "_".join(parameters.split(","))
-        return f"{config_name}/{dtype}/unit/{key}_{parameters}.zdc"
+        return f"{config_name}/symbolic/unit/{key}_{parameters}.zdc"
 
