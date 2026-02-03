@@ -45,7 +45,7 @@ def memory():
 
 
 ##########################################################################
-# Synchronous build process
+# Synchronous direct build process (no graph)
 ##########################################################################
 
 def build_matrix(dtype, config_name, name, state_space, reduced=False):
