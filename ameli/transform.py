@@ -1222,7 +1222,7 @@ class Transform:
     def get_path(config_name):
         """ Return data container file name. """
 
-        return f"{config_name}/symbolic/transform.zdc"
+        return f"{config_name}/transform.zdc"
 
 
 # Register space of electron states in LS coupling

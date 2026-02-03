@@ -835,9 +835,9 @@ class Matrix:
         if "/" in name:
             head, args = name.split("/")
             args = "_".join(args.split(","))
-            file = f"{config_name}/symbolic/{state_space}/{head}_{args}.zdc"
+            file = f"{config_name}/{state_space}/{head}_{args}.zdc"
         else:
-            file = f"{config_name}/symbolic/{state_space}/{name}.zdc"
+            file = f"{config_name}/{state_space}/{name}.zdc"
         return file
 
     @staticmethod

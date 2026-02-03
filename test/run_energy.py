@@ -266,7 +266,7 @@ if __name__ == "__main__":
     for key in RADIAL:
         if "blocking" in RADIAL[key]:
             continue
-        if RADIAL[key]["num"] not in [1, 2, 3, 4, 10, 11, 12, 13]:
+        if RADIAL[key]["num"] in [7]:
             print(f"=== Skipping {key}")
             continue
         print(f"=== Checking {key} ...")

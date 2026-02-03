@@ -424,5 +424,5 @@ class Unit:
 
         key, parameters = name.split("/")
         parameters = "_".join(parameters.split(","))
-        return f"{config_name}/symbolic/unit/{key}_{parameters}.zdc"
+        return f"{config_name}/unit/{key}_{parameters}.zdc"
 
