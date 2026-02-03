@@ -10,6 +10,7 @@
 ##########################################################################
 
 import hashlib
+import inspect
 import json
 from pathlib import Path
 from unittest.mock import patch, MagicMock
@@ -144,21 +145,6 @@ class Registry:
             self.nodes[node_id] = cls(self, node_id, **kwargs)
         return self.nodes[node_id]
 
-    def __getitem__(self, node_id):
-        """ Return the given node. """
-
-        return self.nodes[node_id]
-
-    def items(self):
-        """ Return all registered (id, node) pairs. """
-
-        return self.nodes.items()
-
-    def __len__(self):
-        """ Return number of registered nodes. """
-
-        return len(self.nodes)
-
     def weight(self, node_id):
         """ Return weight of the given node. """
 
@@ -169,6 +155,11 @@ class Registry:
 
         return self.nodes[node_id].exists
 
+    @property
+    def unfinished(self):
+        """ Return number of unfinished nodes. """
+
+        return len([nid for nid, node in self.nodes.items() if not node.exists])
 
 ##########################################################################
 # Container node classes
@@ -184,12 +175,24 @@ class Node:
         self.parents = []
         self.children = []
 
+        signature = inspect.signature(cls.__init__)
+        self.arg_names = list(signature.parameters.keys())[1:]
+        self.exists =  str(self.file) in container_vault
+
+    @property
+    def in_degree(self):
+        return len([node_id for node_id in self.parents if not self.registry.nodes[node_id].exists])
+
+    @property
+    def out_degree(self):
+        return len([node_id for node_id in self.children if not self.registry.nodes[node_id].exists])
+
     def __str__(self):
         name = self.ameli_cls.__name__
-        kwargs = self.kwargs
-        items = [(key, f'"{value}"') if isinstance(value, str) else (key, value) for key, value in kwargs.items()]
-        kwargs = ", ".join(f"{key}={value}" for key, value in items)
-        return f"{name}({kwargs})"
+        args = [self.kwargs[name] for name in self.arg_names]
+        args = [f'"{value}"' if isinstance(value, str) else value for value in args]
+        args = ", ".join(f"{value}" for value in args)
+        return f"{name}({args})"
 
     def register_parent(self, cls, **kwargs):
         parent = self.registry.register(cls, **kwargs)
@@ -201,18 +204,11 @@ class Node:
         self.children.append(child.node_id)
 
     def generate(self):
-        if self.parents:
-            assert all(self.registry.exists(node_id) for node_id in self.parents), str(self)
         return self.ameli_cls(**self.kwargs)
 
     @property
     def weight(self):
         return 1 + sum(self.registry.weight(child_id) for child_id in self.children)
-
-    @property
-    def exists(self):
-        return self.file in container_vault
-
 
 class ConfigNode(Node):
     def __init__(self, registry, node_id, config_name):

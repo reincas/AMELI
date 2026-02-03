@@ -7,7 +7,7 @@
 import logging
 import time
 import sys
-from ameli.lanthanide.build import run_sync, run_pool
+from ameli.lanthanide.build import run_sync, PoolScheduler, run_pool
 
 POOL = True
 
@@ -39,7 +39,7 @@ if __name__ == "__main__":
         nums = [int(sys.argv[1])]
         file = f"ameli-{nums[0]}.log"
     else:
-        nums = [1, 13, 2, 12, 3, 11, 4, 10, 5, 9, 6, 8, 7]
+        nums = [1, 2]#[1, 13, 2, 12, 3, 11, 4, 10, 5, 9, 6, 8, 7]
         file = f"ameli.log"
 
     # Log format
@@ -55,10 +55,8 @@ if __name__ == "__main__":
     console_h.setFormatter(log_format)
     console_h.setLevel(logging.DEBUG)
 
-    for num_electrons in nums:
-        if POOL:
-            # Build all data containers
-            run_pool(num_electrons, (file_h, console_h))
-
-        else:
-            run_sync(num_electrons, (file_h, console_h))
+    handlers = (file_h, console_h)
+    if POOL:
+        run_pool(nums, handlers)
+    else:
+        run_sync(nums, handlers)

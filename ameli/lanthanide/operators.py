@@ -40,6 +40,7 @@ def matrix_args(num_electrons):
     ion with the given number of electrons. """
 
     # Loop through all types and names of tensor matrices
+    reduced_names = set()
     config_name = f"f{num_electrons}"
     dtype = "symbolic"
     for state_space in ("Product", "SLJM", "SLJ"):
@@ -53,17 +54,31 @@ def matrix_args(num_electrons):
                 "config_name": config_name,
                 "name": name,
                 "state_space": state_space,
+                "reduced": False,
             }
             yield kwargs
 
             # Yield initialisation arguments of a matrix of reduced elements
-            if state_space == "SLJ":
-                name_data = MatrixName(name)
-                if name_data.rank > 0:
-                    if "," in name:
-                        name = name[:name.rfind(",")]
-                    else:
-                        name = name[:name.rfind("/")]
-                kwargs["name"] = name
-                kwargs["reduced"] = True
-                yield kwargs
+            if state_space != "SLJ":
+                continue
+
+            name_data = MatrixName(name)
+            if name_data.rank > 0:
+                if "," in name:
+                    reduced_name = name[:name.rfind(",")]
+                else:
+                    reduced_name = name[:name.rfind("/")]
+            else:
+                reduced_name = name
+            if reduced_name in reduced_names:
+                continue
+
+            reduced_names.add(reduced_name)
+            kwargs = {
+                "dtype": dtype,
+                "config_name": config_name,
+                "name": reduced_name,
+                "state_space": state_space,
+                "reduced": True,
+            }
+            yield kwargs

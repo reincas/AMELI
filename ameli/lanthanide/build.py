@@ -11,6 +11,8 @@ import logging.handlers
 import multiprocessing
 import multiprocessing.queues
 import os
+import queue
+
 import psutil
 import time
 
@@ -18,7 +20,9 @@ from ..matrix import Matrix
 from .graph import Registry, MatrixNode
 from .operators import matrix_args
 
-TIMEOUT = 1.0
+vmem = psutil.virtual_memory()
+MEM_CRITICAL = 0.05 * vmem.total
+MEM_MAXIMAL = 0.10 * vmem.total
 
 
 ##########################################################################
@@ -28,16 +32,16 @@ TIMEOUT = 1.0
 def memory():
     # Memory used by this process
     process = psutil.Process(os.getpid())
-    proc_mem = process.memory_info().rss / (1024 ** 3)
+    proc_mem = process.memory_info().rss / 1024 ** 2
 
     # Total available memory
     vmem = psutil.virtual_memory()
-    avail_mem = vmem.available / (1024 ** 3)
+    avail_mem = vmem.available / 1024 ** 2
 
     # Total amount of virtual memory on the system
-    total_mem = vmem.total / (1024 ** 3)
+    total_mem = vmem.total / 1024 ** 2
 
-    return f"proc: {proc_mem:.3f} GB, avail: {avail_mem:.3f} GB, total: {total_mem:.3f} GB"
+    return f"proc: {proc_mem:.0f} MB, avail: {avail_mem:.0f} MB, total: {total_mem:.0f} MB"
 
 
 ##########################################################################
@@ -60,7 +64,7 @@ def build_matrix(dtype, config_name, name, state_space, reduced=False):
     logger.info(f"Matrix generation took {t:.1f} seconds / {memory()}")
 
 
-def run_sync(num_electrons, handlers):
+def run_sync(nums_electrons, handlers):
     t = time.time()
 
     # Register log handlers in root logger
@@ -71,151 +75,350 @@ def run_sync(num_electrons, handlers):
 
     # Local logger
     logger = logging.getLogger("build")
-    logger.info(f"Build matrices for lanthanide ion f{num_electrons}.")
 
-    for kwargs in matrix_args(num_electrons):
-        build_matrix(**kwargs)
+    for num_electrons in nums_electrons:
+        logger.info(f"Build matrices for lanthanide ion f{num_electrons}.")
+        for kwargs in matrix_args(num_electrons):
+            build_matrix(**kwargs)
 
     t = time.time() - t
     logger.info(f"Total execution time: {t:.1f} seconds")
-
-
-##########################################################################
-# Worker process
-##########################################################################
-
-def pool_worker(task_queue, result_queue, log_queue, stop_event, registry):
-    root = logging.getLogger()
-    root.addHandler(logging.handlers.QueueHandler(log_queue))
-    root.setLevel(logging.DEBUG)
-    logger = logging.getLogger(f"[{os.getpid()}]")
-    logger.info(f"Worker active / {memory()}")
-
-    while True:
-        node_id = task_queue.get()
-        if node_id is None:
-            break
-
-        node = registry[node_id]
-        logger.info(f"Worker generating {node}")
-        try:
-            node.generate()
-            result_queue.put(node_id)
-        except Exception as e:
-            logger.error(f"FATAL WORKER ERROR in node {node_id} / {memory()}: {e}", exc_info=True)
-            stop_event.set()
-            result_queue.put(node_id)
-            break
-        gc.collect()
-        logger.info(f"Worker done / {memory()}")
 
 
 ##########################################################################
 # Registry housekeeping functions
 ##########################################################################
 
-def activate(node_id, registry, in_degree, activated, completed, ready_heap):
-    if node_id in activated:
-        return
-    if in_degree[node_id] != 0:
-        return
+def complete_node(node_id, registry, active_heap):
+    """ Remove finished node from the registry if its out-degree is zero (all children finished) or try to activate
+    all of its children otherwise. """
 
-    node = registry[node_id]
-    if node.exists:
-        mark_complete(node_id, registry, in_degree, activated, completed, ready_heap)
-    else:
-        heapq.heappush(ready_heap, (-node.weight, node_id))
-    activated.add(node_id)
+    # Sanity check
+    node = registry.nodes[node_id]
+    assert node.exists
 
-
-def mark_complete(node_id, registry, in_degree, activated, completed, ready_heap):
-    if node_id in completed:
+    # Remove unnecessary node
+    if node.out_degree == 0:
         return
 
-    node = registry[node_id]
+    # Try to activate all children
     for child_id in node.children:
-        if in_degree[child_id] > 0:
-            in_degree[child_id] -= 1
-        activate(child_id, registry, in_degree, activated, completed, ready_heap)
-    completed.add(node_id)
+        activate_node(child_id, registry, active_heap)
+
+
+def activate_node(node_id, registry, active_heap):
+    """ Activate the given node if its in-degree is zero (all parents finished). Try to remove the node from the
+    registry if it already exists. """
+
+    # Node is already active
+    active_nodes = [node_id for _, node_id in active_heap]
+    if node_id in active_nodes:
+        return
+
+    # Node has unresolved dependencies
+    node = registry.nodes[node_id]
+    if node.in_degree > 0:
+        return
+
+    # Try to remove node from registry if it is finished
+    if node.exists:
+        complete_node(node_id, registry, active_heap)
+        return
+
+    # Place node on the heap of active nodes
+    heapq.heappush(active_heap, (-node.weight, node_id))
+
+
+##########################################################################
+# Worker process
+##########################################################################
+
+def pool_worker(task_queue, result_queue, log_queue, stop_event):
+    root = logging.getLogger()
+    root.handlers = []
+    root.addHandler(logging.handlers.QueueHandler(log_queue))
+    root.setLevel(logging.DEBUG)
+    logger = logging.getLogger(f"[{os.getpid()}]")
+    logger.info(f"Worker active / {memory()}")
+
+    while True:
+        node = task_queue.get()
+        if node is None:
+            break
+
+        node_id = node.node_id
+        logger.info(f"Worker generating {node_id}: {node}")
+        assert not node.exists
+        try:
+            node.generate()
+            result_queue.put((node_id, os.getpid()))
+        except Exception as e:
+            logger.error(f"FATAL WORKER ERROR in node {node_id} / {memory()}: {e}", exc_info=True)
+            stop_event.set()
+            result_queue.put((node_id, os.getpid()))
+            break
+        gc.collect()
+        logger.info(f"Worker done / {memory()}")
 
 
 ##########################################################################
 # Pool executor
 ##########################################################################
 
-def run_pool(num_electrons, handlers):
-    t = time.time()
+class PoolScheduler:
+    def __init__(self, logger, log_queue):
+        self.logger = logger
+        self.log_queue = log_queue
 
-    manager = multiprocessing.Manager()
-    task_queue = manager.Queue(maxsize=1)
-    result_queue = manager.Queue()
-    log_queue = manager.Queue()
-    stop_event = manager.Event()
+        self.max_workers = multiprocessing.cpu_count()
+        self.workers = {}
+        self.node_stats = {}
+        self.active_heap = []
 
-    # Start the listener
+        # Initialise required queues and events
+        self.manager = multiprocessing.Manager()
+        self.result_queue = self.manager.Queue()
+        self.stop_event = self.manager.Event()
+
+        self.registry = Registry()
+
+    def max_rss(self, node_id):
+        if node_id not in self.node_stats:
+            return 0
+        return self.node_stats[node_id]
+
+    @staticmethod
+    def get_rss(pid):
+        try:
+            rss = psutil.Process(pid).memory_info().rss
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            return None
+        return rss
+
+    def update_rss(self):
+        for proc, task_queue, node_id in self.workers.values():
+            if node_id is None:
+                continue
+            rss = self.get_rss(proc.pid)
+            if rss is None:
+                continue
+            if not node_id in self.node_stats or rss > self.node_stats[node_id]:
+                self.node_stats[node_id] = rss
+
+    @property
+    def idle_workers(self):
+        return [proc.pid for proc, task_queue, node_id in self.workers.values() if node_id is None]
+
+    @property
+    def busy_workers(self):
+        return [proc.pid for proc, task_queue, node_id in self.workers.values() if node_id is not None]
+
+    def terminate(self, pid):
+        proc, task_queue, node_id = self.workers.pop(pid)
+        task_queue.put(None)
+        proc.terminate()
+        proc.join()
+        return node_id
+
+    def memory_watchdog(self):
+
+        # Skip if enough memory is still available
+        vmem = psutil.virtual_memory()
+        if len(self.workers) == 0 or vmem.available > MEM_MAXIMAL:
+            return True
+
+        # Terminate an idle worker
+        if len(self.idle_workers) > 0:
+            pid = self.idle_workers[0]
+            rss = self.get_rss(pid) / 1024 ** 2
+            self.logger.warning(f"LOW MEMORY ({vmem.percent:.1f} %): Terminating idle PID {pid} using {rss:.0f}MB")
+            node_id = self.terminate(pid)
+            assert node_id is None
+            return False
+
+        # Skip termination of busy workers if enough memory is still available
+        if vmem.available > MEM_CRITICAL:
+            return False
+
+        # Claimed memory (RSS) and PID of the smallest worker
+        worker_stats = [(self.get_rss(pid) / 1024 ** 2, pid) for pid in self.busy_workers]
+        worker_stats.sort()
+        rss, pid = worker_stats[0]
+
+        # Terminate the smallest worker
+        self.logger.warning(f"CRITICAL MEMORY ({vmem.percent:.1f} %): Terminating busy PID {pid} using {rss:.0f}MB")
+        node_id = self.terminate(pid)
+
+        # Put node on the heap again if the worker was active
+        if node_id is not None:
+            node = self.registry.nodes[node_id]
+            if not node.exists:
+                heapq.heappush(self.active_heap, (-node.weight, node_id))
+        return False
+
+    def process_cleanup(self):
+        for proc, task_queue, node_id in self.workers.values():
+            if proc.is_alive():
+                continue
+            if node_id is None:
+                continue
+            node = self.registry.nodes[node_id]
+            if not node.exists:
+                heapq.heappush(self.active_heap, (-node.weight, node_id))
+            self.workers[proc.pid] = (proc, task_queue, None)
+
+    def schedule_tasks(self):
+
+        # Skip if no active task
+        if len(self.active_heap) == 0:
+            return
+
+        # Skip if maximum number of active workers reached
+        if len(self.busy_workers) >= self.max_workers:
+            return
+
+        # Skip if no memory available
+        vmem = psutil.virtual_memory()
+        if vmem.available < MEM_MAXIMAL:
+            return
+
+        # Skip if existing
+        priority, node_id = heapq.heappop(self.active_heap)
+        node = self.registry.nodes[node_id]
+        if node.exists:
+            return
+
+        # Skip if not enough memory available
+        rss = self.max_rss(node_id)
+        if vmem.available - rss < MEM_CRITICAL:
+            heapq.heappush(self.active_heap, (priority, node_id))
+            return
+
+        # Get free worker
+        free_workers = [(proc, queue) for proc, queue, node_id in self.workers.values() if node_id is None]
+        if free_workers:
+            proc, task_queue = free_workers[0]
+
+        # Get new worker
+        else:
+            task_queue = self.manager.Queue()
+            process_args = (task_queue, self.result_queue, self.log_queue, self.stop_event)
+            proc = multiprocessing.Process(target=pool_worker, args=process_args)
+            proc.start()
+
+        # Deal task to worker
+        self.workers[proc.pid] = (proc, task_queue, node_id)
+        task_queue.put(node)
+
+    def store_result(self):
+        try:
+            node_id, pid = self.result_queue.get(timeout=0.5)
+        except queue.Empty:
+            return
+
+        node = self.registry.nodes[node_id]
+        node.exists = True
+        rss = self.max_rss(node_id) / 1024 ** 2
+        self.logger.info(f"Finished {node} [maximum RSS: {rss:.0f} MB].")
+        complete_node(node_id, self.registry, self.active_heap)
+        proc, task_queue, nid = self.workers[pid]
+        assert proc.pid == pid
+        assert node_id == nid
+        self.workers[proc.pid] = (proc, task_queue, None)
+
+    def register(self, num_electrons: int):
+        self.logger.info(f"Register all matrices for lanthanide ion f{num_electrons}.")
+
+        # Register all nodes
+        for kwargs in matrix_args(num_electrons):
+            self.registry.register(MatrixNode, **kwargs)
+
+        # Activate all nodes with zero in-degree
+        self.active_heap = []
+        for node_id in list(self.registry.nodes.keys()):
+            if node_id in self.registry.nodes:
+                activate_node(node_id, self.registry, self.active_heap)
+
+        uf = self.registry.unfinished
+        ac = len(self.active_heap)
+        self.logger.info(f"Number of unfinished nodes: {uf} ({ac} active).")
+
+    @property
+    def memory_status(self):
+        avail = psutil.virtual_memory().available / 1024 ** 2
+        limit = MEM_MAXIMAL / 1024 ** 2
+        hard = MEM_CRITICAL / 1024 ** 2
+        return f"available: {avail:.0f} MB, limit: {limit:.0f} MB, hard limit: {hard:.0f} MB"
+
+    @property
+    def task_status(self):
+        w = len(self.workers)
+        r = len(self.busy_workers)
+        a = len(self.active_heap)
+        t = self.registry.unfinished
+        assert a <= t
+        return f"workers: {w} ({r} busy), tasks: {t} ({a} active)"
+
+    def run(self, nums_electrons: list):
+        self.logger.info(f"Build nodes in a pool of {self.max_workers} workers.")
+        t = time.time()
+
+        while len(nums_electrons) > 0 and len(self.active_heap) == 0:
+            self.register(nums_electrons.pop(0))
+
+        # Run until all nodes are completed
+        last_mem_status = ""
+        last_task_status = ""
+        while self.registry.unfinished and not self.stop_event.is_set():
+            status = self.memory_status
+            if status != last_mem_status:
+                self.logger.info(f"Memory status: {status}")
+                last_mem_status = status
+
+            status = self.task_status
+            if status != last_task_status:
+                self.logger.info(f"Task status: {status}")
+                last_task_status = status
+
+            self.update_rss()
+            free_space = self.memory_watchdog()
+            self.process_cleanup()
+            if free_space:
+                self.schedule_tasks()
+            self.store_result()
+
+            if self.registry.unfinished <= self.max_workers and len(self.active_heap) == 0 and nums_electrons:
+                self.register(nums_electrons.pop(0))
+
+        # Stop all workers
+        self.logger.info(f"Stop all {len(self.workers)} workers.")
+        for proc, task_queue, node_id in self.workers.values():
+            task_queue.put(None)
+            proc.join()
+
+        t = time.time() - t
+        self.logger.info(f"Total execution time: {t:.1f} seconds")
+
+
+def run_pool(nums_electrons, handlers):
+    # Start the worker log queue
+    log_queue = multiprocessing.Queue()
     listener = logging.handlers.QueueListener(log_queue, *handlers)
     listener.start()
 
-    # Register queue handler in root logger
+    # Register handler of the worker log queue in the root logger
     root = logging.getLogger()
-    root.addHandler(logging.handlers.QueueHandler(log_queue))
+    queue_handler = logging.handlers.QueueHandler(log_queue)
+    root.addHandler(queue_handler)
     root.setLevel(logging.INFO)
 
     # Local logger
     logger = logging.getLogger("build")
 
-    # Register all available tensor operator matrices
-    logger.info(f"Register all matrices for lanthanide ion f{num_electrons}.")
-    registry = Registry()
-    for kwargs in matrix_args(num_electrons):
-        registry.register(MatrixNode, **kwargs)
-
-    # Number of unfinished parents
-    in_degree = {node_id: len(node.parents) for node_id, node in registry.items()}
-    activated = set()
-    total_nodes = len(registry)
-    completed = set()
-    ready_heap = []
-
-    # Queue initial nodes without parents
-    for node_id in in_degree:
-        activate(node_id, registry, in_degree, activated, completed, ready_heap)
-
-    # Run until all nodes are completed
-    max_workers = multiprocessing.cpu_count()
-    logger.info(f"Build matrices for lanthanide ion f{num_electrons} in a pool of {max_workers} workers.")
-    slots = multiprocessing.Semaphore(max_workers)
-    args = (task_queue, result_queue, log_queue, stop_event, registry.nodes)
-    workers = []
-    while len(completed) < total_nodes and not stop_event.is_set():
-
-        if ready_heap and slots.acquire(block=False):
-            priority, node_id = heapq.heappop(ready_heap)
-            task_queue.put(node_id)
-
-            if len(workers) < max_workers:
-                proc = multiprocessing.Process(target=pool_worker, args=args)
-                proc.start()
-                workers.append(proc)
-
-        try:
-            finished_id = result_queue.get(timeout=TIMEOUT)
-        except:
-            continue
-
-        mark_complete(finished_id, registry, in_degree, activated, completed, ready_heap)
-        slots.release()
-        logger.info(f"Finished {len(completed)}/{total_nodes} data container tasks.")
-
-    # Kill all workers
-    logger.info("Stop all workers.")
-    for _ in range(len(workers)):
-        task_queue.put(None)
-    for worker in workers:
-        worker.join()
-
-    listener.stop()
-
-    t = time.time() - t
-    logger.info(f"Total execution time: {t:.1f} seconds")
+    try:
+        scheduler = PoolScheduler(logger, log_queue)
+        scheduler.run(nums_electrons)
+    finally:
+        root.removeHandler(queue_handler)
+        queue_handler.close()
+        listener.stop()
