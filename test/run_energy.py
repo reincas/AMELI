@@ -115,8 +115,8 @@ def calc_energies(config_name, radial):
     assert "base" not in radial
     matrices = []
     for name, factor in radial.items():
-        assert Matrix.exists("symbolic", config_name, name, "SLJ")
-        matrix = Matrix("symbolic", config_name, name, "SLJ")
+        assert Matrix.exists(config_name, name, "SLJ")
+        matrix = Matrix(config_name, name, "SLJ")
         matrices.append((matrix, factor))
 
     # Get J space indices and collapse the J spaces to the stretched states with M = -J
@@ -225,8 +225,8 @@ def check_coulomb(data):
         U_real = {}
         for k in (2, 4, 6):
             name = f"U/{k}"
-            assert Matrix.exists("symbolic", config_name, name, "SLJ", reduced=True)
-            reduced = Matrix("symbolic", config_name, name, "SLJ", reduced=True)
+            assert Matrix.exists(config_name, name, "SLJ", reduced=True)
+            reduced = Matrix(config_name, name, "SLJ", reduced=True)
             reduced = reduced.info.array(np.float64)
             reduced = intermediate.T @ reduced @ intermediate
             reduced = np.power(reduced, 2)
