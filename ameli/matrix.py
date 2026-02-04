@@ -19,7 +19,7 @@ from .sparse import SymMatrix
 from .states import space_registry
 from .vault import container_vault
 from .config import ConfigInfo, Config
-from .unit import Unit
+from .unit import Unit, MATRIX
 
 __version__ = "1.0.0"
 logger = logging.getLogger("matrix")
@@ -232,37 +232,6 @@ def matrix_JJ(config):
 # Casimirs spherical tensor operators
 ###########################################################################
 
-def matrix_CR(config):
-    """ Return the matrix <|C2(SO(2l+1))|> of the Casimir operator of the special orthogonal (rotational) group
-    SO(2*l+1) as product state matrix for the given electron configuration. """
-
-    # The current code works only for a single-shell configuration
-    assert config.info.num_subshells == 1, "One sub-shell only!"
-
-    # Parameters
-    s = config.states.electron_pool[0].s
-    l = config.states.electron_pool[0].l
-    num = config.info.num_electrons
-    ident = sp.SparseMatrix.eye(config.num_states)
-
-    # One-electron matrix
-    factor = sp.S(0)
-    for k in range(1, 2 * l, 2):
-        factor += 2 * k + 1
-    matrix = (num * factor / (2 * l + 1)) * ident
-
-    # Two-electron matrix
-    if num > 1:
-        for k in range(1, 2 * l, 2):
-            factor = (-1) ** k * 2 * (2 * s + 1) * (2 * k + 1) * sp.sqrt(2 * k + 1)
-            unit = Unit(config.name, f"UTUT/{k},0,{k},{k},0,{k},0,0").matrix
-            matrix += factor * unit
-
-    # Return matrix
-    matrix /= (2 * l - 1)
-    return matrix
-
-
 def matrix_C2(config):
     """ Return the matrix <|C2(G2)|> of the Casimir operator of the special group G2 as product state matrix for the
     given electron configuration. """
@@ -292,6 +261,37 @@ def matrix_C2(config):
 
     # Return matrix
     matrix /= 4
+    return matrix
+
+
+def matrix_CR(config):
+    """ Return the matrix <|C2(SO(2l+1))|> of the Casimir operator of the special orthogonal (rotational) group
+    SO(2*l+1) as product state matrix for the given electron configuration. """
+
+    # The current code works only for a single-shell configuration
+    assert config.info.num_subshells == 1, "One sub-shell only!"
+
+    # Parameters
+    s = config.states.electron_pool[0].s
+    l = config.states.electron_pool[0].l
+    num = config.info.num_electrons
+    ident = sp.SparseMatrix.eye(config.num_states)
+
+    # One-electron matrix
+    factor = sp.S(0)
+    for k in range(1, 2 * l, 2):
+        factor += 2 * k + 1
+    matrix = (num * factor / (2 * l + 1)) * ident
+
+    # Two-electron matrix
+    if num > 1:
+        for k in range(1, 2 * l, 2):
+            factor = (-1) ** k * 2 * (2 * s + 1) * (2 * k + 1) * sp.sqrt(2 * k + 1)
+            unit = Unit(config.name, f"UTUT/{k},0,{k},{k},0,{k},0,0").matrix
+            matrix += factor * unit
+
+    # Return matrix
+    matrix /= (2 * l - 1)
     return matrix
 
 
@@ -493,50 +493,93 @@ def matrix_H6(config, k: int):
 
 
 # Dictionary mapping name headers to matrix functions, tuples of operator parameters and a description string
-MATRICES = {
-    "U": (matrix_U, ("k", "q"),
-          "Component q of the total unit tensor operator U^(k)_q of rank k in the orbital angular momentum space"),
-    "T": (matrix_T, ("k", "q"),
-          "Component q of the total unit tensor operator T^(k)_q of rank k in the spin angular momentum space"),
-    "UU": (matrix_UU, ("k",),
-           "Squared total unit tensor operator [U^(k)]^2 of rank k in the orbital angular momentum space"),
-    "TT": (matrix_TT, ("k",),
-           "Squared total unit tensor operator [T^(k)]^2 of rank k in the spin angular momentum space"),
-    "UT": (matrix_UT, ("k",),
-           "Scalar product of the total unit tensor operators U^(k)*T^(k) of rank k in the orbital and spin angular momentum space"),
-    "L": (matrix_L, ("q",),
-          "Component q of the total orbital angular momentum operator L_q"),
-    "S": (matrix_S, ("q",),
-          "Component q of the total spin angular momentum operator S_q"),
-    "J": (matrix_J, ("q",),
-          "Component q of the total angular momentum operator J_q"),
-    "LL": (matrix_LL, (),
-           "Squared total orbital angular momentum operator L^2"),
-    "SS": (matrix_SS, (),
-           "Squared total spin angular momentum operator S^2"),
-    "JJ": (matrix_JJ, (),
-           "Squared total angular momentum operator J^2"),
-    "LS": (matrix_LS, (),
-           "Scalar product of the total orbital and spin angular momentum operators LS"),
-    "CR": (matrix_CR, (),
-           "Casimir operator C_2(SO(2l+1)) of the special orthogonal (rotational) group SO(2l+1) in 2l+1 dimensions"),
-    "C2": (matrix_C2, (),
-           "Casimir operator C_2(G_2) of the special group G_2"),
-    "H1": (matrix_H1, ("k",),
-           "Coulomb first order perturbation Hamiltonian f_k of rank k"),
-    "H2": (matrix_H2, (),
-           "Spin-orbit first order perturbation Hamiltonian z"),
-    "H4": (matrix_H4, ("c",),
-           "Effective Coulomb second order perturbation Hamiltonian t_c with index c"),
-    "Hss": (matrix_Hss, ("k",),
-            "Spin-spin first order perturbation Hamiltonian mss_k with rank k"),
-    "Hsoo": (matrix_Hsoo, ("k",),
-             "Spin-other-orbit first order perturbation Hamiltonian msoo_k with rank k"),
-    "H5": (matrix_H5, ("k",),
-           "Spin-spin and spin-other-orbit first order perturbation Hamiltonian m_k with rank k"),
-    "H6": (matrix_H6, ("k",),
-           "Effective electrostatic spin-orbit second order perturbation Hamiltonian p_k with rank k"),
-}
+MATRIX_INFO = [
+    ("U", {"func": matrix_U, "keys": ("k", "q"),
+        "desc": "Component q of the total unit tensor operator U^(k)_q of rank k in the orbital angular momentum space",
+        "html_op": "$\\mathrm{{U}}^{{(k)}}_q$",
+        "html_desc": "Component $q$ of the total unit tensor operator of rank $k$ in the orbital angular momentum space"}),
+    ("T", {"func": matrix_T, "keys": ("k", "q"),
+        "desc": "Component q of the total unit tensor operator T^(k)_q of rank k in the spin space",
+        "html_op": "$\\mathrm{{T}}^{{(k)}}_q$",
+        "html_desc": "Component $q$ of the total unit tensor operator of rank $k$ in the spin space"}),
+    ("UU", {"func": matrix_UU, "keys": ("k",),
+        "desc": "Squared total unit tensor operator [U^(k)]^2 of rank k in the orbital angular momentum space",
+        "html_op": "$(\\mathrm{{U}}^{{(k)}}\\cdot\\mathrm{{U}}^{{(k)}})$",
+        "html_desc": "Squared total unit tensor operator of rank $k$ in the orbital angular momentum space"}),
+    ("TT", {"func": matrix_TT, "keys": ("k",),
+        "desc": "Squared total unit tensor operator [T^(k)]^2 of rank k in the spin space",
+        "html_op": "$(\\mathrm{{T}}^{{(k)}}\\cdot\\mathrm{{T}}^{{(k)}})$",
+        "html_desc": "Squared total unit tensor operator of rank $k$ in the spin space"}),
+    ("UT", {"func": matrix_UT, "keys": ("k",),
+        "desc": "Scalar product of the total unit tensor operators U^(k)*T^(k) of rank k in the orbital and spin spaces",
+        "html_op": "$(\\mathrm{{U}}^{{(k)}}\\cdot\\mathrm{{T}}^{{(k)}})$",
+        "html_desc": "Scalar product of the total unit tensor operators of rank $k$ in the orbital and spin spaces"}),
+    ("L", {"func": matrix_L, "keys": ("q",),
+        "desc": "Component q of the total orbital angular momentum operator L_q",
+        "html_op": "$\\mathrm{{L}}_q$",
+        "html_desc": "Component $q$ of the total orbital angular momentum operator"}),
+    ("S", {"func": matrix_S, "keys": ("q",),
+        "desc": "Component q of the total spin angular momentum operator S_q",
+        "html_op": "$\\mathrm{{S}}_q$",
+        "html_desc": "Component $q$ of the total spin angular momentum operator"}),
+    ("J", {"func": matrix_J, "keys": ("q",),
+        "desc": "Component q of the total angular momentum operator J_q",
+        "html_op": "$\\mathrm{{J}}_q$",
+        "html_desc": "Component $q$ of the total angular momentum operator"}),
+    ("LL", {"func": matrix_LL, "keys": (),
+        "desc": "Squared total orbital angular momentum operator L^2",
+        "html_op": "$(\\mathrm{{L}}\\cdot\\mathrm{{L}})$", "html_radial": "$\\alpha$",
+        "html_desc": "Squared total orbital angular momentum operator"}),
+    ("SS", {"func": matrix_SS, "keys": (),
+        "desc": "Squared total spin angular momentum operator S^2",
+        "html_op": "$(\\mathrm{{S}}\\cdot\\mathrm{{S}})$",
+        "html_desc": "Squared total spin angular momentum operator"}),
+    ("JJ", {"func": matrix_JJ, "keys": (),
+        "desc": "Squared total angular momentum operator J^2",
+        "html_op": "$(\\mathrm{{J}}\\cdot\\mathrm{{J}})$",
+        "html_desc": "Squared total angular momentum operator"}),
+    ("LS", {"func": matrix_LS, "keys": (),
+        "desc": "Scalar product of the total orbital and spin angular momentum operators LS",
+        "html_op": "$(\\mathrm{{L}}\\cdot\\mathrm{{S}})$",
+        "html_desc": "Scalar product of the total orbital and spin angular momentum operators"}),
+    ("C2", {"func": matrix_C2, "keys": (),
+        "desc": "Casimir operator C_2(G_2) of the special group G_2",
+        "html_op": "$\\mathrm{{C}}_2(G_2)$", "html_radial": "$\\beta$",
+        "html_desc": "Casimir operator of the special group $G_2$"}),
+    ("CR", {"func": matrix_CR, "keys": (),
+        "desc": "Casimir operator C_2(SO(2l+1)) of the special orthogonal (rotational) group SO(2l+1) in 2l+1 dimensions",
+        "html_op": "$\\mathrm{{C}}_2(SO(2l+1))$", "html_radial": "$\\gamma$",
+        "html_desc": "Casimir operator of the special orthogonal (rotational) group in $2l+1$ dimensions"}),
+    ("H1", {"func": matrix_H1, "keys": ("k",),
+        "desc": "Coulomb first order perturbation Hamiltonian f_k of rank k",
+        "html_op": "$\\mathrm{{f}}_k$", "html_radial": "$F^k$",
+        "html_desc": "Coulomb first order perturbation Hamiltonian of rank $k$"}),
+    ("H2", {"func": matrix_H2, "keys": (),
+        "desc": "Spin-orbit first order perturbation Hamiltonian z",
+        "html_op": "$\\mathrm{{z}}$", "html_radial": "$\\zeta$",
+        "html_desc": "Spin-orbit first order perturbation Hamiltonian"}),
+    ("H4", {"func": matrix_H4, "keys": ("c",),
+        "desc": "Effective Coulomb second order perturbation Hamiltonian t_c with index c",
+        "html_op": "$\\mathrm{{t}}_c$", "html_radial": "$T^c$",
+        "html_desc": "Effective Coulomb second order perturbation Hamiltonian"}),
+    ("Hss", {"func": matrix_Hss, "keys": ("k",),
+        "desc": "Spin-spin first order perturbation Hamiltonian mss_k of rank k",
+        "html_op": "$\\mathrm{{m}}_{{k,ss}}$",
+        "html_desc": "Spin-spin first order perturbation Hamiltonian of rank $k$"}),
+    ("Hsoo", {"func": matrix_Hsoo, "keys": ("k",),
+        "desc": "Spin-other-orbit first order perturbation Hamiltonian msoo_k of rank k",
+        "html_op": "$\\mathrm{{m}}_{{k,soo}}$",
+        "html_desc": "Spin-other-orbit first order perturbation Hamiltonian of rank $k$"}),
+    ("H5", {"func": matrix_H5, "keys": ("k",),
+        "desc": "Spin-spin and spin-other-orbit first order perturbation Hamiltonian m_k of rank k",
+        "html_op": "$\\mathrm{{m}}_k$", "html_radial": "$M^k$",
+        "html_desc": "Spin-spin and spin-other-orbit first order perturbation Hamiltonian of rank $k$"}),
+    ("H6", {"func": matrix_H6, "keys": ("k",),
+        "desc": "Effective electrostatic spin-orbit second order perturbation Hamiltonian p_k of rank k",
+        "html_op": "$\\mathrm{{p}}_k$", "html_radial": "$P^k$",
+        "html_desc": "Effective electrostatic spin-orbit second order perturbation Hamiltonian of rank $k$"}),
+]
+MATRICES = dict(MATRIX_INFO)
 
 # Translation of alternative names to canonical names
 ALT_NAMES = {
@@ -572,7 +615,10 @@ class MatrixName:
         else:
             self.head = self.name
             self.args = ()
-        self.func, self.keys, self.tensor_desc = MATRICES[self.head]
+        info = MATRICES[self.head]
+        self.func = info["func"]
+        self.keys = info["keys"]
+        self.tensor_desc = info["desc"]
 
         # Determine tensor rank
         if "q" not in self.keys:
