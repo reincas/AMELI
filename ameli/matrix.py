@@ -829,15 +829,17 @@ class Matrix:
         # Sanity check for state space
         assert state_space in space_registry, f"Unknown state space '{state_space}'"
         if reduced:
-            state_space += "reduced"
+            space = f"{state_space.lower()}_reduced"
+        else:
+            space = state_space.lower()
 
         # Return data container file name
         if "/" in name:
             head, args = name.split("/")
             args = "_".join(args.split(","))
-            file = f"{config_name}/{state_space}/{head}_{args}.zdc"
+            file = f"{config_name}/{space}/{head}_{args}.zdc"
         else:
-            file = f"{config_name}/{state_space}/{name}.zdc"
+            file = f"{config_name}/{space}/{name}.zdc"
         return file
 
     @staticmethod
