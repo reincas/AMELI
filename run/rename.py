@@ -39,7 +39,7 @@ def refactor_subfolders(num):
         old_path = root / "symbolic" / old_name
         new_path = root / new_name
 
-        if old_path.is_dir():
+        if old_path.exists():
             if new_path.exists() and old_path.resolve() != new_path.resolve():
                 print(f"Warning: Cannot rename {old_name} because {new_name} already exists.")
             else:
