@@ -28,6 +28,7 @@ def refactor_subfolders(num):
         "SLJ": "slj",
         "SLJreduced": "slj_reduced",
         "unit": "unit",
+        "transform.zdc": "transform.zdc",
     }
 
     if not root.exists():
