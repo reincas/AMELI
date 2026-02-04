@@ -34,7 +34,7 @@ def refactor_subfolders(num):
         return
 
     for old_name, new_name in rename_map.items():
-        old_path = root / old_name
+        old_path = root / "symbolic" / old_name
         new_path = root / new_name
 
         if old_path.is_dir():
@@ -44,6 +44,8 @@ def refactor_subfolders(num):
                 old_path.rename(new_path)
                 print(f"Renamed: {old_path} -> {new_path}")
 
+    old_root = root / "symbolic"
+    old_root.rmdir()
 
 if __name__ == "__main__":
     nums = get_configs()
