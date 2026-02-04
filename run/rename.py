@@ -26,7 +26,8 @@ def refactor_subfolders(num):
         "Product": "product",
         "SLJM": "sljm",
         "SLJ": "slj",
-        "SLJreduced": "slj_reduced"
+        "SLJreduced": "slj_reduced",
+        "unit": "unit",
     }
 
     if not root.exists():
