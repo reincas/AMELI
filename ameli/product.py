@@ -511,7 +511,11 @@ class Product(Vault):
         config = Config(self.config_name)
         assert 1 <= self.tensor_size <= config.info.num_electrons
         config_meta = config.info.as_meta()
-        logger.info(f"Prepare {config.name} product states for {self.tensor_size} electrons")
+        if dc:
+            v = dc["meta.json"]["version"]
+            logger.info(f"Update {config.name} product states for {self.tensor_size} electrons (version {v} -> {__version__})")
+        else:
+            logger.info(f"Generate {config.name} product states for {self.tensor_size} electrons (version {__version__})")
 
         # Get product states
         states_dict, states_meta = config.states.as_meta(hasher)
@@ -529,7 +533,7 @@ class Product(Vault):
 
         # Generate data hash
         data_hash = hasher.hexdigest()
-        if dc and data_hash == dc["content.json"]["sha256Data"]:
+        if dc and data_hash != dc["content.json"]["sha256Data"]:
             if storage:
                 storage.close()
             raise VersionError

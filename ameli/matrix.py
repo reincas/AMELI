@@ -799,7 +799,11 @@ class Matrix(Vault):
         """ Generate the matrix of the tensor operator and store it in a data container file. """
 
         # Get and use a logger object
-        logger.info(f"Generating {self.config_name} tensor operator matrix {self.name}")
+        if dc:
+            v = dc["meta.json"]["version"]
+            logger.info(f"Update {self.config_name} tensor operator matrix {self.name} (version {v} -> {__version__})")
+        else:
+            logger.info(f"Generate {self.config_name} tensor operator matrix {self.name} (version {__version__})")
         t = time.time()
 
         # Initialize the data hasher
@@ -829,7 +833,7 @@ class Matrix(Vault):
 
         # Generate data hash
         data_hash = hasher.hexdigest()
-        if dc and data_hash == dc["content.json"]["sha256Data"]:
+        if dc and data_hash != dc["content.json"]["sha256Data"]:
             raise VersionError
 
         logger.debug(f" {self.config_name} | Finished tensor operator matrix {self.name}")

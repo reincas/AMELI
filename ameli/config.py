@@ -233,7 +233,7 @@ class ConfigInfo:
 TITLE = "Many-electron configuration"
 
 DESCRIPTION = """
-@@This container stores data regarding a configuration of n electrons in one or more partly occupied subshells.
+This container stores data regarding a configuration of n electrons in one or more partly occupied subshells.
 Each subshell is characterised by a quantum number l and a number of electrons.
 It contributes 2(2l+1) electron states with distinct ml and ms quantum numbers to the pool of single-electron
 states of the configuration in '{states}.electronPool'.
@@ -285,7 +285,11 @@ class Config(Vault):
         """ Generate an electron configuration and store it in a data container file. Update function: Use product
         states from the given data container if provided. """
 
-        logger.info(f"Generating {self.name} configuration")
+        if dc:
+            v = dc["meta.json"]["version"]
+            logger.info(f"Update {self.name} configuration (version {v} -> {__version__})")
+        else:
+            logger.info(f"Generate {self.name} configuration (version {__version__})")
         t = time.time()
 
         # Initialize the data hasher
@@ -303,7 +307,7 @@ class Config(Vault):
 
         # Generate data hash
         data_hash = hasher.hexdigest()
-        if dc and data_hash == dc["content.json"]["sha256Data"]:
+        if dc and data_hash != dc["content.json"]["sha256Data"]:
             raise VersionError
 
         # Prepare container description string

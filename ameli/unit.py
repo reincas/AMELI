@@ -357,7 +357,11 @@ class Unit(Vault):
         """ Generate the matrix of the unit tensor operator and store it in a data container file. Update function: Use
         the matrix from the given data container if provided. """
 
-        logger.info(f"Generating {self.config_name} unit matrix {self.name}")
+        if dc:
+            v = dc["meta.json"]["version"]
+            logger.info(f"Update {self.config_name} unit matrix {self.name} (version {v} -> {__version__})")
+        else:
+            logger.info(f"Generate {self.config_name} unit matrix {self.name} (version {__version__})")
         t = time.time()
 
         # Initialize the data hasher
@@ -387,7 +391,7 @@ class Unit(Vault):
 
         # Generate data hash
         data_hash = hasher.hexdigest()
-        if dc and data_hash == dc["content.json"]["sha256Data"]:
+        if dc and data_hash != dc["content.json"]["sha256Data"]:
             raise VersionError
 
         # Prepare container description string

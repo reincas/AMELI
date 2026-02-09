@@ -56,6 +56,7 @@ class Version:
     def is_release(self) -> bool:
         return self.patch == 0
 
+    @property
     def release(self) -> "Version":
         if self.is_release:
             return self
@@ -107,11 +108,6 @@ class Version:
 class Vault:
     """ Interface class for data container files. """
 
-    # def __setitem__(self, name: str, items: dict):
-    #     """ Create and store a SciDataContainer from the given items dictionary. """
-    #
-    #     self.write(name, items)
-
     def write(self, name: str, items: dict):
         dc = Container(items=items)
         dc.freeze()
@@ -129,20 +125,10 @@ class Vault:
                 time.sleep(0.05 * (i + 1))
         raise RuntimeError(f"Storage of {path} failed!")
 
-    # def __getitem__(self, name: str) -> Container:
-    #     """ Load and return the SciDataContainer for the given file name. """
-    #
-    #     return self.read(name)
-
     def read(self, name: str) -> Container:
 
         path = self.vault_path(name)
         return Container(file=str(path))
-
-    # def __contains__(self, name: str) -> bool:
-    #     """ Returns True if the given file exists and False otherwise. """
-    #
-    #     return self.in_vault(name)
 
     @staticmethod
     def in_vault(name: str) -> bool:

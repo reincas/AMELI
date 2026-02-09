@@ -1163,7 +1163,11 @@ class Transform(Vault):
     def generate_container(self, dc=None):
         """ Generate the LS transformation matrix and store it in a data container file. """
 
-        logger.info(f"Generating {self.config_name} transformation matrix")
+        if dc:
+            v = dc["meta.json"]["version"]
+            logger.info(f"Update {self.config_name} transformation matrix (version {v} -> {__version__})")
+        else:
+            logger.info(f"Generate {self.config_name} transformation matrix (version {__version__})")
         t_all = time.time()
 
         # Initialize the data hasher
@@ -1204,7 +1208,7 @@ class Transform(Vault):
 
         # Generate data hash
         data_hash = hasher.hexdigest()
-        if dc and data_hash == dc["content.json"]["sha256Data"]:
+        if dc and data_hash != dc["content.json"]["sha256Data"]:
             raise VersionError
 
         # Prepare container description string
