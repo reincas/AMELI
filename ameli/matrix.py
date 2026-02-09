@@ -742,11 +742,10 @@ class Matrix(Vault):
 
         # Get matrix metadata dictionaries
         if dc:
-            matrix_dict = dc["data/matrix.hdf5"]
-            matrix_meta = dc["data/matrix.json"]["matrix"]
+            state_matrix = SymMatrix.from_meta(dc["data/matrix.hdf5"], dc["data/matrix.json"]["matrix"])
         else:
             state_matrix = SymMatrix.from_matrix(self.state_space, self.state_space, matrix)
-            matrix_dict, matrix_meta = state_matrix.as_meta(hasher)
+        matrix_dict, matrix_meta = state_matrix.as_meta(hasher)
 
         # Return metadata
         return states_dict, states_meta, matrix_dict, matrix_meta
@@ -764,8 +763,8 @@ class Matrix(Vault):
 
         # Metadata dictionaries of matrix with collapsed J spaces
         if dc:
-            matrix_dict = dc["data/matrix.hdf5"]
-            matrix_meta = dc["data/matrix.json"]["matrix"]
+            state_matrix = SymMatrix.from_meta(dc["data/matrix.hdf5"], dc["data/matrix.json"]["matrix"])
+            matrix_dict, matrix_meta = state_matrix.as_meta(hasher)
         else:
             matrix_dict, matrix_meta = parent.info.collapse(indices, "SLJM", "SLJ").as_meta(hasher)
 
@@ -785,8 +784,8 @@ class Matrix(Vault):
 
         # Metadata dictionaries of matrix
         if dc:
-            matrix_dict = dc["data/matrix.hdf5"]
-            matrix_meta = dc["data/matrix.json"]["matrix"]
+            state_matrix = SymMatrix.from_meta(dc["data/matrix.hdf5"], dc["data/matrix.json"]["matrix"])
+            matrix_dict, matrix_meta = state_matrix.as_meta(hasher)
         else:
             J = [sp.S(value) for value in states.representation_lists(["J2"])["J2"]]
             matrix = SymMatrix.reduced([matrix.info for matrix in components], J)

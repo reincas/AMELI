@@ -41,11 +41,9 @@ class BaseUnit(ABC):
 
         # Product object used to get all potentially non-zero matrix elements
         self.product = product
-        self.num_subshells = self.product.config.num_subshells
 
         # Number of electrons, the operator is acting on
         self.tensor_size = int(tensor_size)
-        assert self.tensor_size == self.product.tensor_size
 
         # Common factor of all matrix elements prepared by the subclass
         factor = factor / sp.factorial(self.tensor_size)
@@ -64,8 +62,13 @@ class BaseUnit(ABC):
             assert self.matrix.row_space == "Product"
             assert self.matrix.col_space == "Product"
             assert self.matrix.is_symmetric == symmetric
-            assert self.matrix.num_states == self.product.num_states
             return
+
+        # Sanity check
+        assert self.tensor_size == self.product.tensor_size
+
+        # Number of subshells in the configuration
+        self.num_subshells = self.product.config.num_subshells
 
         # Calculate all non-zero matrix elements
         self.matrix = SymMatrix("Product", "Product", symmetric, self.product.num_states)
@@ -379,7 +382,7 @@ class Unit(Vault):
         cls, tensor_size = MATRIX[key]
         parameters = tuple(map(int, parameters.split(",")))
         if dc:
-            product = SymMatrix.from_meta(dc["data/matrix.hdf5"], dc["data/unit.json"]["matrix"]).matrix
+            product = SymMatrix.from_meta(dc["data/matrix.hdf5"], dc["data/unit.json"]["matrix"])
         else:
             product = Product(self.config_name, tensor_size)
         unit = cls(product, *parameters)

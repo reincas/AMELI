@@ -1185,6 +1185,7 @@ class Transform(Vault):
             state_matrix = SymMatrix.from_meta(dc["data/matrix.hdf5"], dc["data/transform.json"]["matrix"])
             indices = decode_uint_array(dc["data/col_states.hdf5"], "indices")
             eigenvalues = dc["data/transform.json"]["col_states"]["eigenvalues"]
+            eigenvalues = {t: [sp.S(value) for value in values] for t, values in eigenvalues.items()}
         else:
             # Build transformation matrix and store it as SparseMatrix object
             transform, states_dict = transform_states(config)
