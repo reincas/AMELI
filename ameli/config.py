@@ -11,6 +11,7 @@
 # product states of a configuration.
 #
 ##########################################################################
+
 import hashlib
 import logging
 import re
@@ -24,7 +25,7 @@ from .states import register_space
 from .uintarray import decode_uint_array, encode_uint_array
 from .vault import AMELI_VERSION, VersionError, Vault
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 logger = logging.getLogger("config")
 
 # Spectral letters representing quantum numbers of an orbital angular momentum
@@ -233,16 +234,15 @@ class ConfigInfo:
 TITLE = "Many-electron configuration"
 
 DESCRIPTION = """
-This container stores data regarding a configuration of n electrons in one or more partly occupied subshells.
-Each subshell is characterised by a quantum number l and a number of electrons.
-It contributes 2(2l+1) electron states with distinct ml and ms quantum numbers to the pool of single-electron
-states of the configuration in '{states}.electronPool'.
+This container contains data regarding the electron configuration {config_name}.
+The attribute '{states}.electronPool' in the JSON item {json} contains the quantum numbers of all available 
+single-electron states.
 <br> {states_desc}
 """
 
 # Description of the HDF5 container item holding the product states of a configuration
 PRODUCT_DESC = """
-The HDF5 item '{states_hdf5}' contains all electron product states.
+The HDF5 item '{states_hdf5}' contains all many-electron product states.
 Each state (row) within this array comprises an ordered sequence of indices that reference the pool of
 single-electron states in '{states}.electronPool' in the JSON item '{json}'.
 """

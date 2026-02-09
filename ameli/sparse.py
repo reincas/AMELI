@@ -192,9 +192,9 @@ The vector dataset 'rows' contains state indices related to the list of states i
 The vector dataset 'columns' contains state indices related to the list of states in the item '{col_hdf5}'.
 For each row and column there is a value index in the dataset 'elements' which refers to the unique values
 contained in the vector datasets 'signs', 'numerators', and 'denominators'.
-The value of each matrix element is related to its sign s, numerator n, and denominator d by
+The value of each matrix element is related to its sign flag s, numerator n, and denominator d by
 value = (-1)^s * sqrt(n/d).
-If the numerator or the denominator contain very large integers, the respective vector is split bitwise in parts
+If the numerator or the denominator contain very large integers, the respective vector is split bit-wise in parts
 named 'numerator_part<i>' or 'denominator_part<i>'.
 The part with i=0 contains the lowest order bits of the values.
 The size of the quadratic matrix is given by the square of the attribute 'numStates'.

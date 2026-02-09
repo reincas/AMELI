@@ -25,7 +25,7 @@ from .states import space_registry
 from .uintarray import get_dtype
 from .vault import AMELI_VERSION, VersionError, Vault
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 logger = logging.getLogger("product")
 
 
@@ -441,24 +441,22 @@ class ProductElements:
 TITLE = "Support data for the calculation of product state matrix elements of spherical tensor operators"
 
 DESCRIPTION = """
-This container stores data to support the calculation of product state matrix elements for m-electron tensor
-operators (m = attribute 'numTensorElectrons') within a configuration of n electrons (n = attribute
-'config.numElectrons'), where m <= n.
-Each matrix element is expressed as a sum of matrix elements from elementary tensor operators acting on m electrons.
-The sign (-1)^s of each elementary matrix element in the sum is determined by its stored sign flag s: s = 0 indicates
-a positive sign, while s = 1 indicates a negative sign.
+This container contains data to support the calculation of product state matrix elements for {m}-electron tensor
+operators (attribute 'numTensorElectrons') within a configuration of {n} electrons (attribute 'config.numElectrons').
+Each matrix element is expressed as a sum of matrix elements from elementary tensor operators acting on {m} electrons.
+The sign (-1)^s of each elementary matrix element in the sum is determined by its stored sign flag s.
 <br> {states_desc}
 <br>
 Structure of the HDF5 container item 'data/product.hdf5':
 Each row in the dataset 'indices' corresponds to a potentially non-zero matrix element of a high-level
-m-electron tensor operator.
+{m}-electron tensor operator.
 It consists of three elements: two state indices and the number of rows addressed in the dataset 'elements'.
 The state indices are related to the list of single electron states of the configuration in 'states.hdf5'.
 The dataset 'elements' is organized as a data stack.
 Each row in the dataset 'indices' addresses a consecutive block of rows within 'elements'.
 Each row in 'elements' represents one elementary tensor operator element mentioned above.
-The row contains m indices for the initial electrons, m indices for the final electrons, and the sign flag of
-the element.
+The row contains {m} indices for the initial electrons, {m} indices for the final electrons, and the sign flag of
+the elementary element.
 The electron indices are linked to the single electron states in 'states.electronPool' in the item 'product.json'.
 """
 
@@ -540,6 +538,8 @@ class Product(Vault):
 
         # Prepare container description string
         kwargs = {
+            "m": self.tensor_size,
+            "n": self.config.num_electrons,
             "states": "states",
             "states_hdf5": "states.hdf5",
             "json": "product.json",

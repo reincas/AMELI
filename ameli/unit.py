@@ -8,6 +8,7 @@
 # a spherical mixed unit tensor operator in the product state space.
 #
 ##########################################################################
+
 import hashlib
 import logging
 import time
@@ -21,7 +22,7 @@ from .config import ConfigInfo, Config
 from .product import Product
 from .vault import AMELI_VERSION, VersionError, Vault
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 logger = logging.getLogger("unit")
 
 
@@ -304,8 +305,8 @@ MATRIX = {
 TITLE = "Spherical unit tensor operator product state matrix elements"
 
 DESCRIPTION = """
-This container stores the product state matrix elements of a mixed spherical unit tensor operator in the given
-many-electron configuration.
+This container contains the product state matrix elements of a mixed spherical unit tensor operator in the electron 
+configuration {config_name}.
 <br> {states_desc}
 <br> {matrix_desc}
 """
@@ -399,6 +400,7 @@ class Unit(Vault):
 
         # Prepare container description string
         kwargs = {
+            "config_name": self.config_name,
             "states": "states",
             "states_hdf5": "states.hdf5",
             "matrix_hdf5": "matrix.hdf5",

@@ -15,6 +15,7 @@
 # LS states of a configuration.
 #
 ##########################################################################
+
 import hashlib
 import logging
 import time
@@ -31,7 +32,7 @@ from .unit import Unit
 from .matrix import Matrix
 from .vault import AMELI_VERSION, VersionError, Vault
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 
 logger = logging.getLogger("transform")
 ATOL = 1e-12
@@ -1083,8 +1084,8 @@ class LS_States:
 TITLE = "Transformation matrix from product states to LS coupling"
 
 DESCRIPTION = """
-This container stores the exact symbolic orthonormal transformation matrix V from electron product states to LS 
-coupling for a given many-electron configuration.
+This container contains the exact symbolic orthonormal transformation matrix V from electron product states to LS 
+coupling for the electron configuration {config_name}.
 An operator matrix M can be transformed from the product to the LS state space by calculating the matrix product
 M' = V^T * M * V, with the transposed transformation matrix V^T.
 The signs of the LS states are correctly correlated within the J spaces, which allows to build superpositions of
@@ -1214,6 +1215,7 @@ class Transform(Vault):
 
         # Prepare container description string
         kwargs = {
+            "config_name": self.config_name,
             "matrix_hdf5": "matrix.hdf5",
             "matrix": "orthonormal transformation matrix",
             "row_hdf5": "row_states.hdf5",

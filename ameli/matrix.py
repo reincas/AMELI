@@ -9,6 +9,7 @@
 # state space.
 #
 ##########################################################################
+
 import hashlib
 import logging
 import time
@@ -22,7 +23,7 @@ from .config import ConfigInfo, Config
 from .unit import Unit
 from .vault import AMELI_VERSION, VersionError, Vault
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 logger = logging.getLogger("matrix")
 
 
@@ -658,8 +659,8 @@ class MatrixName:
 TITLE = "Spherical tensor operator matrix"
 
 DESCRIPTION = """
-This container stores the {reduced}matrix elements of a spherical tensor operator in the given many-electron
-configuration.
+This container contains the {reduced}matrix elements of a spherical tensor operator in the electron configuration 
+{config_name}.
 <br> {states_desc}
 <br> {matrix_desc}
 """
@@ -839,6 +840,7 @@ class Matrix(Vault):
 
         # Prepare container description string
         kwargs = {
+            "config_name": self.config_name,
             "reduced": "reduced " if self.reduced else "",
             "states": "states",
             "states_hdf5": "states.hdf5",
