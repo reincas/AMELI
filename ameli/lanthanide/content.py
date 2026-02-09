@@ -1,0 +1,138 @@
+##########################################################################
+# Copyright (c) 2026 Reinhard Caspary                                    #
+# <reinhard.caspary@phoenixd.uni-hannover.de>                            #
+# This program is free software under the terms of the MIT license.      #
+##########################################################################
+#
+# This module provides generator functions for different objects required
+# for lanthanide ion configurations.
+#
+##########################################################################
+
+import re
+from pathlib import Path
+
+from ameli import Config, Product, Unit, Matrix, Transform
+from ameli.vault import VAULT_PATH
+
+
+def get_configs():
+    """ Finds all lanthanide ion configuration folders 'f<num>' in the AMELI vault path and returns a list of the
+    respective numbers of electrons. """
+
+    nums = []
+    pattern = re.compile(r'^f(\d+)$')
+
+    for folder in VAULT_PATH.iterdir():
+        if folder.is_dir():
+            match = pattern.match(folder.name)
+            if match:
+                nums.append(int(match.group(1)))
+
+    return sorted(nums)
+
+
+def update_containers(num_electrons):
+    """ Generate the classes and parameters necessary to update every data container for the given lanthanide
+    configuration. """
+
+    def matrix_generator(root_path, folder, space, reduced):
+        """ Generate all matrix classes in the given folder. """
+
+        folder = root_path / folder
+        assert folder.is_dir()
+        for file in folder.iterdir():
+            assert file.suffix == ".zdc"
+            head, *params = file.stem.split("_")
+            if params:
+                name = f"{head}/{','.join(params)}"
+            else:
+                name = head
+            yield Matrix, (config_name, name, space, reduced)
+
+    # Prepare root folder of the given lanthanide configuration
+    config_name = f"f{num_electrons}"
+    root_path = VAULT_PATH / Path(config_name)
+
+    # Yield Config class
+    file = root_path / "config.zdc"
+    assert file.exists()
+    yield Config, (config_name,)
+
+    # Yield Product class
+    for tensor_size in range(1, min(num_electrons, 3) + 1):
+        file = root_path / f"product_{tensor_size}.zdc"
+        assert file.exists()
+        yield Product, (config_name, tensor_size)
+
+    # Yield Unit class
+    folder = root_path / "unit"
+    assert folder.is_dir()
+    for file in folder.iterdir():
+        assert file.suffix == ".zdc"
+        head, *params = file.stem.split("_")
+        name = f"{head}/{','.join(params)}"
+        yield Unit, (config_name, name)
+
+    # Yield Matrix class for product states
+    yield from matrix_generator(root_path, "product", "Product", False)
+
+    # Yield Transform class
+    file = root_path / "transform.zdc"
+    assert file.exists()
+    yield Transform, (config_name,)
+
+    # Yield Matrix class for LS coupling
+    yield from matrix_generator(root_path, "sljm", "SLJM", False)
+    yield from matrix_generator(root_path, "slj", "SLJ", False)
+    yield from matrix_generator(root_path, "slj_reduced", "SLJ", True)
+
+
+# Content mapping for each zip folder
+zip_structure = [
+    ("product.zip", [Path("product")]),
+    ("sljm.zip", [Path("sljm")]),
+    ("slj.zip", [Path("slj")]),
+    ("slj_reduced.zip", [Path("slj_reduced")]),
+    ("support.zip", [Path("."), Path("unit")]),
+]
+
+
+def get_zip_folders(num_electrons):
+    """ Generate names, configuration root path, and file lists for zip folders containing all data container files
+    available for the lanthanide ion with the given number of electrons. """
+
+    # Prepare root folder of the given lanthanide configuration
+    config_name = f"f{num_electrons}"
+    root_path = VAULT_PATH / Path(config_name)
+
+    # Generate list of data container files for each zip folder in the given order
+    for zip_name, subfolders in zip_structure:
+        files = []
+        for folder in subfolders:
+            search_dir = root_path / folder
+            assert search_dir.is_dir(), f"Folder '{folder}' does not exist!"
+            for file_path in search_dir.glob("*.zdc"):
+                files.append(file_path)
+        yield zip_name, root_path, files
+
+
+def get_matrix_heads(num_electrons):
+    """ Return list of the header keys of all matrices available for the lanthanide ion with the given number of
+    electrons. """
+
+    # Prepare root folder of the given lanthanide configuration
+    config_name = f"f{num_electrons}"
+    root_path = VAULT_PATH / Path(config_name)
+
+    # Generate list of data container files for each zip folder in the given order
+    matrix_heads = set()
+    for zip_name, subfolders in zip_structure:
+        if zip_name == "support.zip":
+            continue
+        for folder in subfolders:
+            search_dir = root_path / folder
+            assert search_dir.is_dir(), f"Folder '{folder}' does not exist!"
+            for file_path in search_dir.glob("*.zdc"):
+                matrix_heads.add(file_path.stem.split("_", 1)[0])
+    return matrix_heads
