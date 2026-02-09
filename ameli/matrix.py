@@ -9,17 +9,18 @@
 # state space.
 #
 ##########################################################################
-
+import hashlib
 import logging
 import time
+
 import sympy as sp
 
 from . import desc_format, sym3j
 from .sparse import SymMatrix
 from .states import space_registry
-from .vault import container_vault
 from .config import ConfigInfo, Config
-from .unit import Unit, MATRIX
+from .unit import Unit
+from .vault import AMELI_VERSION, VersionError, Vault
 
 __version__ = "1.0.0"
 logger = logging.getLogger("matrix")
@@ -495,89 +496,89 @@ def matrix_H6(config, k: int):
 # Dictionary mapping name headers to matrix functions, tuples of operator parameters and a description string
 MATRIX_INFO = [
     ("U", {"func": matrix_U, "keys": ("k", "q"),
-        "desc": "Component q of the total unit tensor operator U^(k)_q of rank k in the orbital angular momentum space",
-        "html_op": "$\\mathrm{{U}}^{{(k)}}_q$",
-        "html_desc": "Component $q$ of the total unit tensor operator of rank $k$ in the orbital angular momentum space"}),
+           "desc": "Component q of the total unit tensor operator U^(k)_q of rank k in the orbital angular momentum space",
+           "html_op": "$\\mathrm{{U}}^{{(k)}}_q$",
+           "html_desc": "Component $q$ of the total unit tensor operator of rank $k$ in the orbital angular momentum space"}),
     ("T", {"func": matrix_T, "keys": ("k", "q"),
-        "desc": "Component q of the total unit tensor operator T^(k)_q of rank k in the spin space",
-        "html_op": "$\\mathrm{{T}}^{{(k)}}_q$",
-        "html_desc": "Component $q$ of the total unit tensor operator of rank $k$ in the spin space"}),
+           "desc": "Component q of the total unit tensor operator T^(k)_q of rank k in the spin space",
+           "html_op": "$\\mathrm{{T}}^{{(k)}}_q$",
+           "html_desc": "Component $q$ of the total unit tensor operator of rank $k$ in the spin space"}),
     ("UU", {"func": matrix_UU, "keys": ("k",),
-        "desc": "Squared total unit tensor operator [U^(k)]^2 of rank k in the orbital angular momentum space",
-        "html_op": "$(\\mathrm{{U}}^{{(k)}}\\cdot\\mathrm{{U}}^{{(k)}})$",
-        "html_desc": "Squared total unit tensor operator of rank $k$ in the orbital angular momentum space"}),
+            "desc": "Squared total unit tensor operator [U^(k)]^2 of rank k in the orbital angular momentum space",
+            "html_op": "$(\\mathrm{{U}}^{{(k)}}\\cdot\\mathrm{{U}}^{{(k)}})$",
+            "html_desc": "Squared total unit tensor operator of rank $k$ in the orbital angular momentum space"}),
     ("TT", {"func": matrix_TT, "keys": ("k",),
-        "desc": "Squared total unit tensor operator [T^(k)]^2 of rank k in the spin space",
-        "html_op": "$(\\mathrm{{T}}^{{(k)}}\\cdot\\mathrm{{T}}^{{(k)}})$",
-        "html_desc": "Squared total unit tensor operator of rank $k$ in the spin space"}),
+            "desc": "Squared total unit tensor operator [T^(k)]^2 of rank k in the spin space",
+            "html_op": "$(\\mathrm{{T}}^{{(k)}}\\cdot\\mathrm{{T}}^{{(k)}})$",
+            "html_desc": "Squared total unit tensor operator of rank $k$ in the spin space"}),
     ("UT", {"func": matrix_UT, "keys": ("k",),
-        "desc": "Scalar product of the total unit tensor operators U^(k)*T^(k) of rank k in the orbital and spin spaces",
-        "html_op": "$(\\mathrm{{U}}^{{(k)}}\\cdot\\mathrm{{T}}^{{(k)}})$",
-        "html_desc": "Scalar product of the total unit tensor operators of rank $k$ in the orbital and spin spaces"}),
+            "desc": "Scalar product of the total unit tensor operators U^(k)*T^(k) of rank k in the orbital and spin spaces",
+            "html_op": "$(\\mathrm{{U}}^{{(k)}}\\cdot\\mathrm{{T}}^{{(k)}})$",
+            "html_desc": "Scalar product of the total unit tensor operators of rank $k$ in the orbital and spin spaces"}),
     ("L", {"func": matrix_L, "keys": ("q",),
-        "desc": "Component q of the total orbital angular momentum operator L_q",
-        "html_op": "$\\mathrm{{L}}_q$",
-        "html_desc": "Component $q$ of the total orbital angular momentum operator"}),
+           "desc": "Component q of the total orbital angular momentum operator L_q",
+           "html_op": "$\\mathrm{{L}}_q$",
+           "html_desc": "Component $q$ of the total orbital angular momentum operator"}),
     ("S", {"func": matrix_S, "keys": ("q",),
-        "desc": "Component q of the total spin angular momentum operator S_q",
-        "html_op": "$\\mathrm{{S}}_q$",
-        "html_desc": "Component $q$ of the total spin angular momentum operator"}),
+           "desc": "Component q of the total spin angular momentum operator S_q",
+           "html_op": "$\\mathrm{{S}}_q$",
+           "html_desc": "Component $q$ of the total spin angular momentum operator"}),
     ("J", {"func": matrix_J, "keys": ("q",),
-        "desc": "Component q of the total angular momentum operator J_q",
-        "html_op": "$\\mathrm{{J}}_q$",
-        "html_desc": "Component $q$ of the total angular momentum operator"}),
+           "desc": "Component q of the total angular momentum operator J_q",
+           "html_op": "$\\mathrm{{J}}_q$",
+           "html_desc": "Component $q$ of the total angular momentum operator"}),
     ("LL", {"func": matrix_LL, "keys": (),
-        "desc": "Squared total orbital angular momentum operator L^2",
-        "html_op": "$(\\mathrm{{L}}\\cdot\\mathrm{{L}})$", "html_radial": "$\\alpha$",
-        "html_desc": "Squared total orbital angular momentum operator"}),
+            "desc": "Squared total orbital angular momentum operator L^2",
+            "html_op": "$(\\mathrm{{L}}\\cdot\\mathrm{{L}})$", "html_radial": "$\\alpha$",
+            "html_desc": "Squared total orbital angular momentum operator"}),
     ("SS", {"func": matrix_SS, "keys": (),
-        "desc": "Squared total spin angular momentum operator S^2",
-        "html_op": "$(\\mathrm{{S}}\\cdot\\mathrm{{S}})$",
-        "html_desc": "Squared total spin angular momentum operator"}),
+            "desc": "Squared total spin angular momentum operator S^2",
+            "html_op": "$(\\mathrm{{S}}\\cdot\\mathrm{{S}})$",
+            "html_desc": "Squared total spin angular momentum operator"}),
     ("JJ", {"func": matrix_JJ, "keys": (),
-        "desc": "Squared total angular momentum operator J^2",
-        "html_op": "$(\\mathrm{{J}}\\cdot\\mathrm{{J}})$",
-        "html_desc": "Squared total angular momentum operator"}),
+            "desc": "Squared total angular momentum operator J^2",
+            "html_op": "$(\\mathrm{{J}}\\cdot\\mathrm{{J}})$",
+            "html_desc": "Squared total angular momentum operator"}),
     ("LS", {"func": matrix_LS, "keys": (),
-        "desc": "Scalar product of the total orbital and spin angular momentum operators LS",
-        "html_op": "$(\\mathrm{{L}}\\cdot\\mathrm{{S}})$",
-        "html_desc": "Scalar product of the total orbital and spin angular momentum operators"}),
+            "desc": "Scalar product of the total orbital and spin angular momentum operators LS",
+            "html_op": "$(\\mathrm{{L}}\\cdot\\mathrm{{S}})$",
+            "html_desc": "Scalar product of the total orbital and spin angular momentum operators"}),
     ("C2", {"func": matrix_C2, "keys": (),
-        "desc": "Casimir operator C_2(G_2) of the special group G_2",
-        "html_op": "$\\mathrm{{C}}_2(G_2)$", "html_radial": "$\\beta$",
-        "html_desc": "Casimir operator of the special group $G_2$"}),
+            "desc": "Casimir operator C_2(G_2) of the special group G_2",
+            "html_op": "$\\mathrm{{C}}_2(G_2)$", "html_radial": "$\\beta$",
+            "html_desc": "Casimir operator of the special group $G_2$"}),
     ("CR", {"func": matrix_CR, "keys": (),
-        "desc": "Casimir operator C_2(SO(2l+1)) of the special orthogonal (rotational) group SO(2l+1) in 2l+1 dimensions",
-        "html_op": "$\\mathrm{{C}}_2(SO(2l+1))$", "html_radial": "$\\gamma$",
-        "html_desc": "Casimir operator of the special orthogonal (rotational) group in $2l+1$ dimensions"}),
+            "desc": "Casimir operator C_2(SO(2l+1)) of the special orthogonal (rotational) group SO(2l+1) in 2l+1 dimensions",
+            "html_op": "$\\mathrm{{C}}_2(SO(2l+1))$", "html_radial": "$\\gamma$",
+            "html_desc": "Casimir operator of the special orthogonal (rotational) group in $2l+1$ dimensions"}),
     ("H1", {"func": matrix_H1, "keys": ("k",),
-        "desc": "Coulomb first order perturbation Hamiltonian f_k of rank k",
-        "html_op": "$\\mathrm{{f}}_k$", "html_radial": "$F^k$",
-        "html_desc": "Coulomb first order perturbation Hamiltonian of rank $k$"}),
+            "desc": "Coulomb first order perturbation Hamiltonian f_k of rank k",
+            "html_op": "$\\mathrm{{f}}_k$", "html_radial": "$F^k$",
+            "html_desc": "Coulomb first order perturbation Hamiltonian of rank $k$"}),
     ("H2", {"func": matrix_H2, "keys": (),
-        "desc": "Spin-orbit first order perturbation Hamiltonian z",
-        "html_op": "$\\mathrm{{z}}$", "html_radial": "$\\zeta$",
-        "html_desc": "Spin-orbit first order perturbation Hamiltonian"}),
+            "desc": "Spin-orbit first order perturbation Hamiltonian z",
+            "html_op": "$\\mathrm{{z}}$", "html_radial": "$\\zeta$",
+            "html_desc": "Spin-orbit first order perturbation Hamiltonian"}),
     ("H4", {"func": matrix_H4, "keys": ("c",),
-        "desc": "Effective Coulomb second order perturbation Hamiltonian t_c with index c",
-        "html_op": "$\\mathrm{{t}}_c$", "html_radial": "$T^c$",
-        "html_desc": "Effective Coulomb second order perturbation Hamiltonian"}),
+            "desc": "Effective Coulomb second order perturbation Hamiltonian t_c with index c",
+            "html_op": "$\\mathrm{{t}}_c$", "html_radial": "$T^c$",
+            "html_desc": "Effective Coulomb second order perturbation Hamiltonian"}),
     ("Hss", {"func": matrix_Hss, "keys": ("k",),
-        "desc": "Spin-spin first order perturbation Hamiltonian mss_k of rank k",
-        "html_op": "$\\mathrm{{m}}_{{k,ss}}$",
-        "html_desc": "Spin-spin first order perturbation Hamiltonian of rank $k$"}),
+             "desc": "Spin-spin first order perturbation Hamiltonian mss_k of rank k",
+             "html_op": "$\\mathrm{{m}}_{{k,ss}}$",
+             "html_desc": "Spin-spin first order perturbation Hamiltonian of rank $k$"}),
     ("Hsoo", {"func": matrix_Hsoo, "keys": ("k",),
-        "desc": "Spin-other-orbit first order perturbation Hamiltonian msoo_k of rank k",
-        "html_op": "$\\mathrm{{m}}_{{k,soo}}$",
-        "html_desc": "Spin-other-orbit first order perturbation Hamiltonian of rank $k$"}),
+              "desc": "Spin-other-orbit first order perturbation Hamiltonian msoo_k of rank k",
+              "html_op": "$\\mathrm{{m}}_{{k,soo}}$",
+              "html_desc": "Spin-other-orbit first order perturbation Hamiltonian of rank $k$"}),
     ("H5", {"func": matrix_H5, "keys": ("k",),
-        "desc": "Spin-spin and spin-other-orbit first order perturbation Hamiltonian m_k of rank k",
-        "html_op": "$\\mathrm{{m}}_k$", "html_radial": "$M^k$",
-        "html_desc": "Spin-spin and spin-other-orbit first order perturbation Hamiltonian of rank $k$"}),
+            "desc": "Spin-spin and spin-other-orbit first order perturbation Hamiltonian m_k of rank k",
+            "html_op": "$\\mathrm{{m}}_k$", "html_radial": "$M^k$",
+            "html_desc": "Spin-spin and spin-other-orbit first order perturbation Hamiltonian of rank $k$"}),
     ("H6", {"func": matrix_H6, "keys": ("k",),
-        "desc": "Effective electrostatic spin-orbit second order perturbation Hamiltonian p_k of rank k",
-        "html_op": "$\\mathrm{{p}}_k$", "html_radial": "$P^k$",
-        "html_desc": "Effective electrostatic spin-orbit second order perturbation Hamiltonian of rank $k$"}),
+            "desc": "Effective electrostatic spin-orbit second order perturbation Hamiltonian p_k of rank k",
+            "html_op": "$\\mathrm{{p}}_k$", "html_radial": "$P^k$",
+            "html_desc": "Effective electrostatic spin-orbit second order perturbation Hamiltonian of rank $k$"}),
 ]
 MATRICES = dict(MATRIX_INFO)
 
@@ -664,7 +665,7 @@ configuration.
 """
 
 
-class Matrix:
+class Matrix(Vault):
     """ Class representing the symbolic or floating point matrix of a spherical tensor operator in a given state
      space. The matrix object is available in the attribute 'matrix'. """
 
@@ -690,9 +691,7 @@ class Matrix:
 
         # Load or generate data container
         self.file = self.get_path(config_name, name, state_space, self.reduced)
-        if self.file not in container_vault:
-            self.generate_container()
-        dc = container_vault[self.file]
+        dc = self.load_container(self.file, __version__)
 
         # Extract UUID and code version from the container
         meta = dc["data/matrix.json"]
@@ -723,7 +722,7 @@ class Matrix:
         assert self.info.row_space == self.state_space
         assert self.info.col_space == self.state_space
 
-    def prepare_sljm(self, config, space):
+    def prepare_regular(self, config, space, hasher, dc=None):
         """ Return metadata dictionaries of states and matrix calculated from scratch. """
 
         # Decode matrix name
@@ -734,7 +733,7 @@ class Matrix:
 
         # Get states meta dictionaries
         space.load(self.config_name)
-        states_dict, states_meta = space.as_meta()
+        states_dict, states_meta = space.as_meta(hasher)
 
         # Transform product space matrix to other coupling
         if space.matrix is not None:
@@ -742,13 +741,17 @@ class Matrix:
             matrix = transform.T * matrix * transform
 
         # Get matrix metadata dictionaries
-        state_matrix = SymMatrix.from_matrix(self.state_space, self.state_space, matrix)
-        matrix_dict, matrix_meta = state_matrix.as_meta()
+        if dc:
+            matrix_dict = dc["data/matrix.hdf5"]
+            matrix_meta = dc["data/matrix.json"]["matrix"]
+        else:
+            state_matrix = SymMatrix.from_matrix(self.state_space, self.state_space, matrix)
+            matrix_dict, matrix_meta = state_matrix.as_meta(hasher)
 
         # Return metadata
         return states_dict, states_meta, matrix_dict, matrix_meta
 
-    def prepare_slj(self):
+    def prepare_slj(self, hasher, dc=None):
         """ Return metadata dictionaries of states and matrix derived from the collapsed respective SLJM matrix. """
 
         # Get SLJM parent matrix
@@ -756,16 +759,20 @@ class Matrix:
         assert self.rank == parent.rank
 
         # Metadata dictionaries of states for collapsed J spaces
-        states_dict, states_meta = parent.states.collapse_j().as_meta()
+        states_dict, states_meta = parent.states.collapse_j().as_meta(hasher)
         indices = parent.states.indices_j()
 
         # Metadata dictionaries of matrix with collapsed J spaces
-        matrix_dict, matrix_meta = parent.info.collapse(indices, "SLJM", "SLJ").as_meta()
+        if dc:
+            matrix_dict = dc["data/matrix.hdf5"]
+            matrix_meta = dc["data/matrix.json"]["matrix"]
+        else:
+            matrix_dict, matrix_meta = parent.info.collapse(indices, "SLJM", "SLJ").as_meta(hasher)
 
         # Return metadata
         return states_dict, states_meta, matrix_dict, matrix_meta
 
-    def prepare_reduced(self):
+    def prepare_reduced(self, hasher, dc=None):
         """ Return metadata dictionaries of states and reduced matrix derived from the respective SLJ matrices. """
 
         # Get component matrices of the tensor operator
@@ -774,22 +781,29 @@ class Matrix:
 
         # Metadata dictionaries of states
         states = components[0].states
-        states_dict, states_meta = states.as_meta()
+        states_dict, states_meta = states.as_meta(hasher)
 
         # Metadata dictionaries of matrix
-        J = [sp.S(value) for value in states.representation_lists(["J2"])["J2"]]
-        matrix = SymMatrix.reduced([matrix.info for matrix in components], J)
-        matrix_dict, matrix_meta = matrix.as_meta()
+        if dc:
+            matrix_dict = dc["data/matrix.hdf5"]
+            matrix_meta = dc["data/matrix.json"]["matrix"]
+        else:
+            J = [sp.S(value) for value in states.representation_lists(["J2"])["J2"]]
+            matrix = SymMatrix.reduced([matrix.info for matrix in components], J)
+            matrix_dict, matrix_meta = matrix.as_meta(hasher)
 
         # Return metadata
         return states_dict, states_meta, matrix_dict, matrix_meta
 
-    def generate_container(self):
+    def generate_container(self, dc=None):
         """ Generate the matrix of the tensor operator and store it in a data container file. """
 
         # Get and use a logger object
         logger.info(f"Generating {self.config_name} tensor operator matrix {self.name}")
         t = time.time()
+
+        # Initialize the data hasher
+        hasher = hashlib.sha256()
 
         # Get electron configuration
         config = Config(self.config_name)
@@ -806,12 +820,17 @@ class Matrix:
 
         # Metadata dictionaries of states and matrix
         if self.state_space == "SLJ" and not self.reduced:
-            states_dict, states_meta, matrix_dict, matrix_meta = self.prepare_slj()
+            states_dict, states_meta, matrix_dict, matrix_meta = self.prepare_slj(hasher, dc)
         elif self.state_space == "SLJ" and self.reduced:
-            states_dict, states_meta, matrix_dict, matrix_meta = self.prepare_reduced()
+            states_dict, states_meta, matrix_dict, matrix_meta = self.prepare_reduced(hasher, dc)
         else:
             assert not self.reduced
-            states_dict, states_meta, matrix_dict, matrix_meta = self.prepare_sljm(config, space)
+            states_dict, states_meta, matrix_dict, matrix_meta = self.prepare_regular(config, space, hasher, dc)
+
+        # Generate data hash
+        data_hash = hasher.hexdigest()
+        if dc and data_hash == dc["content.json"]["sha256Data"]:
+            raise VersionError
 
         logger.debug(f" {self.config_name} | Finished tensor operator matrix {self.name}")
 
@@ -834,8 +853,9 @@ class Matrix:
         items = {
             "content.json": {
                 "containerType": {"name": "ameliOperator"},
-                "usedSoftware": [{"name": "AMELI", "version": "1.0.0",
+                "usedSoftware": [{"name": "AMELI", "version": AMELI_VERSION,
                                   "id": "https://github.com/reincas/ameli", "idType": "URL"}],
+                "sha256Data": data_hash,
             },
             "meta.json": {
                 "title": TITLE,
@@ -860,7 +880,7 @@ class Matrix:
         }
 
         # Create the data container and store it in a file
-        container_vault[self.file] = items
+        self.write(self.file, items)
         t = time.time() - t
         logger.info(f"Stored {self.config_name} tensor operator matrix {self.name} ({t:.1f} seconds) -> {self.file}")
 
@@ -893,4 +913,4 @@ class Matrix:
         """ Return True if the matrix data container exists. """
 
         file = Matrix.get_path(config_name, name, state_space, reduced)
-        return file in container_vault
+        return Vault.in_vault(file)

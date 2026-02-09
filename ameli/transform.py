@@ -11,14 +11,13 @@
 # allows to build superpositions of Stark states with same J, but
 # different M in intermediate coupling based on these LS states.
 #
-# The module also provides the class SljmStates, which represents all
+# The module also provides the class LS_States, which represents all
 # LS states of a configuration.
 #
 ##########################################################################
-
+import hashlib
 import logging
 import time
-
 import numpy as np
 import sympy as sp
 
@@ -27,12 +26,13 @@ from .states import space_registry, register_space, register_subspace
 from .uintarray import decode_uint_array, encode_uint_array
 from .sparse import SymMatrix
 from .casimir import CASIMIR
-from .vault import container_vault
 from .config import SPECTRAL, ConfigInfo, Config
 from .unit import Unit
 from .matrix import Matrix
+from .vault import AMELI_VERSION, VersionError, Vault
 
 __version__ = "1.0.0"
+
 logger = logging.getLogger("transform")
 ATOL = 1e-12
 
@@ -71,16 +71,16 @@ SYM_INFO = {
            "html_op": "Operator of the axial component of the total angular momentum $\\mathrm{J}_0$"},
     "sen": {"matrix": None, "repr": lambda x: str(x), "factor": None,
             "desc": "Seniority number",
-           "html_repr": "Seniority number $\\nu$",
-           "html_op": "Operators $(\\mathrm{S}\\cdot\\mathrm{S})$ and $\\mathrm{C}_2(SO(7))$"},
+            "html_repr": "Seniority number $\\nu$",
+            "html_op": "Operators $(\\mathrm{S}\\cdot\\mathrm{S})$ and $\\mathrm{C}_2(SO(7))$"},
     "tau": {"matrix": None, "repr": lambda x: "" if x == 0 else chr(ord("A") + x - 1), "factor": None,
             "desc": "Index of different states with same set of quantum numbers",
-           "html_repr": "Index $\\tau$ of different states with same set of quantum numbers",
-           "html_op": ""},
+            "html_repr": "Index $\\tau$ of different states with same set of quantum numbers",
+            "html_op": ""},
     "num": {"matrix": None, "repr": lambda x: "" if x == 0 else str(x), "factor": None,
             "desc": "Index of different LS states with same L and S quantum numbers",
-           "html_repr": "Index of different states with same quantum numbers $L$ and $S$",
-           "html_op": ""},
+            "html_repr": "Index of different states with same quantum numbers $L$ and $S$",
+            "html_op": ""},
 }
 
 SYM_CHAIN = {
@@ -851,32 +851,35 @@ def transform_states(config):
 class LS_States:
     """ This class represents a list of electron states in LS coupling. """
 
-    # State space string
-    state_space: str
+    def __init__(self, config: Config, eigenvalues: dict, indices: list):
 
-    # Chain of tensor operator keys used for the state classification
-    tensor_chain: list
-    tensor_description: dict
+        # State space string
+        self.state_space = "SLJM"
 
-    # Dictionaries of eigenvalues and their irreducible representations
-    eigenvalues: dict
-    representations: dict
+        # Chain of tensor operator keys used for the state classification
+        self.tensor_chain = SYM_CHAIN[config_key(config)]["chain"]
+        self.tensor_description = {name: SYM_INFO[name]["desc"] for name in self.tensor_chain}
 
-    # Correlation space of state signs (restricts coupling)
-    global_signs: str
+        # Dictionaries of eigenvalues and their irreducible representations
+        self.eigenvalues = eigenvalues
+        self.representations = {t: [SYM_INFO[t]["repr"](v) for v in values] for t, values in eigenvalues.items()}
 
-    # List of states as sequences of eigenvalue indices along the chain of tensor operators
-    indices: list
-    num_states: int
+        # Correlation space of state signs (restricts coupling)
+        self.global_signs = "J space"
 
-    # List of full set of irreducible representations for all states
-    names: list
+        # List of states as sequences of eigenvalue indices along the chain of tensor operators
+        self.indices = indices
+        self.num_states = len(indices)
+
+        # List of full set of irreducible representations for all states
+        states_dict = get_states(config, self.eigenvalue_lists())
+        self.names = str_terms(config, states_dict, "template_full")
 
     @classmethod
     def from_meta(cls, states_dict, info_meta):
-        """ Return a SljmStates object initialized from its data container dictionaries. """
+        """ Return a LS_States object initialized from its data container dictionaries. """
 
-        # Initialize empty SljmStates object
+        # Initialize empty LS_States object
         states = cls.__new__(cls)
 
         # Extract state info
@@ -897,14 +900,15 @@ class LS_States:
         assert states.state_space == states_dict["stateSpace"]
         assert states.num_states == len(states.indices)
 
-        # Return SljmStates object
+        # Return LS_States object
         return states
 
-    def as_meta(self):
+    def as_meta(self, hasher):
         """ Return the data container dictionaries representing this object. """
 
         # States dictionary
         states_dict = encode_uint_array(self.indices, "indices")
+        states_dict["tensorChain"] = self.tensor_chain
         states_dict["stateSpace"] = self.state_space
 
         # States info dictionary
@@ -919,8 +923,40 @@ class LS_States:
             "numStates": self.num_states,
         }
 
+        # Update hasher with dictionaries
+        if hasher:
+            self.update_hasher(states_dict, info_meta, hasher)
+
         # Return dictionaries
         return states_dict, info_meta
+
+    @staticmethod
+    def update_hasher(states_dict, info_meta, hasher):
+        """ Update hasher with representative state data. """
+
+        # Update hasher with states_dict
+        for key in sorted(states_dict.keys()):
+            if key in ["tensorChain"]:
+                continue
+            value = states_dict[key]
+            hasher.update(key.encode('utf-8'))
+            if key == "stateSpace":
+                hasher.update(value.encode('utf-8'))
+            else:
+                hasher.update(value.tobytes())
+
+        # Update hasher with info_meta
+        for key in sorted(info_meta.keys()):
+            if key in ["tensorChain", "tensorDescription", "irreducibleRepresentations", "stateNames"]:
+                continue
+            value = info_meta[key]
+            hasher.update(key.encode('utf-8'))
+            if key == "eigenvalues":
+                for tensor in sorted(value.keys()):
+                    hasher.update(tensor.encode('utf-8'))
+                    hasher.update(str(value[tensor]).encode('utf-8'))
+            else:
+                hasher.update(str(value).encode('utf-8'))
 
     def state_eigenvalues(self, names=None) -> list:
         """ Return a list of eigenvalue dictionaries of all states. Keys of the dictionaries are either the given
@@ -1019,7 +1055,7 @@ class LS_States:
         indices = self.indices_j()
 
         # Get dictionary representation of the current states object
-        states_dict, info_meta = self.as_meta()
+        states_dict, info_meta = self.as_meta(None)
 
         # Remove the Jz part from the eigenvalue indices
         assert "indices" in states_dict
@@ -1079,7 +1115,7 @@ description of the tensor operator for each of the names and string representati
 """
 
 
-class Transform:
+class Transform(Vault):
     """ Class of the exact symbolic transformation matrix from product states to LS coupling. It provides the SymPy
     matrix in the attribute 'matrix' and the respective floating point NumPy array from the method 'array(dtype)'. """
 
@@ -1098,9 +1134,7 @@ class Transform:
 
         # Load or generate data container
         self.file = self.get_path(self.config_name)
-        if self.file not in container_vault:
-            self.generate_container()
-        dc = container_vault[self.file]
+        dc = self.load_container(self.file, __version__)
 
         # Extract UUID and code version from the container
         meta = dc["data/transform.json"]
@@ -1126,60 +1160,52 @@ class Transform:
         assert self.info.row_space == self.row_states.state_space
         assert self.info.col_space == self.col_states.state_space
 
-    def generate_container(self):
+    def generate_container(self, dc=None):
         """ Generate the LS transformation matrix and store it in a data container file. """
 
         logger.info(f"Generating {self.config_name} transformation matrix")
         t_all = time.time()
 
+        # Initialize the data hasher
+        hasher = hashlib.sha256()
+
         # Get electron configuration
         config = Config(self.config_name)
         config_meta = config.info.as_meta()
 
-        # Build transformation matrix and store it as SparseMatrix object
-        transform, states_dict = transform_states(config)
-        logger.debug("Creating StateMatrix.")
-        t = time.time()
-        state_matrix = SymMatrix.from_matrix("Product", "SLJM", transform)
-        t = time.time() - t
-        logger.debug(f"Built StateMatrix. ({t:.1f} seconds)")
-        t = time.time()
-        matrix_dict, matrix_meta = state_matrix.as_meta()
-        t = time.time() - t
-        logger.debug(f"Finished StateMatrix. ({t:.1f} seconds)")
-
-        # List of string representations of all states
-        terms = str_terms(config, states_dict, "template_full")
-
-        # Chain of tensor operators
-        chain = SYM_CHAIN[config_key(config)]["chain"]
-        tensor_desc = {name: SYM_INFO[name]["desc"] for name in chain}
-
-        # Eigenvalues and their representations
-        eigenvalues = {t: sorted(list(set(state[t] for state in states_dict))) for t in chain}
-        eigenvalues_str = {t: list(map(str, values)) for t, values in eigenvalues.items()}
-        representations = {t: [SYM_INFO[t]["repr"](v) for v in values] for t, values in eigenvalues.items()}
-
         # Row states dictionary and metadata (Product)
-        row_states, row_meta = config.states.as_meta()
+        row_states, row_meta = config.states.as_meta(hasher)
 
-        # Column states dictionary (SLJM)
-        states = [[eigenvalues[t].index(state[t]) for t in chain] for state in states_dict]
-        col_states = encode_uint_array(states, "indices")
-        col_states["tensorChain"] = chain
-        col_states["stateSpace"] = "SLJM"
+        # Get LS transformation matrix, eigenvalues, and state indices from data container or determine from scratch
+        if dc:
+            state_matrix = SymMatrix.from_meta(dc["data/matrix.hdf5"], dc["data/transform.json"]["matrix"])
+            indices = decode_uint_array(dc["data/col_states.hdf5"], "indices")
+            eigenvalues = dc["data/transform.json"]["col_states"]["eigenvalues"]
+        else:
+            # Build transformation matrix and store it as SparseMatrix object
+            transform, states_dict = transform_states(config)
+            logger.debug("Creating StateMatrix.")
+            t = time.time()
+            state_matrix = SymMatrix.from_matrix("Product", "SLJM", transform)
+            t = time.time() - t
+            logger.debug(f"Built StateMatrix. ({t:.1f} seconds)")
 
-        # Column states metadata (SLJM)
-        col_meta = {
-            "stateSpace": col_states["stateSpace"],
-            "tensorChain": chain,
-            "tensorDescription": tensor_desc,
-            "eigenvalues": eigenvalues_str,
-            "irreducibleRepresentations": representations,
-            "stateNames": terms,
-            "globalSigns": "J space",
-            "numStates": len(states),
-        }
+            # Prepare eigenvalues and state indices
+            chain = SYM_CHAIN[config_key(config)]["chain"]
+            eigenvalues = {t: sorted(list(set(state[t] for state in states_dict))) for t in chain}
+            indices = [[eigenvalues[t].index(state[t]) for t in chain] for state in states_dict]
+
+        # Row states dictionary and metadata (LS)
+        states = LS_States(config, eigenvalues, indices)
+        col_states, col_meta = states.as_meta(hasher)
+
+        # Dictionary and metadata of transformation matrix
+        matrix_dict, matrix_meta = state_matrix.as_meta(hasher)
+
+        # Generate data hash
+        data_hash = hasher.hexdigest()
+        if dc and data_hash == dc["content.json"]["sha256Data"]:
+            raise VersionError
 
         # Prepare container description string
         kwargs = {
@@ -1200,8 +1226,9 @@ class Transform:
         items = {
             "content.json": {
                 "containerType": {"name": "ameliTransform"},
-                "usedSoftware": [{"name": "AMELI", "version": "1.0.0",
+                "usedSoftware": [{"name": "AMELI", "version": AMELI_VERSION,
                                   "id": "https://github.com/reincas/ameli", "idType": "URL"}],
+                "sha256Data": data_hash,
             },
             "meta.json": {
                 "title": TITLE,
@@ -1223,20 +1250,20 @@ class Transform:
         }
 
         # Create data container and store in file
-        container_vault[self.file] = items
+        self.write(self.file, items)
         t = time.time() - t_all
         logger.info(f"Stored {self.config_name} transformation matrix ({t:.1f} seconds) -> {self.file}")
 
     @staticmethod
     def states_from_meta(states_dict, info_meta):
-        """ Return a SljmStates object initialized from its data container dictionaries. """
+        """ Return a LS_States object initialized from its data container dictionaries. """
 
         return LS_States.from_meta(states_dict, info_meta)
 
-    def states_as_meta(self):
+    def states_as_meta(self, hasher):
         """ Return the data container dictionaries representing the states in LS coupling. """
 
-        return self.col_states.as_meta()
+        return self.col_states.as_meta(hasher)
 
     @staticmethod
     def get_path(config_name):

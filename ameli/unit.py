@@ -8,11 +8,10 @@
 # a spherical mixed unit tensor operator in the product state space.
 #
 ##########################################################################
-
+import hashlib
 import logging
 import time
 from abc import ABC, abstractmethod
-
 import sympy as sp
 
 from . import desc_format, sym3j
@@ -20,7 +19,7 @@ from .states import space_registry
 from .sparse import SymMatrix
 from .config import ConfigInfo, Config
 from .product import Product
-from .vault import container_vault
+from .vault import AMELI_VERSION, VersionError, Vault
 
 __version__ = "1.0.0"
 logger = logging.getLogger("unit")
@@ -56,8 +55,19 @@ class BaseUnit(ABC):
         self.expression = template.format(**parameters)
         self.template = template.format(**{key: key for key in parameters})
 
-        # Calculate all non-zero matrix elements
+        # Sanity check
         assert isinstance(symmetric, bool)
+
+        # Shortcut: use given matrix
+        if isinstance(product, SymMatrix):
+            self.matrix = product
+            assert self.matrix.row_space == "Product"
+            assert self.matrix.col_space == "Product"
+            assert self.matrix.is_symmetric == symmetric
+            assert self.matrix.num_states == self.product.num_states
+            return
+
+        # Calculate all non-zero matrix elements
         self.matrix = SymMatrix("Product", "Product", symmetric, self.product.num_states)
         for initial, final, elements in self.product.matrix_elements():
 
@@ -298,7 +308,7 @@ many-electron configuration.
 """
 
 
-class Unit:
+class Unit(Vault):
     """ Class of the product state matrix of a mixed unit spherical tensor operator. It provides the SymPy matrix in
     the attribute 'matrix'. """
 
@@ -313,9 +323,7 @@ class Unit:
 
         # Load or generate data container
         self.file = self.get_path(config_name, name)
-        if self.file not in container_vault:
-            self.generate_container()
-        dc = container_vault[self.file]
+        dc = self.load_container(self.file, __version__)
 
         # Extract UUID and code version from the container
         meta = dc["data/unit.json"]
@@ -345,30 +353,42 @@ class Unit:
         assert self.info.row_space == self.states.state_space
         assert self.info.col_space == self.states.state_space
 
-    def generate_container(self):
-        """ Generate the matrix of the unit tensor operator and store it in a data container file. """
+    def generate_container(self, dc=None):
+        """ Generate the matrix of the unit tensor operator and store it in a data container file. Update function: Use
+        the matrix from the given data container if provided. """
 
         logger.info(f"Generating {self.config_name} unit matrix {self.name}")
         t = time.time()
+
+        # Initialize the data hasher
+        hasher = hashlib.sha256()
 
         # Get electron configuration
         config = Config(self.config_name)
         config_meta = config.info.as_meta()
 
+        # Get product states
+        states_dict, states_meta = config.states.as_meta(hasher)
+
         # Calculate elementary matrix elements
         key, parameters = self.name.split("/")
         cls, tensor_size = MATRIX[key]
         parameters = tuple(map(int, parameters.split(",")))
-        product = Product(self.config_name, tensor_size)
+        if dc:
+            product = SymMatrix.from_meta(dc["data/matrix.hdf5"], dc["data/unit.json"]["matrix"]).matrix
+        else:
+            product = Product(self.config_name, tensor_size)
         unit = cls(product, *parameters)
         assert unit.tensor_size == tensor_size
 
-        # Get product states
-        states_dict, states_meta = config.states.as_meta()
-
         # Get matrix data dictionaries
-        matrix_dict, matrix_meta = unit.matrix.as_meta()
+        matrix_dict, matrix_meta = unit.matrix.as_meta(hasher)
         logger.debug(f" {self.config_name} | Finished unit matrix {self.name}")
+
+        # Generate data hash
+        data_hash = hasher.hexdigest()
+        if dc and data_hash == dc["content.json"]["sha256Data"]:
+            raise VersionError
 
         # Prepare container description string
         kwargs = {
@@ -388,8 +408,9 @@ class Unit:
         items = {
             "content.json": {
                 "containerType": {"name": "ameliUnit"},
-                "usedSoftware": [{"name": "AMELI", "version": "1.0.0",
+                "usedSoftware": [{"name": "AMELI", "version": AMELI_VERSION,
                                   "id": "https://github.com/reincas/ameli", "idType": "URL"}],
+                "sha256Data": data_hash,
             },
             "meta.json": {
                 "title": TITLE,
@@ -414,7 +435,7 @@ class Unit:
         }
 
         # Create the data container and store it in a file
-        container_vault[self.file] = items
+        self.write(self.file, items)
         t = time.time() - t
         logger.info(f"Stored {self.config_name} unit matrix {self.name} ({t:.1f} seconds) -> {self.file}")
 
@@ -425,4 +446,3 @@ class Unit:
         key, parameters = name.split("/")
         parameters = "_".join(parameters.split(","))
         return f"{config_name}/unit/{key}_{parameters}.zdc"
-

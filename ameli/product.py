@@ -9,7 +9,7 @@
 # operators.
 #
 ##########################################################################
-
+import hashlib
 import logging
 import math
 import os
@@ -23,7 +23,7 @@ from . import desc_format
 from .config import ConfigInfo, Config
 from .states import space_registry
 from .uintarray import get_dtype
-from .vault import container_vault
+from .vault import AMELI_VERSION, VersionError, Vault
 
 __version__ = "1.0.0"
 logger = logging.getLogger("product")
@@ -279,7 +279,23 @@ class ElementStorage:
         assert not self.immutable
         self.indices.resize(self.num_indices, axis=0)
         self.elements.resize(self.num_elements, axis=0)
+
         self.immutable = True
+
+    def as_meta(self):
+        """ Return dictionary with indices and elements. """
+
+        return {"indices": self.indices, "elements": self.elements}
+
+    @staticmethod
+    def update_hasher(indices, elements, hasher):
+        """ Update hasher with indices and elements. """
+
+        for dataset in (indices, elements):
+            chunk_size = 128 * 1024
+            for i in range(0, dataset.shape[0], chunk_size):
+                data_slice = dataset[i: i + chunk_size]
+                hasher.update(data_slice.tobytes())
 
     def close(self):
         """ Close and remove the temporary HDF5 file. """
@@ -447,7 +463,7 @@ The electron indices are linked to the single electron states in 'states.electro
 """
 
 
-class Product:
+class Product(Vault):
     """ Class providing support data for the calculation of product state matrix elements of tensor operators. """
 
     def __init__(self, config_name: str, tensor_size: int):
@@ -461,9 +477,7 @@ class Product:
 
         # Load data container
         self.file = self.get_path(config_name, tensor_size)
-        if self.file not in container_vault:
-            self.generate_container()
-        dc = container_vault[self.file]
+        dc = self.load_container(self.file, __version__)
 
         # Extract UUID and code version from the container
         meta = dc["data/product.json"]
@@ -485,9 +499,13 @@ class Product:
         self.num_indices = len(self.indices)
         self.num_elements = len(self.elements)
 
-    def generate_container(self):
+    def generate_container(self, dc=None):
         """ Generate the product state support data for tensor operators acting on tensor_size electrons and store
-        it in a data container file. """
+        it in a data container file. Update function: Use the index and elements from the given data container if
+        provided."""
+
+        # Initialize the data hasher
+        hasher = hashlib.sha256()
 
         # Get electron configuration
         config = Config(self.config_name)
@@ -496,15 +514,25 @@ class Product:
         logger.info(f"Prepare {config.name} product states for {self.tensor_size} electrons")
 
         # Get product states
-        states_dict, states_meta = config.states.as_meta()
-
-        # Get ProductElements object
-        product_elements = ProductElements(config)
+        states_dict, states_meta = config.states.as_meta(hasher)
 
         # Generate product state support data
         t = time.time()
-        storage = product_elements.matrix_elements(self.tensor_size)
-        product_dict = {"indices": storage.indices, "elements": storage.elements}
+        if dc:
+            storage = None
+            product_dict = dc["data/product.hdf5"]
+        else:
+            product_elements = ProductElements(config)
+            storage = product_elements.matrix_elements(self.tensor_size)
+            product_dict = storage.as_meta()
+        ElementStorage.update_hasher(product_dict["indices"], product_dict["elements"], hasher)
+
+        # Generate data hash
+        data_hash = hasher.hexdigest()
+        if dc and data_hash == dc["content.json"]["sha256Data"]:
+            if storage:
+                storage.close()
+            raise VersionError
 
         # Prepare container description string
         kwargs = {
@@ -519,8 +547,9 @@ class Product:
         items = {
             "content.json": {
                 "containerType": {"name": "ameliProduct"},
-                "usedSoftware": [{"name": "AMELI", "version": "1.0.0",
+                "usedSoftware": [{"name": "AMELI", "version": AMELI_VERSION,
                                   "id": "https://github.com/reincas/ameli", "idType": "URL"}],
+                "sha256Data": data_hash,
             },
             "meta.json": {
                 "title": TITLE,
@@ -539,10 +568,11 @@ class Product:
         }
 
         # Create the data container and store it in a file
-        container_vault[self.file] = items
+        self.write(self.file, items)
 
         # Delete the temporary HDF5 file
-        storage.close()
+        if storage:
+            storage.close()
 
         t = time.time() - t
         ts = self.tensor_size

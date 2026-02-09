@@ -340,7 +340,7 @@ class SymMatrix:
         # Return matrix object
         return obj
 
-    def as_meta(self):
+    def as_meta(self, hasher):
         """ Return object content as data container dictionaries. """
 
         # Determine matrix info and make the matrix immutable
@@ -394,6 +394,15 @@ class SymMatrix:
             matrix_dict |= encode_uint_array(columns, "columns")
             matrix_dict |= encode_uint_array(elements, "elements")
             matrix_dict |= RationalRadicalList(values).as_dict()
+
+        # Update hasher with matrix_dict
+        for key in sorted(matrix_dict.keys()):
+            value = matrix_dict[key]
+            hasher.update(key.encode('utf-8'))
+            if isinstance(value, np.ndarray):
+                hasher.update(value.tobytes())
+            else:
+                hasher.update(str(value).encode('utf-8'))
 
         # Return dictionaries
         return matrix_dict, info_meta
