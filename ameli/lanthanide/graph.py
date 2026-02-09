@@ -22,7 +22,9 @@ from ameli.product import Product
 from ameli.unit import MATRIX, Unit
 from ameli.matrix import MatrixName, Matrix
 from ameli.transform import SYM_INFO, SYM_CHAIN, config_key, Transform
-from ameli.vault import container_vault
+from ameli.vault import Vault
+
+container_vault = Vault()
 
 
 ##########################################################################
@@ -155,6 +157,7 @@ class Registry:
 
         return len([nid for nid, node in self.nodes.items() if not node.exists])
 
+
 ##########################################################################
 # Container node classes
 ##########################################################################
@@ -171,7 +174,7 @@ class Node:
 
         signature = inspect.signature(cls.__init__)
         self.arg_names = list(signature.parameters.keys())[1:]
-        self.exists =  str(self.file) in container_vault
+        self.exists = container_vault.in_vault(str(self.file))
 
     @property
     def in_degree(self):
@@ -204,6 +207,7 @@ class Node:
     def weight(self):
         return 1 + sum(self.registry.weight(child_id) for child_id in self.children)
 
+
 class ConfigNode(Node):
     def __init__(self, registry, node_id, config_name):
         kwargs = {"config_name": config_name}
@@ -234,7 +238,6 @@ class UnitNode(Node):
 
 class TransformNode(Node):
     def __init__(self, registry, node_id, config_name):
-
         kwargs = {"config_name": config_name}
         file = Transform.get_path(config_name)
         super().__init__(registry, node_id, Transform, file, **kwargs)
