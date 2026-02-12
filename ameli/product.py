@@ -531,7 +531,7 @@ class Product(Vault):
 
         # Generate data hash
         data_hash = hasher.hexdigest()
-        if dc and data_hash != dc["content.json"]["sha256Data"]:
+        if dc and "sha256Data" in dc["content.json"] and data_hash != dc["content.json"]["sha256Data"]:
             if storage:
                 storage.close()
             raise VersionError
@@ -539,7 +539,7 @@ class Product(Vault):
         # Prepare container description string
         kwargs = {
             "m": self.tensor_size,
-            "n": self.config.num_electrons,
+            "n": config.info.num_electrons,
             "states": "states",
             "states_hdf5": "states.hdf5",
             "json": "product.json",

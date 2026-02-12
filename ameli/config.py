@@ -231,7 +231,7 @@ class ConfigInfo:
 # Config class
 ###########################################################################
 
-TITLE = "Many-electron configuration"
+TITLE = "Many-electron configuration TEST"
 
 DESCRIPTION = """
 This container contains data regarding the electron configuration {config_name}.
@@ -307,11 +307,12 @@ class Config(Vault):
 
         # Generate data hash
         data_hash = hasher.hexdigest()
-        if dc and data_hash != dc["content.json"]["sha256Data"]:
+        if dc and "sha256Data" in dc["content.json"] and data_hash != dc["content.json"]["sha256Data"]:
             raise VersionError
 
         # Prepare container description string
         kwargs = {
+            "config_name": self.name,
             "states": "states",
             "states_hdf5": "states.hdf5",
             "json": "config.json",

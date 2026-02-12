@@ -1210,7 +1210,7 @@ class Transform(Vault):
 
         # Generate data hash
         data_hash = hasher.hexdigest()
-        if dc and data_hash != dc["content.json"]["sha256Data"]:
+        if dc and "sha256Data" in dc["content.json"] and data_hash != dc["content.json"]["sha256Data"]:
             raise VersionError
 
         # Prepare container description string
