@@ -231,7 +231,7 @@ class ConfigInfo:
 # Config class
 ###########################################################################
 
-TITLE = "Many-electron configuration TEST"
+TITLE = "Many-electron configuration"
 
 DESCRIPTION = """
 This container contains data regarding the electron configuration {config_name}.
