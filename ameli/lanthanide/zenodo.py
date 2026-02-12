@@ -3,18 +3,28 @@
 # <reinhard.caspary@phoenixd.uni-hannover.de>                            #
 # This program is free software under the terms of the MIT license.      #
 ##########################################################################
+
+import hashlib
 import io
+import json
 import os
 import platform
-import re
+import pprint
+
 import requests
+import tempfile
 import zipfile
 from pathlib import Path
 
-from ameli.vault import VAULT_PATH
+from ameli.lanthanide import LANTHANIDE_IONS
+from ameli.lanthanide.content import get_root_path, get_zip_folders
+from ameli.lanthanide.dataset import description
+from ameli.vault import Version, VersionError
 
-__version__ = "1.0.0"
 
+##########################################################################
+# Configuration file classes
+##########################################################################
 
 def swap_name(name):
     """ Convert 'Firstname Lastname' or 'Firstname Middle Lastname' to 'Lastname, Firstname Middle'. """
@@ -27,192 +37,554 @@ def swap_name(name):
     return f"{firstname}, {given_names}"
 
 
-class ZenodoBucket:
+class ConfigFile:
+    def __init__(self, path):
+        self.path = path
 
-    bucket_url: str
-    zenodo_url: str
-    deposition_id: int
-
-    def __init__(self, title, desc, sandbox=False):
-        self.title = title
-        self.desc = desc
-        self.sandbox = sandbox
-
-        if self.sandbox:
-            self.url = "https://sandbox.zenodo.org/api/deposit/depositions"
-            self.token_key = "sandbox_token"
-        else:
-            self.url = "https://zenodo.org/api/deposit/depositions"
-            self.token_key = "token"
-
-        self.credentials_path = self.get_cred_path()
-        self.token = self.load_value(self.credentials_path, self.token_key)
-
-        self.scidata_path = self.get_scidata_path()
-        self.author = swap_name(self.load_value(self.scidata_path, "author"))
-        self.email = self.load_value(self.scidata_path, "email")
-        self.orcid = self.load_value(self.scidata_path, "orcid")
-        self.affiliation = self.load_value(self.scidata_path, "organization")
-
-        self.meta = {
-            "upload_type": "dataset",
-            "version": __version__,
-            "title": self.title,
-            "description": self.desc,
-            "access": {"record": "public", "files": "public"},
-            "license": "cc-by-sa-4.0",
-            "creators": [{
-                "name": self.author,
-                "orcid": self.orcid,
-                "affiliation": self.affiliation,
-            }]
-        }
-
-        self.create_bucket()
-        self.url = f"{self.url}/{self.deposition_id}"
-
-    def get_cred_path(self):
-        """ Return the platform-specific path to the Zenodo credentials file. """
-
-        if platform.system() == "Windows":
-            return Path(os.environ["USERPROFILE"]) / "zenodo.cfg"
-        return Path.home() / ".zenodo"
-
-    def get_scidata_path(self):
-        """ Return the platform-specific path to the scidata config file. """
-
-        if platform.system() == "Windows":
-            return Path(os.environ["USERPROFILE"]) / "scidata.cfg"
-        return Path.home() / ".scidata"
-
-    @staticmethod
-    def load_value(file: Path, key: str):
-        """ Read string value for the given key from the given file. """
-
-        file = Path(file)
-        if not file.exists():
-            raise FileNotFoundError(f"File not found: {file}")
-        with open(file, 'r') as f:
+        self.content = {}
+        with open(self.path, 'r') as f:
             for line in f:
-                if line.startswith(key):
-                    _, _, value = line.partition('=')
-                    return value.strip()
-        raise ValueError(f"Key '{key}' not found in {file}")
+                if line[:1] == '#':
+                    continue
+                line = line.strip()
+                if not line or "=" not in line:
+                    continue
+                key, _, value = line.partition("=")
+                key = key.strip()
+                value = value.strip()
+                self.content[key] = value
 
-    def create_bucket(self):
-        """ Create a Zenodo record bucket. """
+    def __getitem__(self, key):
+        return self.content[key]
 
-        print(f"Creating Zenodo bucket '{self.title}'")
-        headers = {"Content-Type": "application/json", "Authorization": f"Bearer {self.token}"}
-        data = {"metadata": self.meta}
 
-        response = requests.post(self.url, json=data, headers=headers)
+class ScidataConfig(ConfigFile):
+    def __init__(self):
+        if platform.system() == "Windows":
+            path = Path(os.environ["USERPROFILE"]) / "scidata.cfg"
+        else:
+            path = Path.home() / ".scidata"
+        super().__init__(path)
+
+
+class GitHubConfig(ConfigFile):
+    def __init__(self):
+        if platform.system() == "Windows":
+            path = Path(os.environ["USERPROFILE"]) / "github.cfg"
+        else:
+            path = Path.home() / ".github"
+        super().__init__(path)
+
+
+class ZenodoConfig(ConfigFile):
+    def __init__(self):
+        if platform.system() == "Windows":
+            path = Path(os.environ["USERPROFILE"]) / "zenodo.cfg"
+        else:
+            path = Path.home() / ".zenodo"
+        super().__init__(path)
+
+
+##########################################################################
+# File representation classes
+##########################################################################
+
+class FileHash:
+    """ This class is representing a 'hashes.json' file. """
+
+    def __init__(self):
+        self.hashes = {}
+
+        self.hash = None
+        self.sha256_data = None
+        self.is_immutable = False
+
+    def append(self, file):
+        """ Append the hashes of the given file to the hash. """
+
+        raise NotImplementedError()
+
+    def finalize(self):
+        """ Aggregate file and data hashes and make the dictionary immutable. """
+
+        assert not self.is_immutable
+        filenames = [fn for fn, value in self.hashes.items() if isinstance(value, dict)]
+        for key in ("hash", "sha256Data"):
+            hasher = hashlib.sha256()
+            for arc_name in sorted(filenames):
+                hasher.update((self.hashes[arc_name][key]).encode("utf8"))
+            self.hashes[key] = hasher.hexdigest()
+
+        self.hash = self.hashes["hash"]
+        self.sha256_data = self.hashes["sha256Data"]
+        self.is_immutable = True
+
+    def bytes(self):
+
+        assert self.is_immutable
+        return json.dumps(self.hashes, sort_keys=True, indent=4).encode("utf8")
+
+
+class ContainerHash(FileHash):
+    def __init__(self, root_path: Path):
+        self.root_path = Path(root_path)
+        super().__init__()
+
+    def append(self, filename: str):
+        """ Append the hashes of the given data container. """
+
+        assert not self.is_immutable
+        arc_name = Path(filename).relative_to(self.root_path)
+        assert arc_name.suffix == ".zdc"
+
+        with zipfile.ZipFile(filename, 'r') as zip_file:
+            with zip_file.open('content.json') as f:
+                content = json.load(f)
+
+        self.hashes[str(arc_name)] = {"hash": content["hash"], "sha256Data": content["sha256Data"]}
+
+
+class RecordHash(FileHash):
+
+    def append(self, file: "ZipFolder"):
+        """ Append the hashes of the given ZIP folder. """
+
+        assert isinstance(file, ZipFolder)
+        self.hashes[file.name] = {"hash": file.hashes.hash, "sha256Data": file.hashes.sha256_data}
+
+    def merge(self, zenodo):
+        remote_files = set(fi["filename"] for fi in zenodo.record["files"] if fi["filename"] != "hashes.json")
+        local_files = set(fn for fn, value in self.hashes.items() if isinstance(value, dict))
+        assert local_files == remote_files
+
+        for filename in local_files:
+            file_info = zenodo.file_info(filename)
+            self.hashes[filename] |= {"checksum": file_info["checksum"], "filesize": file_info["filesize"]}
+
+
+class ZipFolder:
+    """ Data class representing a ZIP folder containing a number of data containers and the file 'hashes.json' with
+    all file and data hashes of the data containers. """
+
+    def __init__(self, name, root_path, filenames):
+        """ Store name of a ZIP folder containing the given local files for the Zenodo record. Take file paths inside
+        the ZIP folder relative to the given root path. """
+
+        self.name = name
+        self.root_path = Path(root_path)
+        self.filenames = filenames
+
+        # Get file and data hashes
+        self.hashes = ContainerHash(self.root_path)
+        for filename in self.filenames:
+            self.hashes.append(filename)
+        self.hashes.finalize()
+
+    def __str__(self):
+        """ String representation of the object. """
+
+        return f"ZipFolder({self.name})"
+
+    def generate(self):
+        """ Generate ZIP folder in the given (temporary) file object. """
+
+        # Generate the ZIP folder
+        tmp_zip = tempfile.NamedTemporaryFile(suffix='.zip', delete=True)
+        with zipfile.ZipFile(tmp_zip, 'w', zipfile.ZIP_STORED) as zip_file:
+            # Store every file in the ZIP folder
+            for filename in sorted(self.filenames):
+                arc_name = Path(filename).relative_to(self.root_path)
+                zip_file.write(filename, arcname=arc_name)
+
+            # Store 'hashes.json'
+            zip_file.writestr("hashes.json", self.hashes.bytes())
+
+        # Return the flushed temporary file
+        tmp_zip.flush()
+        return tmp_zip
+
+
+##########################################################################
+# Zenodo record class
+##########################################################################
+
+class Zenodo:
+
+    def __init__(self, concept_id, sandbox=True):
+        """ Load or create a Zenodo record. If the attribute 'is_submitted' is False, this is a deposition record. """
+
+        self.concept_id = concept_id
+        self.is_sandbox = bool(sandbox)
+
+        # Zenodo config file contains tokens
+        self.zenodo_cfg = ZenodoConfig()
+
+        # Get base URL and authentication token
+        if self.is_sandbox:
+            self.url = "https://sandbox.zenodo.org/api"
+            self.token = self.zenodo_cfg["sandbox_token"]
+        else:
+            self.url = "https://zenodo.org/api"
+            self.token = self.zenodo_cfg["token"]
+        self.auth_header = {"Authorization": f"Bearer {self.token}"}
+
+        # Get unsubmitted draft record
+        if self.concept_id is None:
+
+            # Fetch an existing unsubmitted draft record or create a new one
+            self.record = self.find_deposition()
+            if not self.record:
+                self.record = self.create_deposition()
+            self.concept_id = int(self.record["conceptrecid"])
+            print(f"*** STORE CONCEPT RECORD ID: {self.concept_id} ***")
+
+        # Load submitted record
+        else:
+
+            # Get record by concept ID
+            self.record = self.get_concept(self.concept_id)
+
+            # Discard pending draft of submitted record
+            if self.record:
+                draft_record = self.find_deposition(self.concept_id)
+                if draft_record:
+                    self.record = draft_record
+
+            # Get existing unsubmitted draft record
+            else:
+                self.record = self.find_deposition(self.concept_id)
+                if self.record is None:
+                    raise ValueError(f"Concept ID {self.concept_id} not found on Zenodo!")
+
+        # Load fresh record
+        self.load_record()
+        self.is_submitted = self.record["submitted"]
+
+        # Sanity check
+        assert self.concept_id == int(self.record["conceptrecid"])
+
+        # Extract metadata
+        self.metadata = self.record["metadata"]
+        self.version = Version(self.metadata["version"]) if "version" in self.metadata else None
+
+        # Load the hashes file
+        self.hashes = self.load_hashes()
+
+    @property
+    def next_version(self):
+        """ Return next version (patch level) of the record. """
+
+        return self.version.next_version()
+
+    @property
+    def next_release(self):
+        """ Return next release version (minor level) of the record. """
+
+        return self.version.next_release()
+
+    @property
+    def next_major(self):
+        """ Return next major release version (major level) of the record. """
+
+        return self.version.next_major()
+
+    def load_hashes(self):
+        """ Load and return the 'hashes.json' file of the record. Compare checksums and file sizes of all files. """
+
+        if not self.has_file("hashes.json"):
+            return {}
+
+        hashes = self.download_json("hashes.json")
+        for filename, value in hashes.items():
+            if not isinstance(value, dict):
+                continue
+            file_info = self.file_info(filename)
+            if self.is_submitted:
+                assert value["filesize"] == file_info["size"]
+                assert value["checksum"] == file_info["checksum"].split(":", 1)[1]
+            else:
+                assert value["filesize"] == file_info["filesize"]
+                assert value["checksum"] == file_info["checksum"]
+        return hashes
+
+    def find_deposition(self, concept_id=None):
+        """ Try to get an unsubmitted Zenodo record. """
+
+        url = f"{self.url}/deposit/depositions"
+        params = {"size": 50, "page": 1}
+        while True:
+            response = requests.get(url, params=params, headers=self.auth_header)
+            response.raise_for_status()
+            records = response.json()
+            for record in records:
+                if record["state"] == "unsubmitted" \
+                        and (concept_id is None or int(record["conceptrecid"]) == concept_id):
+                    return record
+            if "next" in response.links:
+                params["page"] += 1
+            else:
+                break
+
+    def create_deposition(self):
+        """ Create an empty Zenodo record. """
+
+        headers = {"Content-Type": "application/json"} | self.auth_header
+        data = {"metadata": {"tite": "<no title>", "description": "<no description>", "version": "1.0.0"}}
+        url = f"{self.url}/deposit/depositions"
+        response = requests.post(url, json=data, headers=headers)
         response.raise_for_status()
-        self.bucket_url = response.json()["links"]["bucket"]
-        self.zenodo_url = response.json()["links"]["html"]
-        self.deposition_id = response.json()["id"]
-        print(f"Bucket {self.deposition_id}: created")
-
-    def update_meta(self, **kwargs):
-        data = {"metadata": self.meta | kwargs}
-        headers = {"Content-Type": "application/json", "Authorization": f"Bearer {self.token}"}
-        response = requests.put(self.url, json=data, headers=headers)
-        response.raise_for_status()
-        print(f"Bucket {self.deposition_id}: Metadata updated")
         return response.json()
 
-    def upload_file(self, file, filename=None):
-        """ Upload a file into the Zenodo bucket. """
+    def get_concept(self, concept_id):
+        """ Get latest record of the given concept ID. Return None if no record is published yet. """
 
-        opened_here = False
+        url = f"{self.url}/records/{concept_id}"
+        response = requests.get(url, headers=self.auth_header)
+        if response.status_code == 404:
+            return None
+        response.raise_for_status()
+        return response.json()
 
-        # File represented by file object
-        if hasattr(file, 'read'):
-            assert filename, "No filename for file object."
-            if hasattr(file, 'seek'):
-                file.seek(0)
-            data = file
+    def get_deposition(self, record):
+        """ Get pending draft of the given Zenodo record. Return None if no draft exists. """
 
-        # Text file represented by text string
-        elif filename:
-            data = io.BytesIO(file.encode('utf-8'))
-            opened_here = True
+        record_id = record["id"]
+        url = f"{self.url}/deposit/depositions/{record_id}"
+        response = requests.get(url, headers=self.auth_header)
+        if response.status_code == 404:
+            return None
+        response.raise_for_status()
+        return response.json()
 
-        # File represented by path
-        else:
-            path = Path(file)
-            if not path.exists():
-                raise FileNotFoundError(f"File not found: {path}")
-            filename = path.name
-            data = open(path, 'rb')
-            opened_here = True
+    def discard_record(self, record):
+        """ Discard given pending draft record. """
 
-        # Upload file
-        headers = {"Authorization": f"Bearer {self.token}"}
-        upload_url = f"{self.bucket_url}/{filename}"
-        try:
-            response = requests.put(upload_url, data=data, headers=headers)
+        url = record["links"]["discard"]
+        response = requests.post(url, headers=self.auth_header)
+        response.raise_for_status()
+
+    def load_record(self):
+        """ Return the current Zenodo record. """
+
+        url = self.record["links"]["self"]
+        response = requests.get(url, headers=self.auth_header)
+        response.raise_for_status()
+        self.record = response.json()
+
+    def update_meta(self, metadata):
+        """ Update metadata of a Zenodo record and store the response. """
+
+        headers = {"Content-Type": "application/json"} | self.auth_header
+        data = {"metadata": self.metadata | metadata}
+        data["metadata"].pop("resource_type", None)
+        data["metadata"].pop("doi", None)
+
+        if self.is_submitted:
+            record = self.get_deposition(self.record)
+            url = record["links"]["edit"]
+            response = requests.post(url, headers=self.auth_header)
             response.raise_for_status()
-            print(f"Bucket {self.deposition_id}: Uploaded file '{filename}'")
-            return response.json()
-        finally:
-            if opened_here:
-                data.close()
 
-    def upload_zip(self, files, root_path, zip_name):
-        """ Creating a zip folder containing the given local files in the Zenodo bucket. Take zip internal file paths
-        relative to the given root path. """
+            url = response.json()["links"]["self"]
+            response = requests.put(url, json=data, headers=headers)
+            response.raise_for_status()
 
-        # Create zip folder in memory
-        with io.BytesIO() as zip_buffer:
-            with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
-                for file in files:
-                    arcname = Path(file).relative_to(root_path)
-                    zip_file.write(file, arcname=arcname)
+            url = response.json()["links"]["publish"]
+            response = requests.post(url, headers=self.auth_header)
+            response.raise_for_status()
 
-            # Upload zip folder to the bucket
-            return self.upload_file(zip_buffer, filename=zip_name)
+        else:
+            url = self.record["links"]["latest_draft"]
+            response = requests.put(url, json=data, headers=headers)
+            response.raise_for_status()
+
+        self.load_record()
+        assert self.is_submitted == self.record["submitted"]
+        assert self.concept_id == int(self.record["conceptrecid"])
+
+    def filenames(self):
+        """ Return list of all names of the files in the Zenodo record. """
+
+        key = "key" if self.is_submitted else "filename"
+        return [file_info[key] for file_info in self.record["files"]]
+
+    def file_info(self, filename):
+        """ Return the file info dictionary from the Zenodo response. """
+
+        filenames = self.filenames()
+        if filename not in filenames:
+            raise FileNotFoundError(f"File '{filename}' not found in Zenodo record {self.record["id"]}")
+        index = filenames.index(filename)
+        return self.record["files"][index]
+
+    def has_file(self, filename):
+        """ Return True if a file exists in the Zenodo response. """
+
+        try:
+            self.file_info(filename)
+        except FileNotFoundError:
+            return False
+        return True
+
+    def upload_file(self, file, filename):
+        """ Upload a file into the Zenodo record. """
+
+        url = f"{self.record["links"]["bucket"]}/{filename}"
+        file.seek(0)
+        response = requests.put(url, data=file, headers=self.auth_header)
+        file.close()
+        response.raise_for_status()
+        r = response.json()
+        return r
+
+    def download_json(self, filename):
+        """ Download and return the given JSON file from the record. """
+
+        # Download and return file
+        file_info = self.file_info(filename)
+        key = "self" if self.is_submitted else "download"
+        url = file_info["links"][key]
+        response = requests.get(url, headers=self.auth_header)
+        response.raise_for_status()
+        return response.json()
+
+    def delete_file(self, filename):
+        """ Delete given file from the Zenodo record. """
+
+        file_info = self.file_info(filename)
+        url = file_info["links"]["self"]
+        response = requests.delete(url, headers=self.auth_header)
+        if response.status_code == 204:
+            return
+        response.raise_for_status()
+
+    def publish(self):
+        """ Publish Zenodo record. """
+
+        url = self.record["links"]["publish"]
+        response = requests.post(url, headers=self.auth_header)
+        response.raise_for_status()
+
+        self.record = self.get_concept(self.concept_id)
+        self.is_submitted = self.record["submitted"]
+        assert self.is_submitted
+
+        self.hashes = self.load_hashes()
+
+    def create_release(self, version):
+        """ Create a Zenodo release. """
+
+        record = self.get_deposition(self.record)
+
+        url = record["links"]["newversion"]
+        response = requests.post(url, headers=self.auth_header)
+        response.raise_for_status()
+        record = response.json()
+
+        url = record["links"]["latest_draft"]
+        response = requests.get(url, headers=self.auth_header)
+        response.raise_for_status()
+        self.record = response.json()
+
+        self.is_submitted = self.record["submitted"]
+        assert not self.is_submitted
+
+##########################################################################
+# Upload functions for Zenodo records
+##########################################################################
+
+def upload_record(zenodo, hashes, meta, files):
+    """ Upload and publish a Zenodo record. """
+
+    # Remove all existing files from record
+    for filename in zenodo.filenames():
+        zenodo.delete_file(filename)
+
+    # Update record metadata and upload all data files
+    zenodo.update_meta(meta)
+    for file in files:
+        zenodo.upload_file(file.generate(), file.name)
+    zenodo.load_record()
+
+    # Upload hashes
+    hashes.merge(zenodo)
+    zenodo.upload_file(io.BytesIO(hashes.bytes()), "hashes.json")
+
+    # Submit record
+    zenodo.publish()
 
 
-def get_configs():
-    """ Finds all lanthanide ion configuration folders 'f<num>' in the AMELI vault path and returns a list of the
-    respective numbers of electrons. """
+def upload_zenodo(version, title, desc, files, zenodo):
+    """ Upload or update metadata and files as Zenodo record. """
 
-    nums = []
-    pattern = re.compile(r'^f(\d+)$')
+    # Dataset version
+    version = Version(version)
 
-    for folder in VAULT_PATH.iterdir():
-        if folder.is_dir():
-            match = pattern.match(folder.name)
-            if match:
-                nums.append(int(match.group(1)))
+    # Metadata dictionary
+    scidata_cfg = ScidataConfig()
+    metadata = {
+        "upload_type": "dataset",
+        "version": str(version),
+        "title": title,
+        "description": desc,
+        "language": "eng",
+        "access_right": "open",
+        "license": "cc-by-sa-4.0",
+        "creators": [{
+            "name": swap_name(scidata_cfg["author"]),
+            "orcid": scidata_cfg["orcid"],
+            "affiliation": scidata_cfg["organization"],
+        }],
+    }
 
-    return sorted(nums)
+    # Aggregate all hashes
+    hashes = RecordHash()
+    for file in files:
+        hashes.append(file)
+    hashes.finalize()
 
+    # Zenodo record is in draft state
+    if not zenodo.is_submitted:
+        upload_record(zenodo, hashes, metadata, files)
 
-def get_zip_folders(num_electrons):
-    """ Generate names, configuration root path, and file lists for zip folders containing all data container files
-    available for the lanthanide ion with the given number of electrons. """
+    # Zenodo record is in submitted state
+    else:
+        release = False
 
-    # Prepare root folder of the given lanthanide configuration
-    config_name = f"f{num_electrons}"
-    root_path = VAULT_PATH / Path(config_name)
+        if zenodo.hashes["hash"] == hashes.hash:
+            assert zenodo.hashes["sha256Data"] == hashes.sha256_data
+            if version != zenodo.next_version:
+                raise VersionError(f"Version {zenodo.next_version} expected for metadata update, got {version}!")
+        elif zenodo.hashes["sha256Data"] == hashes.sha256_data:
+            if version != zenodo.next_release:
+                raise VersionError(f"Version {zenodo.next_release} expected for new release, got {version}!")
+            release = True
+        else:
+            if version != zenodo.next_major:
+                raise VersionError(f"Version {zenodo.next_major} expected for new major release, got {version}!")
+            release = True
 
-    # Content mapping for each zip folder
-    zip_structure = [
-        ("product.zip", [Path("product")]),
-        ("sljm.zip", [Path("sljm")]),
-        ("slj.zip", [Path("slj")]),
-        ("slj_reduced.zip", [Path("slj_reduced")]),
-        ("support.zip", [Path("."), Path("unit")]),
-    ]
+        # Create new release of Zenodo record
+        if release:
+            zenodo.create_release(version)
+            upload_record(zenodo, hashes, metadata, files)
 
-    # Generate list of data container files for each zip folder in the given order
-    for zip_name, subfolders in zip_structure:
-        files = []
-        for folder in subfolders:
-            search_dir = root_path / folder
-            assert search_dir.is_dir(), f"Folder '{folder}' does not exist!"
-            for file_path in search_dir.glob("*.zdc"):
-                files.append(file_path)
-        yield zip_name, root_path, files
+        # Update record metadata
+        else:
+            zenodo.update_meta(metadata)
+
+def zenodo_lanthanide(num_electrons, version, concept_id, sandbox=True):
+    """ Upload or update Zenodo dataset record for the given lanthanide ion. """
+
+    zenodo = Zenodo(concept_id, sandbox)
+
+    title = f"Matrix Elements for the {LANTHANIDE_IONS[num_electrons]} Ion"
+    desc = description(num_electrons)
+    root_path = get_root_path(num_electrons)
+    files = []
+    for zip_name, filenames in get_zip_folders(root_path):
+        file = ZipFolder(zip_name, root_path, filenames)
+        files.append(file)
+
+    upload_zenodo(version, title, desc, files, zenodo)
+

@@ -75,6 +75,9 @@ class Version:
     def next_release(self):
         return Version(f"{self.major}.{self.minor + 1}.0")
 
+    def next_major(self):
+        return Version(f"{self.major + 1}.0.0")
+
     @property
     def _tuple(self) -> tuple:
         return (self.major, self.minor, self.patch)

@@ -88,8 +88,15 @@ def update_containers(num_electrons):
     yield from matrix_generator(root_path, "slj_reduced", "SLJ", True)
 
 
+def get_root_path(num_electrons):
+    """ Return the root path object for the lanthanide ion with the given number of electrons. """
+
+    config_name = f"f{num_electrons}"
+    return VAULT_PATH / Path(config_name)
+
+
 # Content mapping for each zip folder
-zip_structure = [
+ZIP_STRUCTURE = [
     ("product.zip", [Path("product")]),
     ("sljm.zip", [Path("sljm")]),
     ("slj.zip", [Path("slj")]),
@@ -98,23 +105,19 @@ zip_structure = [
 ]
 
 
-def get_zip_folders(num_electrons):
-    """ Generate names, configuration root path, and file lists for zip folders containing all data container files
-    available for the lanthanide ion with the given number of electrons. """
-
-    # Prepare root folder of the given lanthanide configuration
-    config_name = f"f{num_electrons}"
-    root_path = VAULT_PATH / Path(config_name)
+def get_zip_folders(root_path):
+    """ Generate names and file lists for zip folders containing all data container files available for the lanthanide
+    ion with the given root path. """
 
     # Generate list of data container files for each zip folder in the given order
-    for zip_name, subfolders in zip_structure:
+    for zip_name, subfolders in ZIP_STRUCTURE:
         files = []
         for folder in subfolders:
             search_dir = root_path / folder
             assert search_dir.is_dir(), f"Folder '{folder}' does not exist!"
             for file_path in search_dir.glob("*.zdc"):
                 files.append(file_path)
-        yield zip_name, root_path, files
+        yield zip_name, files
 
 
 def get_matrix_heads(num_electrons):
@@ -127,7 +130,7 @@ def get_matrix_heads(num_electrons):
 
     # Generate list of data container files for each zip folder in the given order
     matrix_heads = set()
-    for zip_name, subfolders in zip_structure:
+    for zip_name, subfolders in ZIP_STRUCTURE:
         if zip_name == "support.zip":
             continue
         for folder in subfolders:
