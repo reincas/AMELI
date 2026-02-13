@@ -236,8 +236,8 @@ class PoolScheduler:
             assert node_id is None
             return False
 
-        # Skip termination of busy workers if enough memory is still available
-        if vmem.available > MEM_CRITICAL:
+        # Skip termination of busy workers if enough memory is still available or if just one busy worker is left
+        if vmem.available > MEM_CRITICAL and len(self.busy_workers) > 1:
             return False
 
         # Claimed memory (RSS) and PID of the smallest worker
@@ -282,16 +282,15 @@ class PoolScheduler:
         if vmem.available < MEM_MAXIMAL:
             return
 
-        # Skip if existing
+        # Skip if node is existing
         priority, node_id = heapq.heappop(self.active_heap)
         node = self.registry.nodes[node_id]
         if node.exists:
             return
 
-        # Skip if not enough memory available
+        # Skip if not enough memory available if at least one worker is busy
         rss = self.max_rss(node_id)
         if vmem.available - rss < MEM_CRITICAL:
-            heapq.heappush(self.active_heap, (priority, node_id))
 
             # Terminate an idle worker
             if len(self.idle_workers) > 0:
@@ -300,7 +299,11 @@ class PoolScheduler:
                 self.logger.warning(f"Terminating idle PID {pid} using {rss:.0f}MB")
                 node_id = self.terminate(pid)
                 assert node_id is None
-            return
+
+            # Skip task only if at least one worker is busy
+            if len(self.busy_workers) > 0:
+                heapq.heappush(self.active_heap, (priority, node_id))
+                return
 
         # Get free worker
         free_workers = [(proc, queue) for proc, queue, node_id in self.workers.values() if node_id is None]
