@@ -312,12 +312,11 @@ configuration {config_name}.
 """
 
 
-class Unit(Vault):
-    """ Class of the product state matrix of a mixed unit spherical tensor operator. It provides the SymPy matrix in
-    the attribute 'matrix'. """
+class UnitContainer(Vault):
+    """ Class representing a unit data container. """
 
     def __init__(self, config_name, name):
-        """ Initialize the spherical unit tensor operator matrix. """
+        """ Provide the data container. """
 
         # Configuration string
         self.config_name = config_name
@@ -327,35 +326,7 @@ class Unit(Vault):
 
         # Load or generate data container
         self.file = self.get_path(config_name, name)
-        dc = self.load_container(self.file, __version__)
-
-        # Extract UUID and code version from the container
-        meta = dc["data/unit.json"]
-        self.uuid = dc.uuid
-        self.version = meta["version"]
-
-        # Sanity check for data type
-        assert meta["dataType"] == "symbolic"
-
-        # Characteristics of the unit tensor operator
-        assert meta["name"] == self.name
-        self.tensor_size = meta["numTensorElectrons"]
-        self.parameters = meta["tensorParameters"]
-        self.expression = meta["tensorExpression"]
-        self.template = meta["tensorTemplate"]
-
-        # Extract electron configuration from the container
-        self.config = ConfigInfo.from_meta(meta["config"])
-        assert self.config.name == config_name
-
-        # Extract product states from the container
-        self.states = space_registry["Product"].from_meta(dc["data/states.hdf5"], meta["states"])
-
-        # Extract unit matrix
-        self.info = SymMatrix.from_meta(dc["data/matrix.hdf5"], meta["matrix"])
-        self.matrix = self.info.matrix
-        assert self.info.row_space == self.states.state_space
-        assert self.info.col_space == self.states.state_space
+        self.update_container(self.file, __version__)
 
     def generate_container(self, dc=None):
         """ Generate the matrix of the unit tensor operator and store it in a data container file. Update function: Use
@@ -444,7 +415,7 @@ class Unit(Vault):
         }
 
         # Create the data container and store it in a file
-        self.write(self.file, items)
+        self.write_container(self.file, items)
         t = time.time() - t
         logger.info(f"Stored {self.config_name} unit matrix {self.name} ({t:.1f} seconds) -> {self.file}")
 
@@ -455,3 +426,43 @@ class Unit(Vault):
         key, parameters = name.split("/")
         parameters = "_".join(parameters.split(","))
         return f"{config_name}/unit/{key}_{parameters}.zdc"
+
+
+class Unit(UnitContainer):
+    """ Class of the product state matrix of a mixed unit spherical tensor operator. It provides the SymPy matrix in
+    the attribute 'matrix'. """
+
+    def __init__(self, config_name, name):
+        """ Initialize the spherical unit tensor operator matrix. """
+
+        # Load or generate data container
+        super().__init__(config_name, name)
+        dc = self.read_container(self.file)
+
+        # Extract UUID and code version from the container
+        meta = dc["data/unit.json"]
+        self.uuid = dc.uuid
+        self.version = meta["version"]
+
+        # Sanity check for data type
+        assert meta["dataType"] == "symbolic"
+
+        # Characteristics of the unit tensor operator
+        assert meta["name"] == self.name
+        self.tensor_size = meta["numTensorElectrons"]
+        self.parameters = meta["tensorParameters"]
+        self.expression = meta["tensorExpression"]
+        self.template = meta["tensorTemplate"]
+
+        # Extract electron configuration from the container
+        self.config = ConfigInfo.from_meta(meta["config"])
+        assert self.config.name == config_name
+
+        # Extract product states from the container
+        self.states = space_registry["Product"].from_meta(dc["data/states.hdf5"], meta["states"])
+
+        # Extract unit matrix
+        self.info = SymMatrix.from_meta(dc["data/matrix.hdf5"], meta["matrix"])
+        self.matrix = self.info.matrix
+        assert self.info.row_space == self.states.state_space
+        assert self.info.col_space == self.states.state_space

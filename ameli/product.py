@@ -461,11 +461,11 @@ The electron indices are linked to the single electron states in 'states.electro
 """
 
 
-class Product(Vault):
-    """ Class providing support data for the calculation of product state matrix elements of tensor operators. """
+class ProductContainer(Vault):
+    """ Class representing a product data container. """
 
     def __init__(self, config_name: str, tensor_size: int):
-        """ Initialize the support data structure for tensor operators acting on tensor_size electrons. """
+        """ Provide the data container. """
 
         # Configuration string
         self.config_name = config_name
@@ -475,27 +475,7 @@ class Product(Vault):
 
         # Load data container
         self.file = self.get_path(config_name, tensor_size)
-        dc = self.load_container(self.file, __version__)
-
-        # Extract UUID and code version from the container
-        meta = dc["data/product.json"]
-        self.uuid = dc.uuid
-        self.version = meta["version"]
-
-        # Extract electron configuration from the container
-        self.config = ConfigInfo.from_meta(meta["config"])
-        assert self.config.name == config_name
-
-        # Extract product states from the container
-        self.states = space_registry["Product"].from_meta(dc["data/states.hdf5"], meta["states"])
-        self.num_states = self.states.num_states
-
-        # Support data from HDF5 data structure.
-        # Note: Do not use decode_uint_array. It is too slow, memory consumption too high.
-        self.indices = dc["data/product.hdf5"]["indices"]
-        self.elements = dc["data/product.hdf5"]["elements"]
-        self.num_indices = len(self.indices)
-        self.num_elements = len(self.elements)
+        self.update_container(self.file, __version__)
 
     def generate_container(self, dc=None):
         """ Generate the product state support data for tensor operators acting on tensor_size electrons and store
@@ -511,9 +491,11 @@ class Product(Vault):
         config_meta = config.info.as_meta()
         if dc:
             v = dc["meta.json"]["version"]
-            logger.info(f"Update {config.name} product states for {self.tensor_size} electrons (version {v} -> {__version__})")
+            logger.info(
+                f"Update {config.name} product states for {self.tensor_size} electrons (version {v} -> {__version__})")
         else:
-            logger.info(f"Generate {config.name} product states for {self.tensor_size} electrons (version {__version__})")
+            logger.info(
+                f"Generate {config.name} product states for {self.tensor_size} electrons (version {__version__})")
 
         # Get product states
         states_dict, states_meta = config.states.as_meta(hasher)
@@ -572,7 +554,7 @@ class Product(Vault):
         }
 
         # Create the data container and store it in a file
-        self.write(self.file, items)
+        self.write_container(self.file, items)
 
         # Delete the temporary HDF5 file
         if storage:
@@ -581,6 +563,43 @@ class Product(Vault):
         t = time.time() - t
         ts = self.tensor_size
         logger.info(f"Stored {config.name} product states for {ts} electrons ({t:.1f} seconds) -> {self.file}")
+
+    @staticmethod
+    def get_path(config_name, tensor_size):
+        """ Return data container file name. """
+
+        return f"{config_name}/product_{tensor_size}.zdc"
+
+
+class Product(ProductContainer):
+    """ Class providing support data for the calculation of product state matrix elements of tensor operators. """
+
+    def __init__(self, config_name: str, tensor_size: int):
+        """ Initialize the support data structure for tensor operators acting on tensor_size electrons. """
+
+        # Load data container
+        super().__init__(config_name, tensor_size)
+        dc = self.read_container(self.file)
+
+        # Extract UUID and code version from the container
+        meta = dc["data/product.json"]
+        self.uuid = dc.uuid
+        self.version = meta["version"]
+
+        # Extract electron configuration from the container
+        self.config = ConfigInfo.from_meta(meta["config"])
+        assert self.config.name == config_name
+
+        # Extract product states from the container
+        self.states = space_registry["Product"].from_meta(dc["data/states.hdf5"], meta["states"])
+        self.num_states = self.states.num_states
+
+        # Support data from HDF5 data structure.
+        # Note: Do not use decode_uint_array. It is too slow, memory consumption too high.
+        self.indices = dc["data/product.hdf5"]["indices"]
+        self.elements = dc["data/product.hdf5"]["elements"]
+        self.num_indices = len(self.indices)
+        self.num_elements = len(self.elements)
 
     def electrons(self, indices):
         """ Convert the given sequence of electron indices into a tuple of Electron objects. """
@@ -607,9 +626,3 @@ class Product(Vault):
             size = int(size)
             yield initial_index, final_index, electron_generator(self.elements[index:index + size])
             index += size
-
-    @staticmethod
-    def get_path(config_name, tensor_size):
-        """ Return data container file name. """
-
-        return f"{config_name}/product_{tensor_size}.zdc"

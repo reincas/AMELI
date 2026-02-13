@@ -1116,50 +1116,22 @@ description of the tensor operator for each of the names and string representati
 """
 
 
-class Transform(Vault):
-    """ Class of the exact symbolic transformation matrix from product states to LS coupling. It provides the SymPy
-    matrix in the attribute 'matrix' and the respective floating point NumPy array from the method 'array(dtype)'. """
+class TransformContainer(Vault):
+    """ Class representing a transform data container. """
 
     # Description of the HDF5 container item holding the LS states of a configuration required by the transformation
     # interface
     states_desc = {"SLJM": SLJM_DESC, "SLJ": SLJ_DESC}
 
-    # Transformation matrix
-    matrix: sp.Matrix = None
-
     def __init__(self, config_name):
-        """ Initialize the orthonormal transformation matrix from the product space to LS coupling. """
+        """ Provide the data container. """
 
         # Configuration string
         self.config_name = config_name
 
         # Load or generate data container
         self.file = self.get_path(self.config_name)
-        dc = self.load_container(self.file, __version__)
-
-        # Extract UUID and code version from the container
-        meta = dc["data/transform.json"]
-        self.uuid = dc.uuid
-        self.version = meta["version"]
-
-        # Sanity check for data type
-        assert meta["dataType"] == "symbolic"
-
-        # Extract electron configuration from the container
-        self.config = ConfigInfo.from_meta(meta["config"])
-        assert self.config.name == config_name
-
-        # Extract row states (Product) and column states (SLJM)
-        self.row_states = space_registry["Product"].from_meta(dc["data/row_states.hdf5"], meta["row_states"])
-        self.col_states = self.states_from_meta(dc["data/col_states.hdf5"], meta["col_states"])
-        assert self.row_states.num_states == self.col_states.num_states
-        self.num_states = self.row_states.num_states
-
-        # Extract transformation matrix
-        self.info = SymMatrix.from_meta(dc["data/matrix.hdf5"], meta["matrix"])
-        self.matrix = self.info.matrix
-        assert self.info.row_space == self.row_states.state_space
-        assert self.info.col_space == self.col_states.state_space
+        self.update_container(self.file, __version__)
 
     def generate_container(self, dc=None):
         """ Generate the LS transformation matrix and store it in a data container file. """
@@ -1257,9 +1229,57 @@ class Transform(Vault):
         }
 
         # Create data container and store in file
-        self.write(self.file, items)
+        self.write_container(self.file, items)
         t = time.time() - t_all
         logger.info(f"Stored {self.config_name} transformation matrix ({t:.1f} seconds) -> {self.file}")
+
+    @staticmethod
+    def get_path(config_name):
+        """ Return data container file name. """
+
+        return f"{config_name}/transform.zdc"
+
+
+class Transform(TransformContainer):
+    """ Class of the exact symbolic transformation matrix from product states to LS coupling. It provides the SymPy
+    matrix in the attribute 'matrix' and the respective floating point NumPy array from the method 'array(dtype)'. """
+
+    # Transformation matrix
+    matrix: sp.Matrix = None
+
+    def __init__(self, config_name):
+        """ Initialize the orthonormal transformation matrix from the product space to LS coupling. """
+
+        # Configuration string
+        self.config_name = config_name
+
+        # Load or generate data container
+        super().__init__(self.config_name)
+        dc = self.read_container(self.file)
+
+        # Extract UUID and code version from the container
+        meta = dc["data/transform.json"]
+        self.uuid = dc.uuid
+        self.version = meta["version"]
+
+        # Sanity check for data type
+        assert meta["dataType"] == "symbolic"
+
+        # Extract electron configuration from the container
+        self.config = ConfigInfo.from_meta(meta["config"])
+        assert self.config.name == config_name
+
+        # Extract row states (Product) and column states (SLJM)
+        self.row_states = space_registry["Product"].from_meta(dc["data/row_states.hdf5"], meta["row_states"])
+        self.col_states = self.states_from_meta(dc["data/col_states.hdf5"], meta["col_states"])
+        assert self.row_states.num_states == self.col_states.num_states
+        self.num_states = self.row_states.num_states
+
+        # Extract transformation matrix
+        self.info = SymMatrix.from_meta(dc["data/matrix.hdf5"], meta["matrix"])
+        self.matrix = self.info.matrix
+        assert self.info.row_space == self.row_states.state_space
+        assert self.info.col_space == self.col_states.state_space
 
     @staticmethod
     def states_from_meta(states_dict, info_meta):
@@ -1271,12 +1291,6 @@ class Transform(Vault):
         """ Return the data container dictionaries representing the states in LS coupling. """
 
         return self.col_states.as_meta(hasher)
-
-    @staticmethod
-    def get_path(config_name):
-        """ Return data container file name. """
-
-        return f"{config_name}/transform.zdc"
 
 
 # Register space of electron states in LS coupling

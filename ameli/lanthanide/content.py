@@ -12,7 +12,11 @@
 import re
 from pathlib import Path
 
-from ameli import Config, Product, Unit, Matrix, Transform
+from ameli.config import ConfigContainer
+from ameli.product import ProductContainer
+from ameli.unit import UnitContainer
+from ameli.matrix import MatrixContainer
+from ameli.transform import TransformContainer
 from ameli.vault import VAULT_PATH
 
 
@@ -48,7 +52,7 @@ def update_containers(num_electrons):
                 name = f"{head}/{','.join(params)}"
             else:
                 name = head
-            yield Matrix, (config_name, name, space, reduced)
+            yield MatrixContainer, (config_name, name, space, reduced)
 
     # Prepare root folder of the given lanthanide configuration
     config_name = f"f{num_electrons}"
@@ -57,13 +61,13 @@ def update_containers(num_electrons):
     # Yield Config class
     file = root_path / "config.zdc"
     assert file.exists()
-    yield Config, (config_name,)
+    yield ConfigContainer, (config_name,)
 
     # Yield Product class
     for tensor_size in range(1, min(num_electrons, 3) + 1):
         file = root_path / f"product_{tensor_size}.zdc"
         assert file.exists()
-        yield Product, (config_name, tensor_size)
+        yield ProductContainer, (config_name, tensor_size)
 
     # Yield Unit class
     folder = root_path / "unit"
@@ -72,7 +76,7 @@ def update_containers(num_electrons):
         assert file.suffix == ".zdc"
         head, *params = file.stem.split("_")
         name = f"{head}/{','.join(params)}"
-        yield Unit, (config_name, name)
+        yield UnitContainer, (config_name, name)
 
     # Yield Matrix class for product states
     yield from matrix_generator(root_path, "product", "Product", False)
@@ -80,7 +84,7 @@ def update_containers(num_electrons):
     # Yield Transform class
     file = root_path / "transform.zdc"
     assert file.exists()
-    yield Transform, (config_name,)
+    yield TransformContainer, (config_name,)
 
     # Yield Matrix class for LS coupling
     yield from matrix_generator(root_path, "sljm", "SLJM", False)

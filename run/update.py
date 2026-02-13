@@ -9,9 +9,12 @@
 #
 ##########################################################################
 
+from datetime import datetime
+
 from ameli.lanthanide.content import get_configs, update_containers
 
 for num_electrons in get_configs():
     for cls, params in update_containers(num_electrons):
-        print(f"{cls.__name__}({", ".join(map(str, params))})")
+        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        print(f"{now} - {cls.__name__}({", ".join(map(str, params))})")
         obj = cls(*params)

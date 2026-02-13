@@ -11,9 +11,11 @@
 # version number with major, minor, and patch level.
 #
 ##########################################################################
+import json
 import os
 import re
 import time
+import zipfile
 from pathlib import Path
 
 from scidatacontainer import Container
@@ -111,7 +113,7 @@ class Version:
 class Vault:
     """ Interface class for data container files. """
 
-    def write(self, name: str, items: dict):
+    def write_container(self, name: str, items: dict):
         dc = Container(items=items)
         dc.freeze()
         path = self.vault_path(name)
@@ -128,9 +130,10 @@ class Vault:
                 time.sleep(0.05 * (i + 1))
         raise RuntimeError(f"Storage of {path} failed!")
 
-    def read(self, name: str) -> Container:
+    @staticmethod
+    def read_container(name: str) -> Container:
 
-        path = self.vault_path(name)
+        path = Vault.vault_path(name)
         return Container(file=str(path))
 
     @staticmethod
@@ -144,42 +147,47 @@ class Vault:
         return VAULT_PATH / Path(name)
 
     def generate_container(self, dc=None):
+        """ Implemented in sub-classes. """
+
         raise NotImplementedError()
 
-    def load_container(self, name: str, version: str):
-        """ Load, update or generate data container file depending on its existence and version number. """
+    @staticmethod
+    def container_version(name: str) -> Version:
+        """ Extract and return the code version of the given data container without loading it completely. """
+
+        with zipfile.ZipFile(Vault.vault_path(name), 'r') as z:
+            with z.open('meta.json') as f:
+                data = json.load(f)
+                return Version(data["version"])
+
+    def update_container(self, name: str, version: str):
+        """ Keep, update, or generate data container file depending on its existence and version number. """
 
         # Generate container if it does not exist yet
-        if not self.vault_path(name).exists():
+        if not Vault.vault_path(name).exists():
             self.generate_container()
+            return
 
-        # Load container and get its version
-        dc = self.read(name)
-        dc_version = Version(dc["meta.json"]["version"])
+        # Data container version is already up-to-date
+        dc_version = Vault.container_version(name)
+        if dc_version == version:
+            return
 
         # Container version must never exceed the current one
         if dc_version > version:
             raise VersionError(f"Config container version {dc_version} > current version {version}!")
 
-        # Version difference to be resolved
-        elif dc_version < version:
+        # Metadata update is sufficient for patch level difference
+        if dc_version.same_release(version):
+            dc = Vault.read_container(name)
+            try:
+                self.generate_container(dc)
+            except VersionError as exc:
+                raise VersionError("Data modified, this is no patch!") from exc
+            return
 
-            # Container update is sufficient for patch level difference
-            if dc_version.same_release(version):
-                try:
-                    self.generate_container(dc)
-                except VersionError as exc:
-                    raise VersionError("Data modified, this is no patch!") from exc
-
-            # New container nust be generated for minor or major level difference
-            else:
-                self.generate_container()
-
-            # Re-load data container
-            dc = self.read(name)
-
-        # Return data container
-        return dc
+        # New container must be generated for minor or major level difference
+        self.generate_container()
 
 
 # Global interface

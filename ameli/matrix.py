@@ -666,12 +666,11 @@ This container contains the {reduced}matrix elements of a spherical tensor opera
 """
 
 
-class Matrix(Vault):
-    """ Class representing the symbolic or floating point matrix of a spherical tensor operator in a given state
-     space. The matrix object is available in the attribute 'matrix'. """
+class MatrixContainer(Vault):
+    """ Class representing a matrix data container. """
 
     def __init__(self, config_name, name, state_space, reduced=False):
-        """ Initialize the spherical tensor operator matrix. """
+        """ Provide the data container. """
 
         # Configuration string
         self.config_name = config_name
@@ -692,36 +691,7 @@ class Matrix(Vault):
 
         # Load or generate data container
         self.file = self.get_path(config_name, name, state_space, self.reduced)
-        dc = self.load_container(self.file, __version__)
-
-        # Extract UUID and code version from the container
-        meta = dc["data/matrix.json"]
-        self.uuid = dc.uuid
-        self.version = meta["version"]
-
-        # Sanity check for data type, rank and reduced flag
-        assert meta["dataType"] == "symbolic"
-        assert self.rank == meta["tensorRank"]
-        assert ("reduced" if self.reduced else "normal") == meta["elementType"]
-
-        # Characteristics of the tensor operator
-        assert meta["name"] == self.name
-        self.tensor_parameters = meta["tensorParameters"]
-        self.tensor_description = meta["tensorDescription"]
-
-        # Extract electron configuration from the container
-        self.config = ConfigInfo.from_meta(meta["config"])
-        assert self.config.name == config_name
-
-        # Extract states (Product or SLJM) from the container
-        self.states = space_registry[self.state_space].from_meta(dc["data/states.hdf5"], meta["states"])
-        assert self.states.state_space == state_space
-
-        # Extract matrix
-        self.info = SymMatrix.from_meta(dc["data/matrix.hdf5"], meta["matrix"])
-        self.matrix = self.info.matrix
-        assert self.info.row_space == self.state_space
-        assert self.info.col_space == self.state_space
+        self.update_container(self.file, __version__)
 
     def prepare_regular(self, config, space, hasher, dc=None):
         """ Return metadata dictionaries of states and matrix calculated from scratch. """
@@ -885,7 +855,7 @@ class Matrix(Vault):
         }
 
         # Create the data container and store it in a file
-        self.write(self.file, items)
+        self.write_container(self.file, items)
         t = time.time() - t
         logger.info(f"Stored {self.config_name} tensor operator matrix {self.name} ({t:.1f} seconds) -> {self.file}")
 
@@ -919,3 +889,44 @@ class Matrix(Vault):
 
         file = Matrix.get_path(config_name, name, state_space, reduced)
         return Vault.in_vault(file)
+
+
+class Matrix(MatrixContainer):
+    """ Class representing the symbolic or floating point matrix of a spherical tensor operator in a given state
+     space. The matrix object is available in the attribute 'matrix'. """
+
+    def __init__(self, config_name, name, state_space, reduced=False):
+        """ Initialize the spherical tensor operator matrix. """
+
+        # Load or generate data container
+        super().__init__(config_name, name, state_space, reduced)
+        dc = self.read_container(self.file)
+
+        # Extract UUID and code version from the container
+        meta = dc["data/matrix.json"]
+        self.uuid = dc.uuid
+        self.version = meta["version"]
+
+        # Sanity check for data type, rank and reduced flag
+        assert meta["dataType"] == "symbolic"
+        assert self.rank == meta["tensorRank"]
+        assert ("reduced" if self.reduced else "normal") == meta["elementType"]
+
+        # Characteristics of the tensor operator
+        assert meta["name"] == self.name
+        self.tensor_parameters = meta["tensorParameters"]
+        self.tensor_description = meta["tensorDescription"]
+
+        # Extract electron configuration from the container
+        self.config = ConfigInfo.from_meta(meta["config"])
+        assert self.config.name == config_name
+
+        # Extract states (Product or SLJM) from the container
+        self.states = space_registry[self.state_space].from_meta(dc["data/states.hdf5"], meta["states"])
+        assert self.states.state_space == state_space
+
+        # Extract matrix
+        self.info = SymMatrix.from_meta(dc["data/matrix.hdf5"], meta["matrix"])
+        self.matrix = self.info.matrix
+        assert self.info.row_space == self.state_space
+        assert self.info.col_space == self.state_space

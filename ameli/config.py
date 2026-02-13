@@ -248,38 +248,22 @@ single-electron states in '{states}.electronPool' in the JSON item '{json}'.
 """
 
 
-class Config(Vault):
-    """ Class of an electron configuration. Provides the quantum numbers for all product states. """
+class ConfigContainer(Vault):
+    """ Class representing a config data container. """
 
     # Description of the HDF5 container item holding the product states of a configuration required by the
     # transformation interface
     states_desc = PRODUCT_DESC
 
-    # Product states are the reference, no transformation matrix
-    matrix = None
-
     def __init__(self, config_name):
-        """ Initialize the electron configuration. """
+        """ Provide the data container. """
 
         # Configuration string
         self.name = config_name
 
         # Load, update, or generate data container
         self.file = self.get_path(config_name)
-        dc = self.load_container(self.file, __version__)
-
-        # Extract UUID and code version from the container
-        meta = dc["data/config.json"]
-        self.uuid = dc.uuid
-        self.version = meta["version"]
-
-        # Extract electron configuration from the container
-        self.info = ConfigInfo.from_meta(dc["data/config.json"])
-        assert self.name == self.info.name
-
-        # Extract product states from the container
-        self.states = self.states_from_meta(dc["data/states.hdf5"], meta["states"])
-        self.num_states = self.states.num_states
+        self.update_container(self.file, __version__)
 
     def generate_container(self, dc=None):
         """ Generate an electron configuration and store it in a data container file. Update function: Use product
@@ -346,9 +330,45 @@ class Config(Vault):
         }
 
         # Create the data container and store it in a file
-        self.write(self.file, items)
+        self.write_container(self.file, items)
         t = time.time() - t
         logger.info(f"Stored {self.name} configuration: ({t:.1f} seconds) -> {self.file}")
+
+    @staticmethod
+    def get_path(config_name):
+        """ Return data container file name. """
+
+        return f"{config_name}/config.zdc"
+
+
+class Config(ConfigContainer):
+    """ Class of an electron configuration. Provides the quantum numbers for all product states. """
+
+    # Transformation matrix
+    matrix = None
+
+    def __init__(self, config_name):
+        """ Initialize the electron configuration. """
+
+        # Load, update, or generate data container
+        super().__init__(config_name)
+        dc = self.read_container(self.file)
+
+        # Extract UUID and code version from the container
+        meta = dc["data/config.json"]
+        self.uuid = dc.uuid
+        self.version = meta["version"]
+
+        # Extract electron configuration from the container
+        self.info = ConfigInfo.from_meta(dc["data/config.json"])
+        assert self.name == self.info.name
+
+        # Extract product states from the container
+        self.states = self.states_from_meta(dc["data/states.hdf5"], meta["states"])
+        self.num_states = self.states.num_states
+
+        # Product states are the reference, no transformation matrix
+        self.matrix = None
 
     def electrons(self, indices):
         """ Convert the given sequence of electron indices into a tuple of Electron objects. """
@@ -365,12 +385,6 @@ class Config(Vault):
         """ Return the data container dictionaries representing the product states. """
 
         return self.states.as_meta(hasher)
-
-    @staticmethod
-    def get_path(config_name):
-        """ Return data container file name. """
-
-        return f"{config_name}/config.zdc"
 
 
 # Register space of electron product states
