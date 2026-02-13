@@ -17,5 +17,5 @@ for num_electrons in get_configs():
     for cls, params in update_containers(num_electrons):
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         param_str = ", ".join(map(str, params))
-        print(f"{now} - {cls.__name__}({param_str})")
+        print(f"{now} - {cls.__name__}({param_str})", flush=True)
         obj = cls(*params)
