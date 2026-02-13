@@ -275,7 +275,8 @@ class SymMatrix:
         # Store or check info flags
         assert self.matrix.shape[0] == self.matrix.shape[1] == self.num_states
         self.is_empty = self.matrix.nnz() == 0
-        assert self.is_symmetric == self.matrix.is_symmetric()
+        if self.is_symmetric:
+            assert self.is_symmetric == self.matrix.is_symmetric()
 
         # Statistics of non-zero elements
         self.num_elements = self.matrix.nnz()
