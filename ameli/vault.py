@@ -114,20 +114,34 @@ class Vault:
     """ Interface class for data container files. """
 
     def write_container(self, name: str, items: dict):
+        """ Store given items as data container file. """
+
+        # Generate the data container object with hash
         dc = Container(items=items)
         dc.freeze()
+
+        # Store data container in a temporary file
         path = self.vault_path(name)
         path.parent.mkdir(parents=True, exist_ok=True)
         tmp_path = path.with_suffix(".tmp")
         dc.write(str(tmp_path))
 
-        max_retries = 100
+        # Wait until the final container file is completely stored and visible on the file system.
+        # Note: os.replace() is an atomic operation on Windows and Linux, it never leaves an unfinished file.
+        max_retries = 50
         for i in range(max_retries):
             try:
                 os.replace(tmp_path, path)
                 return
-            except PermissionError as exc:
-                time.sleep(0.05 * (i + 1))
+            except PermissionError:
+                if i < max_retries - 1:
+                    time.sleep(min(1.0, 0.01 * (2 ** i)))
+            except OSError as exp:
+                raise RuntimeError(f"Disk I/O error: {exp}")
+
+        # Cleanup
+        if os.path.exists(tmp_path):
+            os.remove(tmp_path)
         raise RuntimeError(f"Storage of {path} failed!")
 
     @staticmethod
