@@ -238,30 +238,9 @@ def matrix_C2(config):
     """ Return the matrix <|C2(G2)|> of the Casimir operator of the special group G2 as product state matrix for the
     given electron configuration. """
 
-    # The current code works only for a single-shell configuration
-    assert config.info.num_subshells == 1, "One sub-shell only!"
-
-    # Parameters
-    s = config.states.electron_pool[0].s
-    l = config.states.electron_pool[0].l
-    assert l == 3
-    num = config.info.num_electrons
-    ident = sp.SparseMatrix.eye(config.num_states)
-
-    # One-electron matrix
-    factor = sp.S(0)
-    for k in [1, 5]:
-        factor += 2 * k + 1
-    matrix = (num * factor / (2 * l + 1)) * ident
-
-    # Two-electron matrix
-    if num > 1:
-        for k in [1, 5]:
-            factor = (-1) ** k * 2 * (2 * s + 1) * (2 * k + 1) * sp.sqrt(2 * k + 1)
-            unit = Unit(config.name, f"UTUT/{k},0,{k},{k},0,{k},0,0").matrix
-            matrix += factor * unit
-
-    # Return matrix
+    matrix = sp.SparseMatrix(config.num_states, config.num_states, {})
+    for k in (1, 5):
+        matrix += (2 * k + 1) * Matrix(config.name, f"UU/{k}", "Product").matrix
     matrix /= 4
     return matrix
 
@@ -270,29 +249,10 @@ def matrix_CR(config):
     """ Return the matrix <|C2(SO(2l+1))|> of the Casimir operator of the special orthogonal (rotational) group
     SO(2*l+1) as product state matrix for the given electron configuration. """
 
-    # The current code works only for a single-shell configuration
-    assert config.info.num_subshells == 1, "One sub-shell only!"
-
-    # Parameters
-    s = config.states.electron_pool[0].s
     l = config.states.electron_pool[0].l
-    num = config.info.num_electrons
-    ident = sp.SparseMatrix.eye(config.num_states)
-
-    # One-electron matrix
-    factor = sp.S(0)
+    matrix = sp.SparseMatrix(config.num_states, config.num_states, {})
     for k in range(1, 2 * l, 2):
-        factor += 2 * k + 1
-    matrix = (num * factor / (2 * l + 1)) * ident
-
-    # Two-electron matrix
-    if num > 1:
-        for k in range(1, 2 * l, 2):
-            factor = (-1) ** k * 2 * (2 * s + 1) * (2 * k + 1) * sp.sqrt(2 * k + 1)
-            unit = Unit(config.name, f"UTUT/{k},0,{k},{k},0,{k},0,0").matrix
-            matrix += factor * unit
-
-    # Return matrix
+        matrix += (2 * k + 1) * Matrix(config.name, f"UU/{k}", "Product").matrix
     matrix /= (2 * l - 1)
     return matrix
 
