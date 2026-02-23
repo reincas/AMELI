@@ -18,7 +18,7 @@
 # a list of energies. Some datasets also contain squared reduced matrix
 # elements of U(2), U(4), and U(6) for GSA transitions.
 #
-# A dataset with item "blocking" contains false radial parameters.
+# A dataset with item "invalid" contains false radial parameters.
 #
 # Optional "correct" items contain corrections which need to be
 # applied to the published data to correct typos or incorrect results.
@@ -260,7 +260,7 @@ RADIAL = {
         "source": "[56]",
     },
     "Sm3+:aq": {
-        "blocking": "There seems to be a typo in the radial integrals.",
+        "invalid": "There seems to be a typo in the radial integrals",
         "num": 5,
         "radial":
             {"E^1": 5496.9, "E^2": 25.809, "E^3": 556.40,
