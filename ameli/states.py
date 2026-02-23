@@ -55,12 +55,12 @@ class StateSpace:
         assert self.transform is not None, "Load transform object first!"
         return self.transform.matrix
 
-    def as_meta(self, hasher):
+    def as_meta(self):
         """ Return the meta data dictionaries of the state space. This function requires a loaded transformation
         object. """
 
         assert self.transform is not None, "Load transform object first!"
-        return self.transform.states_as_meta(hasher)
+        return self.transform.states_as_meta()
 
 
 # Initialise empty state space registry
