@@ -9,12 +9,15 @@
 #
 ##########################################################################
 
+import logging
 import pytest
 import re
 import sympy as sp
 from ameli import SPECTRAL, Transform
-
 from data_states import SOURCES, STATES
+from conftest import DEBUG
+
+logging.getLogger(__name__)
 
 
 def rational_range(start, stop):
@@ -24,8 +27,14 @@ def rational_range(start, stop):
         curr += 1
 
 
-@pytest.mark.parametrize("num_electrons", range(1, 5))
+@pytest.mark.parametrize("num_electrons", range(1, 14))
 def test_states(num_electrons: int):
+
+    # Skip large configurations for debugging
+    if DEBUG and DEBUG < num_electrons < 14 - DEBUG:
+        reason = "debugging"
+        logging.info(f"Test skipped -> {reason}")
+        pytest.skip(reason)
 
     # States determined by AMELI
     config_name = f"f{num_electrons}"
@@ -54,7 +63,7 @@ def test_states(num_electrons: int):
 
     # Compare lists of states in order
     if states != states_ref:
-        print("AMELI:     ", sorted(set(states) - set(states_ref)))
-        print("Literature:", sorted(set(states_ref) - set(states)))
+        logging.error(f"*** AMELI-only states: {sorted(set(states) - set(states_ref))}")
+        logging.error(f"*** Ref-only states: {sorted(set(states_ref) - set(states))}")
     assert states == states_ref
-
+    logging.info(f"Test states {config_name} finished -> success")

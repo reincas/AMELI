@@ -14,11 +14,18 @@
 #
 ##########################################################################
 
+import logging
 import pytest
 import numpy as np
 import sympy as sp
 from ameli import Matrix
 from data_energy import SOURCES, RADIAL
+from conftest import DEBUG
+
+logging.getLogger(__name__)
+
+ATOL_ENERGY = 2.5
+ATOL_REDUCED = 0.0005
 
 
 def correct(name, data, corrections):
@@ -135,14 +142,37 @@ def calc_energies(config_name, radial):
     return energies, eigenvectors, irepr
 
 
-def check_coulomb(data):
-    # Data correction list
-    corrections = data.get("correct", [])
+@pytest.mark.parametrize("data_key", RADIAL.keys())
+def test_energy(data_key):
+    """ Run test of energy levels and reduced matrix elements. """
+
+    # Select data set
+    assert data_key in RADIAL
+    data = RADIAL[data_key]
+
+    # Skip invalid dataset
+    if "invalid" in data:
+        reason = f"Invalid dataset ({data["invalid"]})"
+        logging.info(f"Test skipped -> {reason}")
+        pytest.skip(reason)
+
+    # Test source link
+    assert "source" in data
+    assert data["source"] in SOURCES
 
     # Number of f electrons
     assert "num" in data
     num_electrons = data["num"]
     config_name = f"f{num_electrons}"
+
+    # Skip large configurations for debugging
+    if DEBUG and DEBUG < num_electrons < 14 - DEBUG:
+        reason = "debugging"
+        logging.info(f"Test skipped -> {reason}")
+        pytest.skip(reason)
+
+    # Data correction list
+    corrections = data.get("correct", [])
 
     # Get, correct, and sort energy levels
     if "energies" in data:
@@ -192,9 +222,6 @@ def check_coulomb(data):
     else:
         U2 = U4 = U6 = None
 
-    # Initialise success flag
-    success = True
-
     # Use ground state energy from literature as reference
     energies_calc, intermediate, irepr = calc_energies(config_name, radial)
     energies_calc += energies_ref[0] - energies_calc[0]
@@ -209,18 +236,22 @@ def check_coulomb(data):
 
     # Compare given energy levels with calculation and determine mean quadratic deviation
     diffs = []
+    success_energy = True
     for i in range(len(energies_ref)):
-        diff = energies_ref[i] - energies_calc[i]
-        if real_J[i] != str(J[i]) or abs(diff) > 2.5:
-            success = False
+        diff = abs(energies_ref[i] - energies_calc[i])
+        if real_J[i] != str(J[i]) or diff >= ATOL_ENERGY:
+            success_energy = False
             ref = f"J={J[i]}: {energies_ref[i]:.0f}"
             calc = f"{real_names[i]}: {energies_calc[i]:.0f}"
-            print(f"*** | level {i} | ref {ref} | calc {calc} | diff {diff:.1f} ***")
+            logging.error(f"*** | level {i} | ref {ref} | calc {calc} | diff {diff:.1f} >= {ATOL_ENERGY:.1f} ***")
         diffs.append(diff)
     diffs = np.array(diffs)
-    print(f"Energy differences: mean {diffs.mean():.3f}, max {diffs.max():.3f}")
+    logging.info(f"Energy differences: mean {diffs.mean():.3f}, max {diffs.max():.3f}, atol {ATOL_ENERGY:.1f}")
+    if success_energy:
+        logging.info(f"Test energy {config_name}/{data_key} finished -> success")
 
     # Compare squared reduced matrix elements with calculation
+    success_reduced = True
     if U2 is not None:
         U_real = {}
         for k in (2, 4, 6):
@@ -236,38 +267,18 @@ def check_coulomb(data):
             du2 = abs(U_real[2][0, i] - U2[i - 1])
             du4 = abs(U_real[4][0, i] - U4[i - 1])
             du6 = abs(U_real[6][0, i] - U6[i - 1])
-            if max(du2, du4, du6) >= 0.0005:
-                success = False
+            diff = max(du2, du4, du6)
+            if diff > ATOL_REDUCED:
+                success_reduced = False
                 ref = f"J={J[i]}: {U2[i - 1]:.4f} {U4[i - 1]:.4f} {U6[i - 1]:.4f}"
                 calc = f"{real_names[i]}: {U_real[2][0, i]:.4f} {U_real[4][0, i]:.4f} {U_real[6][0, i]:.4f}"
-                print(f"*** | level {i} | ref {ref} | calc {calc} ***")
+                logging.error(f"*** | level {i} | ref {ref} | calc {calc} | diff {diff:.6f} > {ATOL_REDUCED:.6f} ***")
             diffs.extend([du2, du4, du6])
         diffs = np.array(diffs)
-        print(f"Reduced differences: mean {diffs.mean():.6f}, max {diffs.max():.6f}")
+        logging.info(f"Reduced differences: mean {diffs.mean():.6f}, max {diffs.max():.6f}, atol {ATOL_REDUCED:.6f}")
+        if success_reduced:
+            logging.info(f"Test reduced {config_name}/{data_key} finished -> success")
 
-    #assert success
+    # Test result
+    assert success_energy and success_reduced
 
-
-# @pytest.mark.parametrize("name", [key for key in RADIAL if "blocking" not in RADIAL[key]])
-def run_coulomb(name):
-    # Select data set
-    assert name in RADIAL
-    data = RADIAL[name]
-
-    # Test source link
-    assert "source" in data
-    assert data["source"] in SOURCES
-
-    # Run test
-    check_coulomb(data)
-
-
-if __name__ == "__main__":
-    for key in RADIAL:
-        if "blocking" in RADIAL[key]:
-            continue
-        if RADIAL[key]["num"] in [7]:
-            print(f"=== Skipping {key}")
-            continue
-        print(f"=== Checking {key} ...")
-        run_coulomb(key)

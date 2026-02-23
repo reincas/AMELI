@@ -9,14 +9,24 @@
 #
 ##########################################################################
 
+import logging
 import pytest
 import sympy as sp
 from ameli import Matrix, Transform
+from conftest import DEBUG
+
+logging.getLogger(__name__)
 
 
-@pytest.mark.parametrize("num_electrons", range(1, 4))
+@pytest.mark.parametrize("num_electrons", range(1, 14))
 def test_transform(num_electrons: int):
     """ LS transformation test. """
+
+    # Skip large configurations for debugging
+    if DEBUG and DEBUG < num_electrons < 14 - DEBUG:
+        reason = "debugging"
+        logging.info(f"Test skipped -> {reason}")
+        pytest.skip(reason)
 
     # Transformation object
     config_name = f"f{num_electrons}"
@@ -37,5 +47,6 @@ def test_transform(num_electrons: int):
         diff = (V.T * matrix * V - D).norm(sp.oo)
         success = diff == 0
 
-        # Result
+        # Test result
         assert success
+        logging.info(f"Test transform {config_name}/{name} finished -> success")

@@ -8,14 +8,24 @@
 #
 ##########################################################################
 
+import logging
 import pytest
 import sympy as sp
 from ameli import Transform
+from conftest import DEBUG
+
+logging.getLogger(__name__)
 
 
-@pytest.mark.parametrize("num_electrons", range(1, 4))
+@pytest.mark.parametrize("num_electrons", range(1, 14))
 def test_orthonormal(num_electrons: int):
     """ LS transformation orthonormality test. """
+
+    # Skip large configurations for debugging
+    if DEBUG and DEBUG < num_electrons < 14 - DEBUG:
+        reason = "debugging"
+        logging.info(f"Test skipped -> {reason}")
+        pytest.skip(reason)
 
     # Transformation object
     config_name = f"f{num_electrons}"
@@ -26,5 +36,6 @@ def test_orthonormal(num_electrons: int):
     diff = (V.T * V - sp.eye(transform.num_states)).norm(sp.oo)
     success = diff == 0
 
-    # Result
+    # Test result
     assert success
+    logging.info(f"Test orthonormal {config_name} finished -> success")
