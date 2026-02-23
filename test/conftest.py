@@ -5,10 +5,12 @@ import pytest
 # Set 'DEFAULT = False' to run the full test suite
 DEBUG = 3
 
+
 class TestContext:
     """ Context information class used to store test function and arguments as a string. """
 
     info = "Idle"
+
 
 # Global test context object
 context = TestContext()
@@ -53,6 +55,12 @@ def update_context_string(request):
 
     # Mark remaining log messages when the test run has actually finished
     context.info = "Teardown"
+
+
+def pytest_html_report_title(report):
+    """ Pytest HTML report title. """
+
+    report.title = "AMELI Test Report"
 
 
 def pytest_exception_interact(node, call, report):
