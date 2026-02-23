@@ -384,6 +384,12 @@ class Config(ConfigContainer):
 
         return self.states.as_meta()
 
+    @staticmethod
+    def hash_data(hasher, states_dict, info_meta):
+        """ Update hasher with representative state data. """
+
+        ProductStates.hash_data(hasher, states_dict, info_meta)
+
 
 # Register space of electron product states
 register_space("Product", Config)

@@ -62,6 +62,12 @@ class StateSpace:
         assert self.transform is not None, "Load transform object first!"
         return self.transform.states_as_meta()
 
+    def hash_data(self, hasher, states_dict, info_meta):
+        """ Update hasher with representative state data. """
+
+        assert self.transform is not None, "Load transform object first!"
+        self.transform.hash_data(hasher, states_dict, info_meta)
+
 
 # Initialise empty state space registry
 space_registry = {}
@@ -80,5 +86,3 @@ def register_subspace(space, subspace):
     assert space in space_registry, f"State space {space} is not registered!"
     parent = space_registry[space]
     space_registry[subspace] = StateSpace(space, parent.cls, subspace=subspace)
-
-

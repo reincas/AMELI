@@ -1052,7 +1052,7 @@ class LS_States:
         indices = self.indices_j()
 
         # Get dictionary representation of the current states object
-        states_dict, info_meta = self.as_meta(None)
+        states_dict, info_meta = self.as_meta()
 
         # Remove the Jz part from the eigenvalue indices
         assert "indices" in states_dict
@@ -1290,6 +1290,12 @@ class Transform(TransformContainer):
         """ Return the data container dictionaries representing the states in LS coupling. """
 
         return self.col_states.as_meta()
+
+    @staticmethod
+    def hash_data(hasher, states_dict, info_meta):
+        """ Update hasher with representative state data. """
+
+        LS_States.hash_data(hasher, states_dict, info_meta)
 
 
 # Register space of electron states in LS coupling
