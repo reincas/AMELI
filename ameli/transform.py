@@ -926,13 +926,13 @@ class LS_States:
 
         # Update hasher with dictionaries
         if hasher:
-            self.update_hasher(states_dict, info_meta, hasher)
+            self.update_hasher(hasher, states_dict, info_meta)
 
         # Return dictionaries
         return states_dict, info_meta
 
     @staticmethod
-    def update_hasher(states_dict, info_meta, hasher):
+    def update_hasher(hasher, states_dict, info_meta):
         """ Update hasher with representative state data. """
 
         # Update hasher with states_dict
@@ -1178,7 +1178,8 @@ class TransformContainer(Vault):
         col_states, col_meta = states.as_meta(hasher)
 
         # Dictionary and metadata of transformation matrix
-        matrix_dict, matrix_meta = state_matrix.as_meta(hasher)
+        matrix_dict, matrix_meta = state_matrix.as_meta()
+        SymMatrix.update_hasher(hasher, matrix_dict)
 
         # Generate data hash
         data_hash = hasher.hexdigest()

@@ -13,6 +13,7 @@ import hashlib
 import logging
 import math
 import os
+from pathlib import Path
 import tempfile
 import time
 from itertools import combinations
@@ -233,6 +234,7 @@ class ElementStorage:
         # Generate temporary HDF5 file
         fd, self.path = tempfile.mkstemp(suffix=".hdf5", prefix="elements_")
         os.close(fd)
+        self.path = Path(self.path)
         self.fp = h5py.File(self.path, 'w', libver='latest')
 
         # Initialise empty resizable dataset 'indices'
@@ -260,9 +262,15 @@ class ElementStorage:
         self.num_elements = 0
         self.immutable = False
 
+    @property
+    def is_open(self):
+        """ Return if the temporary HDF5 file is open. """
+        return bool(self.fp)
+
     def append(self, initial, final, elements):
         """ Append row to dataset 'indices' and chunk to dataset 'elements'. """
 
+        assert self.is_open, "Temporary HFDF5 file is closed!"
         assert not self.immutable
         assert len(elements.shape) == 2
         assert elements.shape[1] == self.element_cols
@@ -276,6 +284,7 @@ class ElementStorage:
     def finalize(self):
         """ Fix final sizes of the datasets and make the object immutable. """
 
+        assert self.is_open, "Temporary HFDF5 file is closed!"
         assert not self.immutable
         self.indices.resize(self.num_indices, axis=0)
         self.elements.resize(self.num_elements, axis=0)
@@ -285,6 +294,7 @@ class ElementStorage:
     def as_meta(self):
         """ Return dictionary with indices and elements. """
 
+        assert self.is_open, "Temporary HFDF5 file is closed!"
         return {"indices": self.indices, "elements": self.elements}
 
     @staticmethod
@@ -300,7 +310,8 @@ class ElementStorage:
     def close(self):
         """ Close and remove the temporary HDF5 file. """
 
-        self.fp.close()
+        if self.is_open:
+            self.fp.close()
         if os.path.exists(self.path):
             os.remove(self.path)
 
@@ -464,6 +475,8 @@ The electron indices are linked to the single electron states in 'states.electro
 class ProductContainer(Vault):
     """ Class representing a product data container. """
 
+    #ignore_items = ["data/product.hdf5"]
+
     def __init__(self, config_name: str, tensor_size: int):
         """ Provide the data container. """
 
@@ -505,11 +518,12 @@ class ProductContainer(Vault):
         if dc:
             storage = None
             product_dict = dc["data/product.hdf5"]
+            ElementStorage.update_hasher(product_dict["indices"], product_dict["elements"], hasher)
         else:
             product_elements = ProductElements(config)
             storage = product_elements.matrix_elements(self.tensor_size)
+            ElementStorage.update_hasher(storage.indices, storage.elements, hasher)
             product_dict = storage.as_meta()
-        ElementStorage.update_hasher(product_dict["indices"], product_dict["elements"], hasher)
 
         # Generate data hash
         data_hash = hasher.hexdigest()

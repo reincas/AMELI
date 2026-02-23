@@ -103,13 +103,14 @@ class ProductStates:
         }
 
         # Update hasher with dictionaries
-        self.update_hasher(states_dict, info_meta, hasher)
+        if hasher:
+            self.update_hasher(hasher, states_dict, info_meta)
 
         # Return dictionaries
         return states_dict, info_meta
 
     @staticmethod
-    def update_hasher(states_dict, info_meta, hasher):
+    def update_hasher(hasher, states_dict, info_meta):
         """ Update hasher with representative state data. """
 
         # Update hasher with states_dict

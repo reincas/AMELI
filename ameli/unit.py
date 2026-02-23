@@ -361,7 +361,8 @@ class UnitContainer(Vault):
         assert unit.tensor_size == tensor_size
 
         # Get matrix data dictionaries
-        matrix_dict, matrix_meta = unit.matrix.as_meta(hasher)
+        matrix_dict, matrix_meta = unit.matrix.as_meta()
+        SymMatrix.update_hasher(hasher, matrix_dict)
         logger.debug(f" {self.config_name} | Finished unit matrix {self.name}")
 
         # Generate data hash

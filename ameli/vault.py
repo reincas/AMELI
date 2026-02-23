@@ -113,6 +113,8 @@ class Version:
 class Vault:
     """ Interface class for data container files. """
 
+    ignore_items = []
+
     def write_container(self, name: str, items: dict):
         """ Store given items as data container file. """
 
@@ -144,11 +146,10 @@ class Vault:
             os.remove(tmp_path)
         raise RuntimeError(f"Storage of {path} failed!")
 
-    @staticmethod
-    def read_container(name: str) -> Container:
+    def read_container(self, name: str) -> Container:
 
         path = Vault.vault_path(name)
-        return Container(file=str(path))
+        return Container(file=str(path), ignore_items=self.ignore_items)
 
     @staticmethod
     def in_vault(name: str) -> bool:
@@ -193,7 +194,7 @@ class Vault:
 
         # Metadata update is sufficient for patch level difference
         if dc_version.same_release(version):
-            dc = Vault.read_container(name)
+            dc = self.read_container(name)
             try:
                 self.generate_container(dc)
             except VersionError as exc:
