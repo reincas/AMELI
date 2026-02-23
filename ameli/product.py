@@ -298,7 +298,7 @@ class ElementStorage:
         return {"indices": self.indices, "elements": self.elements}
 
     @staticmethod
-    def update_hasher(indices, elements, hasher):
+    def hash_data(hasher, indices, elements):
         """ Update hasher with indices and elements. """
 
         for dataset in (indices, elements):
@@ -511,19 +511,21 @@ class ProductContainer(Vault):
                 f"Generate {config.name} product states for {self.tensor_size} electrons (version {__version__})")
 
         # Get product states
-        states_dict, states_meta = config.states.as_meta(hasher)
+        states_dict, states_meta = config.states.as_meta()
+        config.states.hash_data(hasher, states_dict, states_meta)
 
         # Generate product state support data
         t = time.time()
         if dc:
             storage = None
             product_dict = dc["data/product.hdf5"]
-            ElementStorage.update_hasher(product_dict["indices"], product_dict["elements"], hasher)
+            ElementStorage.hash_data(hasher, product_dict["indices"], product_dict["elements"])
         else:
             product_elements = ProductElements(config)
             storage = product_elements.matrix_elements(self.tensor_size)
-            ElementStorage.update_hasher(storage.indices, storage.elements, hasher)
-            product_dict = storage.as_meta()
+            ElementStorage.hash_data(hasher, storage.indices, storage.elements)
+            product_dict = storage.as_meta() # DEBUG
+            #storage.fp.close() # DEBUG
 
         # Generate data hash
         data_hash = hasher.hexdigest()
@@ -564,7 +566,8 @@ class ProductContainer(Vault):
                 "numTensorElectrons": self.tensor_size,
             },
             "data/states.hdf5": states_dict,
-            "data/product.hdf5": product_dict,
+            "data/product.hdf5": product_dict, # DEBUG
+            #"data/product.hdf5": storage.path, # DEBUG
         }
 
         # Create the data container and store it in a file

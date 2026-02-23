@@ -347,7 +347,8 @@ class UnitContainer(Vault):
         config_meta = config.info.as_meta()
 
         # Get product states
-        states_dict, states_meta = config.states.as_meta(hasher)
+        states_dict, states_meta = config.states.as_meta()
+        config.states.hash_data(hasher, states_dict, states_meta)
 
         # Calculate elementary matrix elements
         key, parameters = self.name.split("/")
@@ -362,7 +363,7 @@ class UnitContainer(Vault):
 
         # Get matrix data dictionaries
         matrix_dict, matrix_meta = unit.matrix.as_meta()
-        SymMatrix.update_hasher(hasher, matrix_dict)
+        SymMatrix.hash_data(hasher, matrix_dict)
         logger.debug(f" {self.config_name} | Finished unit matrix {self.name}")
 
         # Generate data hash

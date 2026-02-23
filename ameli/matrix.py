@@ -653,7 +653,7 @@ class MatrixContainer(Vault):
         self.file = self.get_path(config_name, name, state_space, self.reduced)
         self.update_container(self.file, __version__)
 
-    def prepare_regular(self, config, space, hasher, dc=None):
+    def prepare_regular(self, config, states, hasher, dc=None):
         """ Return metadata dictionaries of states and matrix calculated from scratch. """
 
         # Decode matrix name
@@ -663,12 +663,13 @@ class MatrixContainer(Vault):
         matrix = name_data.func(config, *name_data.args)
 
         # Get states meta dictionaries
-        space.load(self.config_name)
-        states_dict, states_meta = space.as_meta(hasher)
+        states.load(self.config_name)
+        states_dict, states_meta = states.as_meta()
+        states.hash_data(hasher, states_dict, states_meta)
 
         # Transform product space matrix to other coupling
-        if space.matrix is not None:
-            transform = space.matrix
+        if states.matrix is not None:
+            transform = states.matrix
             matrix = transform.T * matrix * transform
 
         # Get matrix metadata dictionaries
@@ -678,7 +679,7 @@ class MatrixContainer(Vault):
         else:
             state_matrix = SymMatrix.from_matrix(self.state_space, self.state_space, matrix)
             matrix_dict, matrix_meta = state_matrix.as_meta()
-        SymMatrix.update_hasher(hasher, matrix_dict)
+        SymMatrix.hash_data(hasher, matrix_dict)
 
         # Return metadata
         return states_dict, states_meta, matrix_dict, matrix_meta
@@ -691,7 +692,9 @@ class MatrixContainer(Vault):
         assert self.rank == parent.rank
 
         # Metadata dictionaries of states for collapsed J spaces
-        states_dict, states_meta = parent.states.collapse_j().as_meta(hasher)
+        states = parent.states.collapse_j()
+        states_dict, states_meta = states.as_meta()
+        states.hash_data(hasher, states_dict, states_meta)
         indices = parent.states.indices_j()
 
         # Metadata dictionaries of matrix with collapsed J spaces
@@ -701,7 +704,7 @@ class MatrixContainer(Vault):
         else:
             state_matrix = parent.info.collapse(indices, "SLJM", "SLJ")
             matrix_dict, matrix_meta = state_matrix.as_meta()
-        SymMatrix.update_hasher(hasher, matrix_dict)
+        SymMatrix.hash_data(hasher, matrix_dict)
 
         # Return metadata
         return states_dict, states_meta, matrix_dict, matrix_meta
@@ -715,7 +718,8 @@ class MatrixContainer(Vault):
 
         # Metadata dictionaries of states
         states = components[0].states
-        states_dict, states_meta = states.as_meta(hasher)
+        states_dict, states_meta = states.as_meta()
+        states.hash_data(hasher, states_dict, states_meta)
 
         # Metadata dictionaries of matrix
         if dc:
@@ -725,7 +729,7 @@ class MatrixContainer(Vault):
             J = [sp.S(value) for value in states.representation_lists(["J2"])["J2"]]
             state_matrix = SymMatrix.reduced([matrix.info for matrix in components], J)
             matrix_dict, matrix_meta = state_matrix.as_meta()
-        SymMatrix.update_hasher(hasher, matrix_dict)
+        SymMatrix.hash_data(hasher, matrix_dict)
 
         # Return metadata
         return states_dict, states_meta, matrix_dict, matrix_meta

@@ -904,7 +904,7 @@ class LS_States:
         # Return LS_States object
         return states
 
-    def as_meta(self, hasher):
+    def as_meta(self):
         """ Return the data container dictionaries representing this object. """
 
         # States dictionary
@@ -924,15 +924,11 @@ class LS_States:
             "numStates": self.num_states,
         }
 
-        # Update hasher with dictionaries
-        if hasher:
-            self.update_hasher(hasher, states_dict, info_meta)
-
         # Return dictionaries
         return states_dict, info_meta
 
     @staticmethod
-    def update_hasher(hasher, states_dict, info_meta):
+    def hash_data(hasher, states_dict, info_meta):
         """ Update hasher with representative state data. """
 
         # Update hasher with states_dict
@@ -1151,7 +1147,8 @@ class TransformContainer(Vault):
         config_meta = config.info.as_meta()
 
         # Row states dictionary and metadata (Product)
-        row_states, row_meta = config.states.as_meta(hasher)
+        row_states, row_meta = config.states.as_meta()
+        config.states.hash_data(hasher, row_states, row_meta)
 
         # Get LS transformation matrix, eigenvalues, and state indices from data container or determine from scratch
         if dc:
@@ -1175,11 +1172,12 @@ class TransformContainer(Vault):
 
         # Row states dictionary and metadata (LS)
         states = LS_States(config, eigenvalues, indices)
-        col_states, col_meta = states.as_meta(hasher)
+        col_states, col_meta = states.as_meta()
+        states.hash_data(hasher, col_states, col_meta)
 
         # Dictionary and metadata of transformation matrix
         matrix_dict, matrix_meta = state_matrix.as_meta()
-        SymMatrix.update_hasher(hasher, matrix_dict)
+        SymMatrix.hash_data(hasher, matrix_dict)
 
         # Generate data hash
         data_hash = hasher.hexdigest()
@@ -1288,10 +1286,10 @@ class Transform(TransformContainer):
 
         return LS_States.from_meta(states_dict, info_meta)
 
-    def states_as_meta(self, hasher):
+    def states_as_meta(self):
         """ Return the data container dictionaries representing the states in LS coupling. """
 
-        return self.col_states.as_meta(hasher)
+        return self.col_states.as_meta()
 
 
 # Register space of electron states in LS coupling

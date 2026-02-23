@@ -87,7 +87,7 @@ class ProductStates:
         # Return ProductStates object
         return states
 
-    def as_meta(self, hasher):
+    def as_meta(self):
         """ Return the data container dictionaries representing this object. """
 
         # States dictionary
@@ -102,15 +102,11 @@ class ProductStates:
             "numStates": self.num_states,
         }
 
-        # Update hasher with dictionaries
-        if hasher:
-            self.update_hasher(hasher, states_dict, info_meta)
-
         # Return dictionaries
         return states_dict, info_meta
 
     @staticmethod
-    def update_hasher(hasher, states_dict, info_meta):
+    def hash_data(hasher, states_dict, info_meta):
         """ Update hasher with representative state data. """
 
         # Update hasher with states_dict
@@ -288,7 +284,8 @@ class ConfigContainer(Vault):
             states = ProductStates.from_meta(dc["data/states.hdf5"], dc["data/config.json"]["states"])
         else:
             states = ProductStates(electron_pool, indices)
-        states_dict, states_meta = states.as_meta(hasher)
+        states_dict, states_meta = states.as_meta()
+        states.hash_data(hasher, states_dict, states_meta)
 
         # Generate data hash
         data_hash = hasher.hexdigest()
@@ -382,10 +379,10 @@ class Config(ConfigContainer):
 
         return ProductStates.from_meta(states_dict, info_meta)
 
-    def states_as_meta(self, hasher):
+    def states_as_meta(self):
         """ Return the data container dictionaries representing the product states. """
 
-        return self.states.as_meta(hasher)
+        return self.states.as_meta()
 
 
 # Register space of electron product states

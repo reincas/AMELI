@@ -400,7 +400,7 @@ class SymMatrix:
         return matrix_dict, info_meta
 
     @staticmethod
-    def update_hasher(hasher, matrix_dict):
+    def hash_data(hasher, matrix_dict):
         """ Update hasher with matrix_dict. """
 
         for key in sorted(matrix_dict.keys()):
