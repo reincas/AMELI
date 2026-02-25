@@ -69,7 +69,10 @@ def pytest_exception_interact(node, call, report):
     logger = logging.getLogger("pytest.error")
     if report.failed:
         exc_name = call.excinfo.typename
-        error_msg = report.longrepr.reprcrash.message
+        try:
+            error_msg = report.longrepr.reprcrash.message
+        except:
+            error_msg = str(report.longrepr)
         lineno = report.longrepr.reprcrash.lineno
 
         extra_data = {'test_context': context.info}
