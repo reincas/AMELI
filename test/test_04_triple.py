@@ -88,13 +88,13 @@ def test_triple(data_key):
 
     # Loop through all final states
     for i in range(array.shape[0]):
-        term_a = f"{irepr["S2"][i]}{irepr["L2"][i]}{irepr["num"][i]}"
-        state_a = f"{irepr["S2"][i]}{irepr["L2"][i]}{irepr["num"][i]}{irepr["J2"][i]}"
+        term_a = f'{irepr["S2"][i]}{irepr["L2"][i]}{irepr["num"][i]}'
+        state_a = f'{irepr["S2"][i]}{irepr["L2"][i]}{irepr["num"][i]}{irepr["J2"][i]}'
 
         # Loop through initial states up to the diagonal
         for j in range(i + 1):
-            term_b = f"{irepr["S2"][j]}{irepr["L2"][j]}{irepr["num"][j]}"
-            state_b = f"{irepr["S2"][j]}{irepr["L2"][j]}{irepr["num"][j]}{irepr["J2"][j]}"
+            term_b = f'{irepr["S2"][j]}{irepr["L2"][j]}{irepr["num"][j]}'
+            state_b = f'{irepr["S2"][j]}{irepr["L2"][j]}{irepr["num"][j]}{irepr["J2"][j]}'
 
             # Quantum number J of final and initial states
             Ja = eigenvalues["J2"][i]
