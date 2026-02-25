@@ -1,150 +1,150 @@
-2026-02-23 22:19:36 - INFO - test_orthonormal(1) - Test orthonormal f1 finished -> success
-2026-02-23 22:19:37 - INFO - test_orthonormal(2) - Test orthonormal f2 finished -> success
-2026-02-23 22:19:43 - INFO - test_orthonormal(3) - Test orthonormal f3 finished -> success
-2026-02-23 22:19:43 - INFO - test_orthonormal(4) - Test skipped -> debugging
-2026-02-23 22:19:43 - INFO - test_orthonormal(5) - Test skipped -> debugging
-2026-02-23 22:19:43 - INFO - test_orthonormal(6) - Test skipped -> debugging
-2026-02-23 22:19:43 - INFO - test_orthonormal(7) - Test skipped -> debugging
-2026-02-23 22:19:43 - INFO - test_orthonormal(8) - Test skipped -> debugging
-2026-02-23 22:19:43 - INFO - test_orthonormal(9) - Test skipped -> debugging
-2026-02-23 22:19:43 - INFO - test_orthonormal(10) - Test skipped -> debugging
-2026-02-23 22:19:49 - INFO - test_orthonormal(11) - Test orthonormal f11 finished -> success
-2026-02-23 22:19:49 - INFO - test_orthonormal(12) - Test orthonormal f12 finished -> success
-2026-02-23 22:19:49 - INFO - test_orthonormal(13) - Test orthonormal f13 finished -> success
-2026-02-23 22:19:50 - INFO - test_transform(1) - Test transform f1/S2 finished -> success
-2026-02-23 22:19:50 - INFO - test_transform(1) - Test transform f1/C7 finished -> success
-2026-02-23 22:19:50 - INFO - test_transform(1) - Test transform f1/C2 finished -> success
-2026-02-23 22:19:50 - INFO - test_transform(1) - Test transform f1/L2 finished -> success
-2026-02-23 22:19:50 - INFO - test_transform(1) - Test transform f1/J2 finished -> success
-2026-02-23 22:19:50 - INFO - test_transform(1) - Test transform f1/Jz finished -> success
-2026-02-23 22:19:50 - INFO - test_transform(2) - Test transform f2/S2 finished -> success
-2026-02-23 22:19:50 - INFO - test_transform(2) - Test transform f2/C7 finished -> success
-2026-02-23 22:19:50 - INFO - test_transform(2) - Test transform f2/C2 finished -> success
-2026-02-23 22:19:50 - INFO - test_transform(2) - Test transform f2/L2 finished -> success
-2026-02-23 22:19:51 - INFO - test_transform(2) - Test transform f2/J2 finished -> success
-2026-02-23 22:19:51 - INFO - test_transform(2) - Test transform f2/Jz finished -> success
-2026-02-23 22:19:58 - INFO - test_transform(3) - Test transform f3/S2 finished -> success
-2026-02-23 22:20:05 - INFO - test_transform(3) - Test transform f3/C7 finished -> success
-2026-02-23 22:20:13 - INFO - test_transform(3) - Test transform f3/C2 finished -> success
-2026-02-23 22:20:20 - INFO - test_transform(3) - Test transform f3/L2 finished -> success
-2026-02-23 22:20:28 - INFO - test_transform(3) - Test transform f3/J2 finished -> success
-2026-02-23 22:20:34 - INFO - test_transform(3) - Test transform f3/Jz finished -> success
-2026-02-23 22:20:34 - INFO - test_transform(4) - Test skipped -> debugging
-2026-02-23 22:20:34 - INFO - test_transform(5) - Test skipped -> debugging
-2026-02-23 22:20:34 - INFO - test_transform(6) - Test skipped -> debugging
-2026-02-23 22:20:34 - INFO - test_transform(7) - Test skipped -> debugging
-2026-02-23 22:20:34 - INFO - test_transform(8) - Test skipped -> debugging
-2026-02-23 22:20:34 - INFO - test_transform(9) - Test skipped -> debugging
-2026-02-23 22:20:34 - INFO - test_transform(10) - Test skipped -> debugging
-2026-02-23 22:20:41 - INFO - test_transform(11) - Test transform f11/S2 finished -> success
-2026-02-23 22:20:49 - INFO - test_transform(11) - Test transform f11/C7 finished -> success
-2026-02-23 22:20:58 - INFO - test_transform(11) - Test transform f11/C2 finished -> success
-2026-02-23 22:21:06 - INFO - test_transform(11) - Test transform f11/L2 finished -> success
-2026-02-23 22:21:15 - INFO - test_transform(11) - Test transform f11/J2 finished -> success
-2026-02-23 22:21:22 - INFO - test_transform(11) - Test transform f11/Jz finished -> success
-2026-02-23 22:21:22 - INFO - test_transform(12) - Test transform f12/S2 finished -> success
-2026-02-23 22:21:22 - INFO - test_transform(12) - Test transform f12/C7 finished -> success
-2026-02-23 22:21:22 - INFO - test_transform(12) - Test transform f12/C2 finished -> success
-2026-02-23 22:21:22 - INFO - test_transform(12) - Test transform f12/L2 finished -> success
-2026-02-23 22:21:23 - INFO - test_transform(12) - Test transform f12/J2 finished -> success
-2026-02-23 22:21:23 - INFO - test_transform(12) - Test transform f12/Jz finished -> success
-2026-02-23 22:21:23 - INFO - test_transform(13) - Test transform f13/S2 finished -> success
-2026-02-23 22:21:23 - INFO - test_transform(13) - Test transform f13/C7 finished -> success
-2026-02-23 22:21:23 - INFO - test_transform(13) - Test transform f13/C2 finished -> success
-2026-02-23 22:21:23 - INFO - test_transform(13) - Test transform f13/L2 finished -> success
-2026-02-23 22:21:23 - INFO - test_transform(13) - Test transform f13/J2 finished -> success
-2026-02-23 22:21:23 - INFO - test_transform(13) - Test transform f13/Jz finished -> success
-2026-02-23 22:21:23 - INFO - test_states(1) - Test states f1 finished -> success
-2026-02-23 22:21:23 - INFO - test_states(2) - Test states f2 finished -> success
-2026-02-23 22:21:23 - INFO - test_states(3) - Test states f3 finished -> success
-2026-02-23 22:21:23 - INFO - test_states(4) - Test skipped -> debugging
-2026-02-23 22:21:23 - INFO - test_states(5) - Test skipped -> debugging
-2026-02-23 22:21:23 - INFO - test_states(6) - Test skipped -> debugging
-2026-02-23 22:21:23 - INFO - test_states(7) - Test skipped -> debugging
-2026-02-23 22:21:23 - INFO - test_states(8) - Test skipped -> debugging
-2026-02-23 22:21:23 - INFO - test_states(9) - Test skipped -> debugging
-2026-02-23 22:21:23 - INFO - test_states(10) - Test skipped -> debugging
-2026-02-23 22:21:23 - INFO - test_states(11) - Test states f11 finished -> success
-2026-02-23 22:21:24 - INFO - test_states(12) - Test states f12 finished -> success
-2026-02-23 22:21:24 - INFO - test_states(13) - Test states f13 finished -> success
-2026-02-23 22:21:24 - INFO - test_magnetic('Pr3+|Hss/0') - Test magnetic f2/Pr3+|Hss/0 finished -> success
-2026-02-23 22:21:24 - INFO - test_magnetic('Pr3+|Hss/2') - Test magnetic f2/Pr3+|Hss/2 finished -> success
-2026-02-23 22:21:24 - INFO - test_magnetic('Pr3+|Hss/4') - Test magnetic f2/Pr3+|Hss/4 finished -> success
-2026-02-23 22:21:24 - INFO - test_magnetic('Pr3+|Hsoo/0') - Test magnetic f2/Pr3+|Hsoo/0 finished -> success
-2026-02-23 22:21:24 - INFO - test_magnetic('Pr3+|Hsoo/2') - Test magnetic f2/Pr3+|Hsoo/2 finished -> success
-2026-02-23 22:21:24 - INFO - test_magnetic('Pr3+|Hsoo/4') - Test magnetic f2/Pr3+|Hsoo/4 finished -> success
-2026-02-23 22:21:24 - INFO - test_magnetic('Pr3+|H6/0') - Test magnetic f2/Pr3+|H6/0 finished -> success
-2026-02-23 22:21:24 - INFO - test_magnetic('Pr3+|H6/2') - Test magnetic f2/Pr3+|H6/2 finished -> success
-2026-02-23 22:21:24 - INFO - test_magnetic('Pr3+|H6/4') - Test magnetic f2/Pr3+|H6/4 finished -> success
-2026-02-23 22:21:24 - INFO - test_magnetic('Pr3+|H6/6') - Test magnetic f2/Pr3+|H6/6 finished -> success
-2026-02-23 22:21:24 - INFO - test_magnetic('Tm3+|Hss/0') - Test magnetic f12/Tm3+|Hss/0 finished -> success
-2026-02-23 22:21:24 - INFO - test_magnetic('Tm3+|Hss/2') - Test magnetic f12/Tm3+|Hss/2 finished -> success
-2026-02-23 22:21:24 - INFO - test_magnetic('Tm3+|Hss/4') - Test magnetic f12/Tm3+|Hss/4 finished -> success
-2026-02-23 22:21:24 - INFO - test_magnetic('Tm3+|Hsoo/0') - Test magnetic f12/Tm3+|Hsoo/0 finished -> success
-2026-02-23 22:21:24 - INFO - test_magnetic('Tm3+|Hsoo/2') - Test magnetic f12/Tm3+|Hsoo/2 finished -> success
-2026-02-23 22:21:24 - INFO - test_magnetic('Tm3+|Hsoo/4') - Test magnetic f12/Tm3+|Hsoo/4 finished -> success
-2026-02-23 22:21:24 - INFO - test_magnetic('Tm3+|H6/2') - Test magnetic f12/Tm3+|H6/2 finished -> success
-2026-02-23 22:21:24 - INFO - test_magnetic('Tm3+|H6/4') - Test magnetic f12/Tm3+|H6/4 finished -> success
-2026-02-23 22:21:24 - INFO - test_magnetic('Tm3+|H6/6') - Test magnetic f12/Tm3+|H6/6 finished -> success
-2026-02-23 22:21:24 - INFO - test_triple('Nd3+|H4/1') - Test triple f3/Nd3+|H4/1 finished -> success
-2026-02-23 22:21:24 - INFO - test_triple('Nd3+|H4/2') - Test triple f3/Nd3+|H4/2 finished -> success
-2026-02-23 22:21:24 - INFO - test_triple('Nd3+|H4/3') - Test triple f3/Nd3+|H4/3 finished -> success
-2026-02-23 22:21:24 - INFO - test_triple('Nd3+|H4/4') - Test triple f3/Nd3+|H4/4 finished -> success
-2026-02-23 22:21:24 - INFO - test_triple('Nd3+|H4/5') - Test triple f3/Nd3+|H4/5 finished -> success
-2026-02-23 22:21:24 - INFO - test_triple('Nd3+|H4/6') - Test triple f3/Nd3+|H4/6 finished -> success
-2026-02-23 22:21:24 - INFO - test_triple('Nd3+|H4/7') - Test triple f3/Nd3+|H4/7 finished -> success
-2026-02-23 22:21:24 - INFO - test_triple('Nd3+|H4/8') - Test triple f3/Nd3+|H4/8 finished -> success
-2026-02-23 22:21:24 - INFO - test_triple('Nd3+|H4/9') - Test triple f3/Nd3+|H4/9 finished -> success
-2026-02-23 22:21:25 - INFO - test_energy('Pr3+:free') - Energy differences: mean 0.268, max 0.696, atol 2.5
-2026-02-23 22:21:25 - INFO - test_energy('Pr3+:free') - Test energy f2/Pr3+:free finished -> success
-2026-02-23 22:21:25 - INFO - test_energy('Pr3+:LaCl3') - Energy differences: mean 0.189, max 0.501, atol 2.5
-2026-02-23 22:21:25 - INFO - test_energy('Pr3+:LaCl3') - Test energy f2/Pr3+:LaCl3 finished -> success
-2026-02-23 22:21:25 - INFO - test_energy('Pr3+:LaF3') - Energy differences: mean 0.209, max 0.643, atol 2.5
-2026-02-23 22:21:25 - INFO - test_energy('Pr3+:LaF3') - Test energy f2/Pr3+:LaF3 finished -> success
-2026-02-23 22:21:25 - INFO - test_energy('Pr3+:LaF3/alt') - Energy differences: mean 0.193, max 0.593, atol 2.5
-2026-02-23 22:21:25 - INFO - test_energy('Pr3+:LaF3/alt') - Test energy f2/Pr3+:LaF3/alt finished -> success
-2026-02-23 22:21:25 - INFO - test_energy('Pr3+:LaF3/ext') - Energy differences: mean 0.262, max 0.803, atol 2.5
-2026-02-23 22:21:25 - INFO - test_energy('Pr3+:LaF3/ext') - Test energy f2/Pr3+:LaF3/ext finished -> success
-2026-02-23 22:21:25 - INFO - test_energy('Pr3+:aq') - Energy differences: mean 0.204, max 0.490, atol 2.5
-2026-02-23 22:21:25 - INFO - test_energy('Pr3+:aq') - Test energy f2/Pr3+:aq finished -> success
-2026-02-23 22:21:25 - INFO - test_energy('Pr3+:aq') - Reduced differences: mean 0.000022, max 0.000071, atol 0.000500
-2026-02-23 22:21:25 - INFO - test_energy('Pr3+:aq') - Test reduced f2/Pr3+:aq finished -> success
-2026-02-23 22:21:25 - INFO - test_energy('Nd3+:LaCl3') - Energy differences: mean 0.446, max 2.238, atol 2.5
-2026-02-23 22:21:25 - INFO - test_energy('Nd3+:LaCl3') - Test energy f3/Nd3+:LaCl3 finished -> success
-2026-02-23 22:21:25 - INFO - test_energy('Nd3+aq') - Energy differences: mean 0.411, max 1.338, atol 2.5
-2026-02-23 22:21:25 - INFO - test_energy('Nd3+aq') - Test energy f3/Nd3+aq finished -> success
-2026-02-23 22:21:26 - INFO - test_energy('Nd3+aq') - Reduced differences: mean 0.000027, max 0.000199, atol 0.000500
-2026-02-23 22:21:26 - INFO - test_energy('Nd3+aq') - Test reduced f3/Nd3+aq finished -> success
-2026-02-23 22:21:26 - INFO - test_energy('Pm3+:aq') - Test skipped -> debugging
-2026-02-23 22:21:26 - INFO - test_energy('Sm3+:LaCl3') - Test skipped -> debugging
-2026-02-23 22:21:26 - INFO - test_energy('Sm3+:aq') - Test skipped -> Invalid dataset (There seems to be a typo in the radial integrals)
-2026-02-23 22:21:26 - INFO - test_energy('Eu3+:LaCl3') - Test skipped -> debugging
-2026-02-23 22:21:26 - INFO - test_energy('Eu3+:aq') - Test skipped -> debugging
-2026-02-23 22:21:26 - INFO - test_energy('Gd3+:GdCl3') - Test skipped -> debugging
-2026-02-23 22:21:26 - INFO - test_energy('Gd3+:aq') - Test skipped -> debugging
-2026-02-23 22:21:26 - INFO - test_energy('Tb3+:LaCl3') - Test skipped -> debugging
-2026-02-23 22:21:26 - INFO - test_energy('Tb3+:aq') - Test skipped -> debugging
-2026-02-23 22:21:26 - INFO - test_energy('Dy3+:LaCl3') - Test skipped -> debugging
-2026-02-23 22:21:26 - INFO - test_energy('Dy3+:aq') - Test skipped -> debugging
-2026-02-23 22:21:26 - INFO - test_energy('Ho3+:LaCl3') - Test skipped -> debugging
-2026-02-23 22:21:26 - INFO - test_energy('Ho3+:aq') - Test skipped -> debugging
-2026-02-23 22:21:26 - INFO - test_energy('Er3+:free') - Energy differences: mean 0.736, max 2.448, atol 2.5
-2026-02-23 22:21:26 - INFO - test_energy('Er3+:free') - Test energy f11/Er3+:free finished -> success
-2026-02-23 22:21:26 - INFO - test_energy('Er3+:LaF3') - Energy differences: mean 0.676, max 2.257, atol 2.5
-2026-02-23 22:21:26 - INFO - test_energy('Er3+:LaF3') - Test energy f11/Er3+:LaF3 finished -> success
-2026-02-23 22:21:26 - INFO - test_energy('Er3+:LaCl3') - Energy differences: mean 0.737, max 2.185, atol 2.5
-2026-02-23 22:21:26 - INFO - test_energy('Er3+:LaCl3') - Test energy f11/Er3+:LaCl3 finished -> success
-2026-02-23 22:21:26 - INFO - test_energy('Er3+:aq') - Energy differences: mean 0.717, max 2.492, atol 2.5
-2026-02-23 22:21:26 - INFO - test_energy('Er3+:aq') - Test energy f11/Er3+:aq finished -> success
-2026-02-23 22:21:26 - INFO - test_energy('Er3+:aq') - Reduced differences: mean 0.000026, max 0.000477, atol 0.000500
-2026-02-23 22:21:26 - INFO - test_energy('Er3+:aq') - Test reduced f11/Er3+:aq finished -> success
-2026-02-23 22:21:26 - INFO - test_energy('Tm3+:LaF3') - Energy differences: mean 0.507, max 1.675, atol 2.5
-2026-02-23 22:21:26 - INFO - test_energy('Tm3+:LaF3') - Test energy f12/Tm3+:LaF3 finished -> success
-2026-02-23 22:21:27 - INFO - test_energy('Tm3+:aq') - Energy differences: mean 0.239, max 0.515, atol 2.5
-2026-02-23 22:21:27 - INFO - test_energy('Tm3+:aq') - Test energy f12/Tm3+:aq finished -> success
-2026-02-23 22:21:27 - INFO - test_energy('Tm3+:aq') - Reduced differences: mean 0.000016, max 0.000056, atol 0.000500
-2026-02-23 22:21:27 - INFO - test_energy('Tm3+:aq') - Test reduced f12/Tm3+:aq finished -> success
-2026-02-23 22:21:27 - INFO - test_energy('Tm3+:C2H5SO4') - Energy differences: mean 0.348, max 0.949, atol 2.5
-2026-02-23 22:21:27 - INFO - test_energy('Tm3+:C2H5SO4') - Test energy f12/Tm3+:C2H5SO4 finished -> success
-2026-02-23 22:21:27 - INFO - test_energy('Tm3+:LaF3/ext') - Energy differences: mean 0.419, max 2.307, atol 2.5
-2026-02-23 22:21:27 - INFO - test_energy('Tm3+:LaF3/ext') - Test energy f12/Tm3+:LaF3/ext finished -> success
+2026-02-25 14:28:26 - INFO - test_orthonormal(1) - Test orthonormal f1 finished -> success
+2026-02-25 14:28:26 - INFO - test_orthonormal(2) - Test orthonormal f2 finished -> success
+2026-02-25 14:28:39 - INFO - test_orthonormal(3) - Test orthonormal f3 finished -> success
+2026-02-25 14:28:39 - INFO - test_orthonormal(4) - Test skipped -> debugging
+2026-02-25 14:28:39 - INFO - test_orthonormal(5) - Test skipped -> debugging
+2026-02-25 14:28:39 - INFO - test_orthonormal(6) - Test skipped -> debugging
+2026-02-25 14:28:39 - INFO - test_orthonormal(7) - Test skipped -> debugging
+2026-02-25 14:28:39 - INFO - test_orthonormal(8) - Test skipped -> debugging
+2026-02-25 14:28:39 - INFO - test_orthonormal(9) - Test skipped -> debugging
+2026-02-25 14:28:39 - INFO - test_orthonormal(10) - Test skipped -> debugging
+2026-02-25 14:28:48 - INFO - test_orthonormal(11) - Test orthonormal f11 finished -> success
+2026-02-25 14:28:48 - INFO - test_orthonormal(12) - Test orthonormal f12 finished -> success
+2026-02-25 14:28:48 - INFO - test_orthonormal(13) - Test orthonormal f13 finished -> success
+2026-02-25 14:28:48 - INFO - test_transform(1) - Test transform f1/S2 finished -> success
+2026-02-25 14:28:48 - INFO - test_transform(1) - Test transform f1/C7 finished -> success
+2026-02-25 14:28:48 - INFO - test_transform(1) - Test transform f1/C2 finished -> success
+2026-02-25 14:28:48 - INFO - test_transform(1) - Test transform f1/L2 finished -> success
+2026-02-25 14:28:48 - INFO - test_transform(1) - Test transform f1/J2 finished -> success
+2026-02-25 14:28:48 - INFO - test_transform(1) - Test transform f1/Jz finished -> success
+2026-02-25 14:28:49 - INFO - test_transform(2) - Test transform f2/S2 finished -> success
+2026-02-25 14:28:49 - INFO - test_transform(2) - Test transform f2/C7 finished -> success
+2026-02-25 14:28:49 - INFO - test_transform(2) - Test transform f2/C2 finished -> success
+2026-02-25 14:28:49 - INFO - test_transform(2) - Test transform f2/L2 finished -> success
+2026-02-25 14:28:50 - INFO - test_transform(2) - Test transform f2/J2 finished -> success
+2026-02-25 14:28:50 - INFO - test_transform(2) - Test transform f2/Jz finished -> success
+2026-02-25 14:28:59 - INFO - test_transform(3) - Test transform f3/S2 finished -> success
+2026-02-25 14:29:09 - INFO - test_transform(3) - Test transform f3/C7 finished -> success
+2026-02-25 14:29:22 - INFO - test_transform(3) - Test transform f3/C2 finished -> success
+2026-02-25 14:29:34 - INFO - test_transform(3) - Test transform f3/L2 finished -> success
+2026-02-25 14:29:48 - INFO - test_transform(3) - Test transform f3/J2 finished -> success
+2026-02-25 14:29:57 - INFO - test_transform(3) - Test transform f3/Jz finished -> success
+2026-02-25 14:29:57 - INFO - test_transform(4) - Test skipped -> debugging
+2026-02-25 14:29:57 - INFO - test_transform(5) - Test skipped -> debugging
+2026-02-25 14:29:57 - INFO - test_transform(6) - Test skipped -> debugging
+2026-02-25 14:29:57 - INFO - test_transform(7) - Test skipped -> debugging
+2026-02-25 14:29:57 - INFO - test_transform(8) - Test skipped -> debugging
+2026-02-25 14:29:57 - INFO - test_transform(9) - Test skipped -> debugging
+2026-02-25 14:29:57 - INFO - test_transform(10) - Test skipped -> debugging
+2026-02-25 14:30:09 - INFO - test_transform(11) - Test transform f11/S2 finished -> success
+2026-02-25 14:30:20 - INFO - test_transform(11) - Test transform f11/C7 finished -> success
+2026-02-25 14:30:31 - INFO - test_transform(11) - Test transform f11/C2 finished -> success
+2026-02-25 14:30:42 - INFO - test_transform(11) - Test transform f11/L2 finished -> success
+2026-02-25 14:30:53 - INFO - test_transform(11) - Test transform f11/J2 finished -> success
+2026-02-25 14:31:05 - INFO - test_transform(11) - Test transform f11/Jz finished -> success
+2026-02-25 14:31:06 - INFO - test_transform(12) - Test transform f12/S2 finished -> success
+2026-02-25 14:31:06 - INFO - test_transform(12) - Test transform f12/C7 finished -> success
+2026-02-25 14:31:07 - INFO - test_transform(12) - Test transform f12/C2 finished -> success
+2026-02-25 14:31:07 - INFO - test_transform(12) - Test transform f12/L2 finished -> success
+2026-02-25 14:31:08 - INFO - test_transform(12) - Test transform f12/J2 finished -> success
+2026-02-25 14:31:08 - INFO - test_transform(12) - Test transform f12/Jz finished -> success
+2026-02-25 14:31:08 - INFO - test_transform(13) - Test transform f13/S2 finished -> success
+2026-02-25 14:31:08 - INFO - test_transform(13) - Test transform f13/C7 finished -> success
+2026-02-25 14:31:08 - INFO - test_transform(13) - Test transform f13/C2 finished -> success
+2026-02-25 14:31:08 - INFO - test_transform(13) - Test transform f13/L2 finished -> success
+2026-02-25 14:31:08 - INFO - test_transform(13) - Test transform f13/J2 finished -> success
+2026-02-25 14:31:08 - INFO - test_transform(13) - Test transform f13/Jz finished -> success
+2026-02-25 14:31:08 - INFO - test_states(1) - Test states f1 finished -> success
+2026-02-25 14:31:08 - INFO - test_states(2) - Test states f2 finished -> success
+2026-02-25 14:31:09 - INFO - test_states(3) - Test states f3 finished -> success
+2026-02-25 14:31:09 - INFO - test_states(4) - Test skipped -> debugging
+2026-02-25 14:31:09 - INFO - test_states(5) - Test skipped -> debugging
+2026-02-25 14:31:09 - INFO - test_states(6) - Test skipped -> debugging
+2026-02-25 14:31:09 - INFO - test_states(7) - Test skipped -> debugging
+2026-02-25 14:31:09 - INFO - test_states(8) - Test skipped -> debugging
+2026-02-25 14:31:09 - INFO - test_states(9) - Test skipped -> debugging
+2026-02-25 14:31:09 - INFO - test_states(10) - Test skipped -> debugging
+2026-02-25 14:31:09 - INFO - test_states(11) - Test states f11 finished -> success
+2026-02-25 14:31:09 - INFO - test_states(12) - Test states f12 finished -> success
+2026-02-25 14:31:09 - INFO - test_states(13) - Test states f13 finished -> success
+2026-02-25 14:31:21 - INFO - test_triple('Nd3+|H4/1') - Test triple f3/Nd3+|H4/1 finished -> success
+2026-02-25 14:31:21 - INFO - test_triple('Nd3+|H4/2') - Test triple f3/Nd3+|H4/2 finished -> success
+2026-02-25 14:31:21 - INFO - test_triple('Nd3+|H4/3') - Test triple f3/Nd3+|H4/3 finished -> success
+2026-02-25 14:31:21 - INFO - test_triple('Nd3+|H4/4') - Test triple f3/Nd3+|H4/4 finished -> success
+2026-02-25 14:31:34 - INFO - test_triple('Nd3+|H4/5') - Test triple f3/Nd3+|H4/5 finished -> success
+2026-02-25 14:31:34 - INFO - test_triple('Nd3+|H4/6') - Test triple f3/Nd3+|H4/6 finished -> success
+2026-02-25 14:31:35 - INFO - test_triple('Nd3+|H4/7') - Test triple f3/Nd3+|H4/7 finished -> success
+2026-02-25 14:31:35 - INFO - test_triple('Nd3+|H4/8') - Test triple f3/Nd3+|H4/8 finished -> success
+2026-02-25 14:31:37 - INFO - test_triple('Nd3+|H4/9') - Test triple f3/Nd3+|H4/9 finished -> success
+2026-02-25 14:31:37 - INFO - test_magnetic('Pr3+|Hss/0') - Test magnetic f2/Pr3+|Hss/0 finished -> success
+2026-02-25 14:31:37 - INFO - test_magnetic('Pr3+|Hss/2') - Test magnetic f2/Pr3+|Hss/2 finished -> success
+2026-02-25 14:31:37 - INFO - test_magnetic('Pr3+|Hss/4') - Test magnetic f2/Pr3+|Hss/4 finished -> success
+2026-02-25 14:31:37 - INFO - test_magnetic('Pr3+|Hsoo/0') - Test magnetic f2/Pr3+|Hsoo/0 finished -> success
+2026-02-25 14:31:37 - INFO - test_magnetic('Pr3+|Hsoo/2') - Test magnetic f2/Pr3+|Hsoo/2 finished -> success
+2026-02-25 14:31:37 - INFO - test_magnetic('Pr3+|Hsoo/4') - Test magnetic f2/Pr3+|Hsoo/4 finished -> success
+2026-02-25 14:31:37 - INFO - test_magnetic('Pr3+|H6/0') - Test magnetic f2/Pr3+|H6/0 finished -> success
+2026-02-25 14:31:37 - INFO - test_magnetic('Pr3+|H6/2') - Test magnetic f2/Pr3+|H6/2 finished -> success
+2026-02-25 14:31:37 - INFO - test_magnetic('Pr3+|H6/4') - Test magnetic f2/Pr3+|H6/4 finished -> success
+2026-02-25 14:31:37 - INFO - test_magnetic('Pr3+|H6/6') - Test magnetic f2/Pr3+|H6/6 finished -> success
+2026-02-25 14:31:38 - INFO - test_magnetic('Tm3+|Hss/0') - Test magnetic f12/Tm3+|Hss/0 finished -> success
+2026-02-25 14:31:38 - INFO - test_magnetic('Tm3+|Hss/2') - Test magnetic f12/Tm3+|Hss/2 finished -> success
+2026-02-25 14:31:38 - INFO - test_magnetic('Tm3+|Hss/4') - Test magnetic f12/Tm3+|Hss/4 finished -> success
+2026-02-25 14:31:38 - INFO - test_magnetic('Tm3+|Hsoo/0') - Test magnetic f12/Tm3+|Hsoo/0 finished -> success
+2026-02-25 14:31:38 - INFO - test_magnetic('Tm3+|Hsoo/2') - Test magnetic f12/Tm3+|Hsoo/2 finished -> success
+2026-02-25 14:31:38 - INFO - test_magnetic('Tm3+|Hsoo/4') - Test magnetic f12/Tm3+|Hsoo/4 finished -> success
+2026-02-25 14:31:38 - INFO - test_magnetic('Tm3+|H6/2') - Test magnetic f12/Tm3+|H6/2 finished -> success
+2026-02-25 14:31:38 - INFO - test_magnetic('Tm3+|H6/4') - Test magnetic f12/Tm3+|H6/4 finished -> success
+2026-02-25 14:31:38 - INFO - test_magnetic('Tm3+|H6/6') - Test magnetic f12/Tm3+|H6/6 finished -> success
+2026-02-25 14:31:38 - INFO - test_energy('Pr3+:free') - Energy differences: mean 0.268, max 0.696, atol 2.5
+2026-02-25 14:31:38 - INFO - test_energy('Pr3+:free') - Test energy f2/Pr3+:free finished -> success
+2026-02-25 14:31:38 - INFO - test_energy('Pr3+:LaCl3') - Energy differences: mean 0.189, max 0.501, atol 2.5
+2026-02-25 14:31:38 - INFO - test_energy('Pr3+:LaCl3') - Test energy f2/Pr3+:LaCl3 finished -> success
+2026-02-25 14:31:39 - INFO - test_energy('Pr3+:LaF3') - Energy differences: mean 0.209, max 0.643, atol 2.5
+2026-02-25 14:31:39 - INFO - test_energy('Pr3+:LaF3') - Test energy f2/Pr3+:LaF3 finished -> success
+2026-02-25 14:31:39 - INFO - test_energy('Pr3+:LaF3/alt') - Energy differences: mean 0.193, max 0.593, atol 2.5
+2026-02-25 14:31:39 - INFO - test_energy('Pr3+:LaF3/alt') - Test energy f2/Pr3+:LaF3/alt finished -> success
+2026-02-25 14:31:40 - INFO - test_energy('Pr3+:LaF3/ext') - Energy differences: mean 0.262, max 0.803, atol 2.5
+2026-02-25 14:31:40 - INFO - test_energy('Pr3+:LaF3/ext') - Test energy f2/Pr3+:LaF3/ext finished -> success
+2026-02-25 14:31:40 - INFO - test_energy('Pr3+:aq') - Energy differences: mean 0.204, max 0.490, atol 2.5
+2026-02-25 14:31:40 - INFO - test_energy('Pr3+:aq') - Test energy f2/Pr3+:aq finished -> success
+2026-02-25 14:31:40 - INFO - test_energy('Pr3+:aq') - Reduced differences: mean 0.000022, max 0.000071, atol 0.000500
+2026-02-25 14:31:40 - INFO - test_energy('Pr3+:aq') - Test reduced f2/Pr3+:aq finished -> success
+2026-02-25 14:31:40 - INFO - test_energy('Nd3+:LaCl3') - Energy differences: mean 0.446, max 2.238, atol 2.5
+2026-02-25 14:31:40 - INFO - test_energy('Nd3+:LaCl3') - Test energy f3/Nd3+:LaCl3 finished -> success
+2026-02-25 14:31:41 - INFO - test_energy('Nd3+aq') - Energy differences: mean 0.411, max 1.338, atol 2.5
+2026-02-25 14:31:41 - INFO - test_energy('Nd3+aq') - Test energy f3/Nd3+aq finished -> success
+2026-02-25 14:31:41 - INFO - test_energy('Nd3+aq') - Reduced differences: mean 0.000027, max 0.000199, atol 0.000500
+2026-02-25 14:31:41 - INFO - test_energy('Nd3+aq') - Test reduced f3/Nd3+aq finished -> success
+2026-02-25 14:31:41 - INFO - test_energy('Pm3+:aq') - Test skipped -> debugging
+2026-02-25 14:31:41 - INFO - test_energy('Sm3+:LaCl3') - Test skipped -> debugging
+2026-02-25 14:31:41 - INFO - test_energy('Sm3+:aq') - Test skipped -> Invalid dataset (There seems to be a typo in the radial integrals)
+2026-02-25 14:31:41 - INFO - test_energy('Eu3+:LaCl3') - Test skipped -> debugging
+2026-02-25 14:31:41 - INFO - test_energy('Eu3+:aq') - Test skipped -> debugging
+2026-02-25 14:31:41 - INFO - test_energy('Gd3+:GdCl3') - Test skipped -> debugging
+2026-02-25 14:31:41 - INFO - test_energy('Gd3+:aq') - Test skipped -> debugging
+2026-02-25 14:31:41 - INFO - test_energy('Tb3+:LaCl3') - Test skipped -> debugging
+2026-02-25 14:31:41 - INFO - test_energy('Tb3+:aq') - Test skipped -> debugging
+2026-02-25 14:31:41 - INFO - test_energy('Dy3+:LaCl3') - Test skipped -> debugging
+2026-02-25 14:31:41 - INFO - test_energy('Dy3+:aq') - Test skipped -> debugging
+2026-02-25 14:31:41 - INFO - test_energy('Ho3+:LaCl3') - Test skipped -> debugging
+2026-02-25 14:31:41 - INFO - test_energy('Ho3+:aq') - Test skipped -> debugging
+2026-02-25 14:31:42 - INFO - test_energy('Er3+:free') - Energy differences: mean 0.736, max 2.448, atol 2.5
+2026-02-25 14:31:42 - INFO - test_energy('Er3+:free') - Test energy f11/Er3+:free finished -> success
+2026-02-25 14:31:42 - INFO - test_energy('Er3+:LaF3') - Energy differences: mean 0.676, max 2.257, atol 2.5
+2026-02-25 14:31:42 - INFO - test_energy('Er3+:LaF3') - Test energy f11/Er3+:LaF3 finished -> success
+2026-02-25 14:31:42 - INFO - test_energy('Er3+:LaCl3') - Energy differences: mean 0.737, max 2.185, atol 2.5
+2026-02-25 14:31:42 - INFO - test_energy('Er3+:LaCl3') - Test energy f11/Er3+:LaCl3 finished -> success
+2026-02-25 14:31:42 - INFO - test_energy('Er3+:aq') - Energy differences: mean 0.717, max 2.492, atol 2.5
+2026-02-25 14:31:42 - INFO - test_energy('Er3+:aq') - Test energy f11/Er3+:aq finished -> success
+2026-02-25 14:31:43 - INFO - test_energy('Er3+:aq') - Reduced differences: mean 0.000026, max 0.000477, atol 0.000500
+2026-02-25 14:31:43 - INFO - test_energy('Er3+:aq') - Test reduced f11/Er3+:aq finished -> success
+2026-02-25 14:31:43 - INFO - test_energy('Tm3+:LaF3') - Energy differences: mean 0.507, max 1.675, atol 2.5
+2026-02-25 14:31:43 - INFO - test_energy('Tm3+:LaF3') - Test energy f12/Tm3+:LaF3 finished -> success
+2026-02-25 14:31:43 - INFO - test_energy('Tm3+:aq') - Energy differences: mean 0.239, max 0.515, atol 2.5
+2026-02-25 14:31:43 - INFO - test_energy('Tm3+:aq') - Test energy f12/Tm3+:aq finished -> success
+2026-02-25 14:31:43 - INFO - test_energy('Tm3+:aq') - Reduced differences: mean 0.000016, max 0.000056, atol 0.000500
+2026-02-25 14:31:43 - INFO - test_energy('Tm3+:aq') - Test reduced f12/Tm3+:aq finished -> success
+2026-02-25 14:31:44 - INFO - test_energy('Tm3+:C2H5SO4') - Energy differences: mean 0.348, max 0.949, atol 2.5
+2026-02-25 14:31:44 - INFO - test_energy('Tm3+:C2H5SO4') - Test energy f12/Tm3+:C2H5SO4 finished -> success
+2026-02-25 14:31:44 - INFO - test_energy('Tm3+:LaF3/ext') - Energy differences: mean 0.419, max 2.307, atol 2.5
+2026-02-25 14:31:44 - INFO - test_energy('Tm3+:LaF3/ext') - Test energy f12/Tm3+:LaF3/ext finished -> success
