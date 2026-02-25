@@ -152,7 +152,7 @@ def test_energy(data_key):
 
     # Skip invalid dataset
     if "invalid" in data:
-        reason = f"Invalid dataset ({data["invalid"]})"
+        reason = f"Invalid dataset ({data['invalid']})"
         logging.info(f"Test skipped -> {reason}")
         pytest.skip(reason)
 
