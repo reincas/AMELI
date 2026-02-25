@@ -3,7 +3,7 @@ import pytest
 
 # Maximum number of electrons (or holes) for the test functions
 # Set 'DEFAULT = False' to run the full test suite
-DEBUG = 3
+DEBUG = False
 
 
 class TestContext:
