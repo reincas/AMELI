@@ -48,8 +48,8 @@ class Database:
         self.db_path = Path(db_path)
         self.connection = None
 
-        self.db_path.unlink(missing_ok=True)
-        self.generate()
+        if not self.db_path.exists():
+            self.generate()
 
     def generate(self):
         with sqlite3.connect(self.db_path) as conn:
