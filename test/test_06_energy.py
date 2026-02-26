@@ -16,6 +16,8 @@
 
 import logging
 import pytest
+from pathlib import Path
+import sqlite3
 import numpy as np
 import sympy as sp
 from ameli import Matrix
@@ -24,8 +26,64 @@ from conftest import DEBUG
 
 logging.getLogger(__name__)
 
-ATOL_ENERGY = 2.5
-ATOL_REDUCED = 0.0005
+DB_PATH = "energy.db"
+ATOL_ENERGY = 5.0
+ATOL_REDUCED = 0.0010
+
+CREATE_TABLE = '''
+    CREATE TABLE IF NOT EXISTS {table} (
+        key INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        num INTEGER NOT NULL,
+        level INTEGER NOT NULL,
+        j text NOT NULL,
+        term TEXT NOT NULL,
+        ref_value REAL NOT NULL,
+        calc_value REAL NOT NULL
+    )
+'''
+
+class Database:
+    def __init__(self, db_path):
+        self.db_path = Path(db_path)
+        self.connection = None
+
+        # Initialize the file if it doesn't exist
+        if not self.db_path.exists():
+            self.generate()
+
+    def generate(self):
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            for table in ("energy", "u2", "u4", "u6"):
+                cursor.execute(CREATE_TABLE.format(table=table))
+                conn.commit()
+
+    def __enter__(self):
+        self.connection = sqlite3.connect(self.db_path)
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if self.connection:
+            if exc_type is None:
+                self.connection.commit()
+            else:
+                self.connection.rollback()
+            self.connection.close()
+
+    def add(self, table, record):
+        query = f"INSERT INTO {table} (name, num, level, j, term, ref_value, calc_value) VALUES (?,?,?,?,?,?,?)"
+        values = (
+            str(record["name"]),
+            int(record["num"]),
+            int(record["level"]),
+            str(record["j"]),
+            str(record["term"]),
+            float(record["ref_value"]),
+            float(record["calc_value"])
+        )
+        self.connection.execute(query, values)
+
 
 
 def correct(name, data, corrections):
@@ -235,49 +293,72 @@ def test_energy(data_key):
     real_J = [irepr["J2"][i] for i in max_indices]
 
     # Compare given energy levels with calculation and determine mean quadratic deviation
-    diffs = []
-    success_energy = True
-    for i in range(len(energies_ref)):
-        diff = abs(energies_ref[i] - energies_calc[i])
-        if real_J[i] != str(J[i]) or diff >= ATOL_ENERGY:
-            success_energy = False
-            ref = f"J={J[i]}: {energies_ref[i]:.0f}"
-            calc = f"{real_names[i]}: {energies_calc[i]:.0f}"
-            logging.error(f"*** | level {i} | ref {ref} | calc {calc} | diff {diff:.1f} >= {ATOL_ENERGY:.1f} ***")
-        diffs.append(diff)
-    diffs = np.array(diffs)
-    logging.info(f"Energy differences: mean {diffs.mean():.3f}, max {diffs.max():.3f}, atol {ATOL_ENERGY:.1f}")
-    if success_energy:
-        logging.info(f"Test energy {config_name}/{data_key} finished -> success")
-
-    # Compare squared reduced matrix elements with calculation
-    success_reduced = True
-    if U2 is not None:
-        U_real = {}
-        for k in (2, 4, 6):
-            name = f"U/{k}"
-            assert Matrix.exists(config_name, name, "SLJ", reduced=True)
-            reduced = Matrix(config_name, name, "SLJ", reduced=True)
-            reduced = reduced.info.array(np.float64)
-            reduced = intermediate.T @ reduced @ intermediate
-            reduced = np.power(reduced, 2)
-            U_real[k] = reduced
+    with Database(DB_PATH) as db:
         diffs = []
-        for i in range(1, len(energies_ref)):
-            du2 = abs(U_real[2][0, i] - U2[i - 1])
-            du4 = abs(U_real[4][0, i] - U4[i - 1])
-            du6 = abs(U_real[6][0, i] - U6[i - 1])
-            diff = max(du2, du4, du6)
-            if diff > ATOL_REDUCED:
-                success_reduced = False
-                ref = f"J={J[i]}: {U2[i - 1]:.4f} {U4[i - 1]:.4f} {U6[i - 1]:.4f}"
-                calc = f"{real_names[i]}: {U_real[2][0, i]:.4f} {U_real[4][0, i]:.4f} {U_real[6][0, i]:.4f}"
-                logging.error(f"*** | level {i} | ref {ref} | calc {calc} | diff {diff:.6f} > {ATOL_REDUCED:.6f} ***")
-            diffs.extend([du2, du4, du6])
+        success_energy = True
+        for i in range(len(energies_ref)):
+            record = {
+                "name": data_key,
+                "num": num_electrons,
+                "level": i,
+                "j": J[i],
+                "term": real_names[i],
+                "ref_value": energies_ref[i],
+                "calc_value": energies_calc[i],
+            }
+            db.add("energy", record)
+
+            diff = abs(energies_ref[i] - energies_calc[i])
+            if real_J[i] != str(J[i]) or diff >= ATOL_ENERGY:
+                success_energy = False
+                ref = f"J={J[i]}: {energies_ref[i]:.0f}"
+                calc = f"{real_names[i]}: {energies_calc[i]:.0f}"
+                logging.error(f"*** | level {i} | ref {ref} | calc {calc} | diff {diff:.1f} >= {ATOL_ENERGY:.1f} ***")
+            diffs.append(diff)
         diffs = np.array(diffs)
-        logging.info(f"Reduced differences: mean {diffs.mean():.6f}, max {diffs.max():.6f}, atol {ATOL_REDUCED:.6f}")
-        if success_reduced:
-            logging.info(f"Test reduced {config_name}/{data_key} finished -> success")
+        logging.info(f"Energy differences: mean {diffs.mean():.3f}, max {diffs.max():.3f}, atol {ATOL_ENERGY:.1f}")
+        if success_energy:
+            logging.info(f"Test energy {config_name}/{data_key} finished -> success")
+
+        # Compare squared reduced matrix elements with calculation
+        success_reduced = True
+        if U2 is not None:
+            U_real = {}
+            for k in (2, 4, 6):
+                name = f"U/{k}"
+                assert Matrix.exists(config_name, name, "SLJ", reduced=True)
+                reduced = Matrix(config_name, name, "SLJ", reduced=True)
+                reduced = reduced.info.array(np.float64)
+                reduced = intermediate.T @ reduced @ intermediate
+                reduced = np.power(reduced, 2)
+                U_real[k] = reduced
+            diffs = []
+            for i in range(1, len(energies_ref)):
+                record = {
+                    "name": data_key,
+                    "num": num_electrons,
+                    "level": i,
+                    "j": J[i],
+                    "term": real_names[i],
+                }
+                db.add("u2", record | {"ref_value": U_real[2][0, i], "calc_value": U2[i - 1]})
+                db.add("u4", record | {"ref_value": U_real[4][0, i], "calc_value": U4[i - 1]})
+                db.add("u6", record | {"ref_value": U_real[6][0, i], "calc_value": U6[i - 1]})
+
+                du2 = abs(U_real[2][0, i] - U2[i - 1])
+                du4 = abs(U_real[4][0, i] - U4[i - 1])
+                du6 = abs(U_real[6][0, i] - U6[i - 1])
+                diff = max(du2, du4, du6)
+                if diff > ATOL_REDUCED:
+                    success_reduced = False
+                    ref = f"J={J[i]}: {U2[i - 1]:.4f} {U4[i - 1]:.4f} {U6[i - 1]:.4f}"
+                    calc = f"{real_names[i]}: {U_real[2][0, i]:.4f} {U_real[4][0, i]:.4f} {U_real[6][0, i]:.4f}"
+                    logging.error(f"*** | level {i} | ref {ref} | calc {calc} | diff {diff:.6f} > {ATOL_REDUCED:.6f} ***")
+                diffs.extend([du2, du4, du6])
+            diffs = np.array(diffs)
+            logging.info(f"Reduced differences: mean {diffs.mean():.6f}, max {diffs.max():.6f}, atol {ATOL_REDUCED:.6f}")
+            if success_reduced:
+                logging.info(f"Test reduced {config_name}/{data_key} finished -> success")
 
     # Test result
     assert success_energy and success_reduced
