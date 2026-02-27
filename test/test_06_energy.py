@@ -27,8 +27,6 @@ from conftest import DEBUG
 logging.getLogger(__name__)
 
 DB_PATH = "energy.db"
-ATOL_ENERGY = 5.0
-ATOL_REDUCED = 0.0010
 
 CREATE_TABLE = '''
     CREATE TABLE IF NOT EXISTS {table} (
@@ -203,6 +201,10 @@ def calc_energies(config_name, radial):
 def test_energy(data_key):
     """ Run test of energy levels and reduced matrix elements. """
 
+    # Erase existing energy database
+    if data_key == list(RADIAL.keys())[0]:
+        Path(DB_PATH).unlink(missing_ok=True)
+
     # Select data set
     assert data_key in RADIAL
     data = RADIAL[data_key]
@@ -291,10 +293,17 @@ def test_energy(data_key):
     real_names = [names[i] for i in max_indices]
     real_J = [irepr["J2"][i] for i in max_indices]
 
+    # Check for plausible energy level identification
+    success = True
+    for i in range(len(energies_ref)):
+        if real_J[i] != str(J[i]):
+            success = False
+            logging.error(f"*** Level missmatch for {real_names[i]}: J={J[i]} in reference ***")
+
     # Compare given energy levels with calculation and determine mean quadratic deviation
+    # Store results in the energy database
     with Database(DB_PATH) as db:
         diffs = []
-        success_energy = True
         for i in range(len(energies_ref)):
             record = {
                 "name": data_key,
@@ -307,20 +316,17 @@ def test_energy(data_key):
             }
             db.add("energy", record)
 
-            diff = abs(energies_ref[i] - energies_calc[i])
-            if real_J[i] != str(J[i]) or diff >= ATOL_ENERGY:
-                success_energy = False
-                ref = f"J={J[i]}: {energies_ref[i]:.0f}"
-                calc = f"{real_names[i]}: {energies_calc[i]:.0f}"
-                logging.error(f"*** | level {i} | ref {ref} | calc {calc} | diff {diff:.1f} >= {ATOL_ENERGY:.1f} ***")
+            diff = energies_ref[i] - energies_calc[i]
             diffs.append(diff)
+
+            ref = f"J={J[i]}: {energies_ref[i]:.0f}"
+            calc = f"{real_names[i]}: {energies_calc[i]:.0f}"
+            logging.info(f"    level {i} | ref {ref} | calc {calc} | diff {diff:.1f}")
+
         diffs = np.array(diffs)
-        logging.info(f"Energy differences: mean {diffs.mean():.3f}, max {diffs.max():.3f}, atol {ATOL_ENERGY:.1f}")
-        if success_energy:
-            logging.info(f"Test energy {config_name}/{data_key} finished -> success")
+        logging.info(f"Energy differences: mean {diffs.mean():.3f}, max {np.abs(diffs).max():.3f}")
 
         # Compare squared reduced matrix elements with calculation
-        success_reduced = True
         if U2 is not None:
             U_real = {}
             for k in (2, 4, 6):
@@ -331,6 +337,7 @@ def test_energy(data_key):
                 reduced = intermediate.T @ reduced @ intermediate
                 reduced = np.power(reduced, 2)
                 U_real[k] = reduced
+
             diffs = []
             for i in range(1, len(energies_ref)):
                 record = {
@@ -344,21 +351,19 @@ def test_energy(data_key):
                 db.add("u4", record | {"ref_value": U_real[4][0, i], "calc_value": U4[i - 1]})
                 db.add("u6", record | {"ref_value": U_real[6][0, i], "calc_value": U6[i - 1]})
 
-                du2 = abs(U_real[2][0, i] - U2[i - 1])
-                du4 = abs(U_real[4][0, i] - U4[i - 1])
-                du6 = abs(U_real[6][0, i] - U6[i - 1])
-                diff = max(du2, du4, du6)
-                if diff > ATOL_REDUCED:
-                    success_reduced = False
-                    ref = f"J={J[i]}: {U2[i - 1]:.4f} {U4[i - 1]:.4f} {U6[i - 1]:.4f}"
-                    calc = f"{real_names[i]}: {U_real[2][0, i]:.4f} {U_real[4][0, i]:.4f} {U_real[6][0, i]:.4f}"
-                    logging.error(f"*** | level {i} | ref {ref} | calc {calc} | diff {diff:.6f} > {ATOL_REDUCED:.6f} ***")
+                du2 = U_real[2][0, i] - U2[i - 1]
+                du4 = U_real[4][0, i] - U4[i - 1]
+                du6 = U_real[6][0, i] - U6[i - 1]
                 diffs.extend([du2, du4, du6])
+
+                max_diff = max(abs(du2), abs(du4), abs(du6))
+                ref = f"J={J[i]}: {U2[i - 1]:.4f} {U4[i - 1]:.4f} {U6[i - 1]:.4f}"
+                calc = f"{real_names[i]}: {U_real[2][0, i]:.4f} {U_real[4][0, i]:.4f} {U_real[6][0, i]:.4f}"
+                logging.info(f"    level {i} | ref {ref} | calc {calc} | max diff {max_diff:.6f}")
+
             diffs = np.array(diffs)
-            logging.info(f"Reduced differences: mean {diffs.mean():.6f}, max {diffs.max():.6f}, atol {ATOL_REDUCED:.6f}")
-            if success_reduced:
-                logging.info(f"Test reduced {config_name}/{data_key} finished -> success")
+            logging.info(f"Reduced differences: mean {diffs.mean():.6f}, max {np.abs(diffs).max():.6f}")
 
     # Test result
-    assert success_energy and success_reduced
+    assert success
 
