@@ -209,11 +209,11 @@ def test_energy(data_key):
     assert data_key in RADIAL
     data = RADIAL[data_key]
 
-    # Skip invalid dataset
-    if "invalid" in data:
-        reason = f"Invalid dataset ({data['invalid']})"
-        logging.info(f"Test skipped -> {reason}")
-        pytest.skip(reason)
+    # # Skip invalid dataset
+    # if "invalid" in data:
+    #     reason = f"Invalid dataset ({data['invalid']})"
+    #     logging.info(f"Test skipped -> {reason}")
+    #     pytest.skip(reason)
 
     # Test source link
     assert "source" in data
