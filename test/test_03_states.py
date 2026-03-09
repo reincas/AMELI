@@ -61,9 +61,16 @@ def test_states(num_electrons: int):
                 m = ("+", "")[int(bool(m < 0))] + str(m)
                 states_ref.append(f"{term} {j} {m}")
 
+    # Sort states
+    states = sorted(states)
+    states_ref = sorted(states_ref)
+
     # Compare lists of states in order
     if states != states_ref:
-        logging.error(f"*** AMELI-only states: {sorted(set(states) - set(states_ref))}")
-        logging.error(f"*** Ref-only states: {sorted(set(states_ref) - set(states))}")
+        for state in sorted(set(states) - set(states_ref)):
+            logging.error(f"*** AMELI-only state: |{state}>")
+        for state in sorted(set(states_ref) - set(states))
+            logging.error(f"*** Ref-only state: |{state}>")
+        logging.error(f"*** AMELI states: {len(states)}, Ref states: {len(states_ref)}")
     assert states == states_ref
     logging.info(f"Test states {config_name} finished -> success")
