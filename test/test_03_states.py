@@ -69,7 +69,7 @@ def test_states(num_electrons: int):
     if states != states_ref:
         for state in sorted(set(states) - set(states_ref)):
             logging.error(f"*** AMELI-only state: |{state}>")
-        for state in sorted(set(states_ref) - set(states))
+        for state in sorted(set(states_ref) - set(states)):
             logging.error(f"*** Ref-only state: |{state}>")
         logging.error(f"*** AMELI states: {len(states)}, Ref states: {len(states_ref)}")
     assert states == states_ref
