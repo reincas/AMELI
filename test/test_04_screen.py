@@ -57,14 +57,14 @@ def test_triple(num_electrons: int):
 
     # Coulomb interaction matrices
     f0 = Matrix(config_name, "H1/0", "Product").matrix
-    f2 = Matrix(config_name, "H1/2", "Product").matrix * 225
-    f4 = Matrix(config_name, "H1/4", "Product").matrix * 1089
-    f6 = Matrix(config_name, "H1/6", "Product").matrix * 184041 / 25
+    f2 = Matrix(config_name, "H1/2", "Product").matrix
+    f4 = Matrix(config_name, "H1/4", "Product").matrix
+    f6 = Matrix(config_name, "H1/6", "Product").matrix
 
     # Racah version of Coulomb interaction matrices
     e0 = f0
-    e1 = f0 * 9 / 7 + f2 / 42 + f4 / 77 + f6 / 462
-    e2 = f2 * 143 / 42 - f4 * 130 / 77 + f6 * 5 / 66
+    e1 = 9 * f0 / 7 + 75 * f2 / 14 + 99 * f4 / 7 + 5577 * f6 / 350
+    e2 = 10725 * f2 / 14 - 12870 * f4 / 7 + 5577 * f6 / 10
 
     # Matrix H4/1 is screened by e_0 and e_1
     name = "H4/1"
