@@ -56,4 +56,6 @@ def main(test_args=None):
 if __name__ == "__main__":
     test_args = None
     #test_args = {"file": "test_03_states.py", "func": "test_states", "args": 5}
+    #test_args = {"file": "test_04_screen.py", "func": "test_magnetic"}
+    #test_args = {"file": "test_04_screen.py", "func": "test_triple"}
     main(test_args)
