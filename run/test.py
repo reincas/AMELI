@@ -20,7 +20,7 @@ CODES = {
 }
 
 
-def main():
+def main(test_args=None):
     test_path = Path("../test")
     path = test_path / "pytest.ini"
 
@@ -31,7 +31,17 @@ def main():
     start_time = datetime.datetime.now()
     print(f"{start_time} --- Starting AMELI Test Suite (log: {log_file}) ---")
 
-    args = [str(test_path), "-v", "--durations=0"]
+    if test_args:
+        pytest_target = str(test_path / test_args["file"])
+        if "func" in test_args:
+            pytest_target += f'::{test_args["func"]}'
+            if "args" in test_args:
+                # Pytest uses brackets for parametrized values
+                pytest_target += f'[{test_args["args"]}]'
+    else:
+        pytest_target = str(test_path)
+
+    args = [pytest_target, "-v", "--durations=0"]
     exit_code = pytest.main(args)
 
     if exit_code in CODES:
@@ -44,4 +54,6 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    test_args = None
+    #test_args = {"file": "test_03_states.py", "func": "test_states", "args": 5}
+    main(test_args)
