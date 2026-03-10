@@ -278,19 +278,19 @@ class ElementStorage:
         assert elements.shape[1] == self.element_cols
 
         size = int(elements.shape[0])
-        self.indices[self.num_indices, :] = (initial, final, size)
-        self.elements[self.num_elements:self.num_elements + size, :] = elements
-        self.num_indices += 1
+        self.elements.resize(self.num_elements + size, axis=0)
+        self.elements[self.num_elements:, :] = elements
         self.num_elements += size
 
+        self.indices.resize(self.num_indices + 1, axis=0)
+        self.indices[self.num_indices, :] = (initial, final, size)
+        self.num_indices += 1
+
     def finalize(self):
-        """ Fix final sizes of the datasets and make the object immutable. """
+        """ Make the object immutable. """
 
         assert self.is_open, "Temporary HFDF5 file is closed!"
         assert not self.immutable
-        self.indices.resize(self.num_indices, axis=0)
-        self.elements.resize(self.num_elements, axis=0)
-
         self.immutable = True
 
     def as_meta(self):
@@ -528,7 +528,7 @@ class ProductContainer(Vault):
             ElementStorage.hash_data(hasher, storage.indices, storage.elements)
             storage.fp.close()
             product_dict = {"path": storage.path, "compression": ZIP_STORED}
-            #product_dict = storage.as_meta()
+            # product_dict = storage.as_meta()
 
         # Generate data hash
         data_hash = hasher.hexdigest()
@@ -618,8 +618,8 @@ class Product(ProductContainer):
         root = self.read_hdf5(self.file, "data/product.hdf5")
         self.indices = root["indices"]
         self.elements = root["elements"]
-        #self.indices = dc["data/product.hdf5"]["indices"]
-        #self.elements = dc["data/product.hdf5"]["elements"]
+        # self.indices = dc["data/product.hdf5"]["indices"]
+        # self.elements = dc["data/product.hdf5"]["elements"]
         self.num_indices = len(self.indices)
         self.num_elements = len(self.elements)
 
