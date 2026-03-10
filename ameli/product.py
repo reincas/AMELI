@@ -17,6 +17,8 @@ from pathlib import Path
 import tempfile
 import time
 from itertools import combinations
+from zipfile import ZIP_STORED
+
 import h5py
 import numpy as np
 
@@ -475,7 +477,7 @@ The electron indices are linked to the single electron states in 'states.electro
 class ProductContainer(Vault):
     """ Class representing a product data container. """
 
-    #ignore_items = ["data/product.hdf5"]
+    ignore_items = ["data/product.hdf5"]
 
     def __init__(self, config_name: str, tensor_size: int):
         """ Provide the data container. """
@@ -524,8 +526,9 @@ class ProductContainer(Vault):
             product_elements = ProductElements(config)
             storage = product_elements.matrix_elements(self.tensor_size)
             ElementStorage.hash_data(hasher, storage.indices, storage.elements)
-            product_dict = storage.as_meta() # DEBUG
-            #storage.fp.close() # DEBUG
+            storage.fp.close()
+            product_dict = {"path": storage.path, "compression": ZIP_STORED}
+            #product_dict = storage.as_meta()
 
         # Generate data hash
         data_hash = hasher.hexdigest()
@@ -566,8 +569,7 @@ class ProductContainer(Vault):
                 "numTensorElectrons": self.tensor_size,
             },
             "data/states.hdf5": states_dict,
-            "data/product.hdf5": product_dict, # DEBUG
-            #"data/product.hdf5": storage.path, # DEBUG
+            "data/product.hdf5": product_dict,
         }
 
         # Create the data container and store it in a file
@@ -613,8 +615,11 @@ class Product(ProductContainer):
 
         # Support data from HDF5 data structure.
         # Note: Do not use decode_uint_array. It is too slow, memory consumption too high.
-        self.indices = dc["data/product.hdf5"]["indices"]
-        self.elements = dc["data/product.hdf5"]["elements"]
+        root = self.read_hdf5(self.file, "data/product.hdf5")
+        self.indices = root["indices"]
+        self.elements = root["elements"]
+        #self.indices = dc["data/product.hdf5"]["indices"]
+        #self.elements = dc["data/product.hdf5"]["elements"]
         self.num_indices = len(self.indices)
         self.num_elements = len(self.elements)
 
