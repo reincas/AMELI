@@ -50,9 +50,11 @@ def test_states(num_electrons: int):
 
     # Build literature states by appending J and M
     states_ref = []
-    pattern = r"(\d)([A-Z])(\d?)\s+(\d)\s+\((\d{3})\)\((\d{2})\)([AB]?)"
+    pattern = r"(\d)([A-Z])(\d*)\s+(\d)\s+\((\d{3})\)\((\d{2})\)([AB]?)"
     for term in terms_ref["states"]:
         match = re.match(pattern, term)
+        if not match:
+            print("**********", term)
         s = (sp.S(match[1]) - 1) / 2
         assert s.is_integer or (s.is_rational and s.denominator == 2), f"{s}"
         l = SPECTRAL.index(match[2].lower())
