@@ -362,7 +362,15 @@ class ProductElements:
         # Determine all pairs of initial and final state which differ in num_diff electrons using and updating
         # the list of unused matrix element indices
         i = 0
+        t = time.time()
         while i < len(self.unused):
+            now = time.time()
+            if now - t >= 10.0:
+                r = len(self.unused) - i
+                n = len(self.elements)
+                logger.debug(f"  {self.config.name} | Number of elements: {n}, remaining tests: {r}")
+                t = now
+
             initial_index, final_index = self.unused[i]
             initial_state = self.states[initial_index]
             final_state = self.states[final_index]
@@ -373,10 +381,6 @@ class ProductElements:
                 RuntimeError("Code error: multiple matches!")
             if len(same_electrons) == 0:
                 i += 1
-                r = len(self.unused) - i
-                if r % 10000 == 0:
-                    n = len(self.elements)
-                    logger.debug(f"  {self.config.name} | Number of elements: {n}, remaining tests: {r}")
                 continue
 
             # Pick the tuple of matching (same) electrons from the intersection set
