@@ -19,7 +19,6 @@ import zipfile
 from pathlib import Path
 
 import h5py
-from h5py.version import hdf5_version
 from scidatacontainer import Container
 
 AMELI_VERSION = "1.2.0"
@@ -213,7 +212,8 @@ class Vault:
         path = Vault.vault_path(name)
         return Container(file=str(path), ignore_items=self.ignore_items)
 
-    def read_hdf5(self, zip_file, hdf5_file: str):
+    @staticmethod
+    def read_hdf5(zip_file, hdf5_file: str):
         """ Open and return an uncompressed HDF5 file in the data container. """
 
         path = Vault.vault_path(zip_file)
