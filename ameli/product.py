@@ -226,9 +226,11 @@ class ProductElement():
 
 
 class ElementStorage:
-    def __init__(self, index_dtype, element_dtype, index_size, element_cols):
+    def __init__(self, index_chunk, element_chunk, index_dtype, element_dtype, index_size, element_cols):
         """ Create temporary HDF5 file with datasets 'indices' and 'elements'. """
 
+        self.index_chunk = index_chunk
+        self.element_chunk = element_chunk
         self.index_dtype = index_dtype
         self.element_dtype = element_dtype
         self.index_size = index_size
@@ -246,7 +248,7 @@ class ElementStorage:
             shape=(self.index_size, 3),
             maxshape=(None, 3),
             dtype=self.index_dtype,
-            chunks=(1024, 3),
+            chunks=(self.index_chunk, 3),
             compression="gzip"
         )
 
@@ -256,7 +258,7 @@ class ElementStorage:
             shape=(128 * 1024, self.element_cols),
             maxshape=(None, self.element_cols),
             dtype=self.element_dtype,
-            chunks=(128 * 1024, self.element_cols),
+            chunks=(self.element_chunk, self.element_cols),
             compression="gzip"
         )
 
@@ -431,10 +433,14 @@ class ProductElements:
         element_dtype, match = get_dtype(max_value)
         assert match
 
+        # Determine chunk sizes for the datasets 'indices' and 'elements'
+        index_chunk = math.comb(self.config.states.pool_size, self.num_electrons)
+        element_chunk = index_chunk * math.comb(self.num_electrons, tensor_size) * math.factorial(tensor_size) ** 2
+
         # Build the index list and the list of elementary matrix elements
         max_index = self.len_diff[tensor_size]
         element_cols = 2 * tensor_size + 1
-        storage = ElementStorage(index_dtype, element_dtype, max_index, element_cols)
+        storage = ElementStorage(index_chunk, element_chunk, index_dtype, element_dtype, max_index, element_cols)
         logger.debug(f"Collecting {max_index} elements for {tensor_size}-electron operators")
         i = 0
         for initial_index, final_index, product_element in self.elements[:max_index]:
