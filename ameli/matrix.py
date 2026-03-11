@@ -23,7 +23,7 @@ from .config import ConfigInfo, Config
 from .unit import Unit
 from .vault import AMELI_VERSION, VersionError, Vault
 
-__version__ = "1.0.1"
+__version__ = "1.0.3"
 logger = logging.getLogger("matrix")
 
 

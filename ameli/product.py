@@ -28,7 +28,7 @@ from .states import space_registry
 from .uintarray import get_dtype
 from .vault import AMELI_VERSION, VersionError, Vault
 
-__version__ = "1.0.1"
+__version__ = "1.0.5"
 logger = logging.getLogger("product")
 
 
