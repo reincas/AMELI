@@ -158,7 +158,7 @@ class TaskManager:
         return len(self._finished)
 
 ##########################################################################
-# Worker process
+# Worker process and ProcManager class
 ##########################################################################
 
 def pool_worker(task_queue, result_queue, log_queue, stop_event):
@@ -188,8 +188,145 @@ def pool_worker(task_queue, result_queue, log_queue, stop_event):
         logger.info(f"Worker done / {memory()}")
 
 
+class ProcManager:
+    """ Manager for all worker processes. """
+
+    def __init__(self, max_workers, manager, result_queue, log_queue, stop_event):
+        self.max_workers = max_workers
+        self.manager = manager
+        self.result_queue = result_queue
+        self.log_queue = log_queue
+        self.stop_event = stop_event
+
+        # Workers: {pid: (process_obj, task_queue, node_id)}
+        self.workers = {}
+
+    @property
+    def busy_count(self):
+        return sum(1 for _, _, nid in self.workers.values() if nid is not None)
+
+    @property
+    def idle_count(self):
+        return sum(1 for _, _, nid in self.workers.values() if nid is None)
+
+    @property
+    def idle_workers(self):
+        return [pid for pid, (_, _, nid) in self.workers.items() if nid is None]
+
+    @property
+    def busy_workers(self):
+        return [pid for pid, (_, _, nid) in self.workers.items() if nid is not None]
+
+    @property
+    def all_busy(self):
+        return self.busy_count >= self.max_workers
+
+    def get_busy_rss(self):
+        """ Return PID, RSS and node_id for each busy worker. """
+
+        result = []
+        for pid, (_, _, node_id) in self.workers.items():
+            if node_id is None:
+                continue
+            rss = self.get_rss(pid)
+            if not rss:
+                continue
+            result.append((pid, rss, node_id))
+        return result
+
+    def get_worker(self):
+        """ Return a (process, task_queue) tuple if a worker is available or can be created. """
+
+        # Try to find an idle worker
+        for proc, task_queue, nid in self.workers.values():
+            if nid is None:
+                return proc, task_queue
+
+        # Try to spawn a new worker
+        if len(self.workers) < self.max_workers:
+            task_queue = self.manager.Queue()
+            args = (task_queue, self.result_queue, self.log_queue, self.stop_event)
+            proc = multiprocessing.Process(target=pool_worker, args=args)
+            proc.start()
+            self.workers[proc.pid] = (proc, task_queue, None)
+            return proc, task_queue
+
+        # No worker available
+        return None, None
+
+    def assign(self, pid, node_id):
+        """ Assign node_id to the given worker. """
+
+        proc, task_queue, _ = self.workers[pid]
+        self.workers[pid] = (proc, task_queue, node_id)
+
+    def release(self, pid):
+        """ Mark given worker as idle. """
+
+        if pid in self.workers:
+            proc, task_queue, _ = self.workers[pid]
+            self.workers[pid] = (proc, task_queue, None)
+
+    def get_rss(self, pid):
+        """ Return physical memory size (RSS) of given process, if it exists. """
+
+        try:
+            return psutil.Process(pid).memory_info().rss
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            return None
+
+    def terminate_idle(self):
+        """ Kill an idle worker and return its PID and RSS. """
+
+        idle_workers = self.idle_workers
+        if not idle_workers:
+            return None, None
+
+        pid = idle_workers[0]
+        rss = self.get_rss(pid)
+        node_id = self.terminate(pid)
+        assert node_id is None
+        return pid, rss
+
+    def terminate_smallest(self):
+        """ Kill smallest worker and return its PID, RSS, and node_id. """
+
+        worker_stats = [(self.get_rss(pid), pid) for pid in self.busy_workers]
+        worker_stats.sort()
+        rss, pid = worker_stats[0]
+        node_id = self.terminate(pid)
+        return pid, rss, node_id
+
+    def terminate(self, pid):
+        """ Kill the given worker and return the node_id it was working on. """
+
+        proc, task_queue, node_id = self.workers.pop(pid)
+        task_queue.put(None)
+        proc.terminate()
+        proc.join()
+        return node_id
+
+    def cleanup_dead_workers(self):
+        """ Return a list of node_ids that were lost to crashed worker processes. """
+
+        lost_nodes = []
+        for pid, (proc, task_queue, nid) in list(self.workers.items()):
+            if not proc.is_alive():
+                if nid is not None:
+                    lost_nodes.append(nid)
+                self.workers.pop(pid)
+        return lost_nodes
+
+    def stop(self):
+        """ Stop all worker processes. """
+
+        for proc, task_queue, _ in self.workers.values():
+            task_queue.put(None)
+            proc.join()
+
+
 ##########################################################################
-# Pool executor
+# PoolScheduler class
 ##########################################################################
 
 class PoolScheduler:
@@ -197,20 +334,20 @@ class PoolScheduler:
         self.logger = logger
         self.log_queue = log_queue
 
-        self.max_workers = multiprocessing.cpu_count()
-        self.workers = {}
-
         # Memory stats collected and updated for every processed node
         self.node_stats = {}
 
         # Initialise the task manager
         self.task_manager = TaskManager()
 
-        # Initialise required queues and events
+        # Initialise worker process manager
+        max_workers = multiprocessing.cpu_count()
         self.manager = multiprocessing.Manager()
         self.result_queue = self.manager.Queue()
         self.stop_event = self.manager.Event()
+        self.proc_manager = ProcManager(max_workers, self.manager, self.result_queue, self.log_queue, self.stop_event)
 
+        # Initialize the node registry
         self.registry = Registry()
 
     def max_rss(self, node_id):
@@ -218,67 +355,33 @@ class PoolScheduler:
             return 0
         return self.node_stats[node_id]
 
-    @staticmethod
-    def get_rss(pid):
-        try:
-            rss = psutil.Process(pid).memory_info().rss
-        except (psutil.NoSuchProcess, psutil.AccessDenied):
-            return None
-        return rss
-
     def update_rss(self):
-        for proc, task_queue, node_id in self.workers.values():
-            if node_id is None:
-                continue
-            rss = self.get_rss(proc.pid)
-            if rss is None:
-                continue
+        for proc, rss, node_id in self.proc_manager.get_busy_rss():
             if not node_id in self.node_stats or rss > self.node_stats[node_id]:
                 self.node_stats[node_id] = rss
-
-    @property
-    def idle_workers(self):
-        return [proc.pid for proc, task_queue, node_id in self.workers.values() if node_id is None]
-
-    @property
-    def busy_workers(self):
-        return [proc.pid for proc, task_queue, node_id in self.workers.values() if node_id is not None]
-
-    def terminate(self, pid):
-        proc, task_queue, node_id = self.workers.pop(pid)
-        task_queue.put(None)
-        proc.terminate()
-        proc.join()
-        return node_id
 
     def memory_watchdog(self):
 
         # Skip if enough memory is still available
         vmem = psutil.virtual_memory()
-        if len(self.workers) == 0 or vmem.available > MEM_MAXIMAL:
+        if len(self.proc_manager.workers) == 0 or vmem.available > MEM_MAXIMAL:
             return True
 
-        # Terminate an idle worker
-        if len(self.idle_workers) > 0:
-            pid = self.idle_workers[0]
-            rss = self.get_rss(pid) / 1024 ** 2
-            self.logger.warning(f"LOW MEMORY ({vmem.percent:.1f} %): Terminating idle PID {pid} using {rss:.0f}MB")
-            node_id = self.terminate(pid)
-            assert node_id is None
+        # Try to terminate an idle worker
+        pid, rss = self.proc_manager.terminate_idle()
+        if pid:
+            rss /= 1024 ** 2
+            self.logger.warning(f"LOW MEMORY ({vmem.percent:.1f} %): Terminated idle PID {pid} using {rss:.0f}MB")
             return False
 
         # Skip termination of busy workers if enough memory is still available or if just one busy worker is left
-        if vmem.available > MEM_CRITICAL and len(self.busy_workers) > 1:
+        if vmem.available > MEM_CRITICAL and len(self.proc_manager.busy_workers) > 1:
             return False
 
-        # Claimed memory (RSS) and PID of the smallest worker
-        worker_stats = [(self.get_rss(pid) / 1024 ** 2, pid) for pid in self.busy_workers]
-        worker_stats.sort()
-        rss, pid = worker_stats[0]
-
         # Terminate the smallest worker
-        self.logger.warning(f"CRITICAL MEMORY ({vmem.percent:.1f} %): Terminating busy PID {pid} using {rss:.0f}MB")
-        node_id = self.terminate(pid)
+        pid, rss, node_id = self.proc_manager.terminate_smallest()
+        rss /= 1024 ** 2
+        self.logger.warning(f"CRITICAL MEMORY ({vmem.percent:.1f} %): Terminated busy PID {pid} using {rss:.0f}MB")
 
         # Put node on the heap again if the worker was active
         if node_id is not None:
@@ -287,19 +390,16 @@ class PoolScheduler:
         return False
 
     def process_cleanup(self):
-        for proc, task_queue, node_id in self.workers.values():
-            if proc.is_alive():
-                continue
-            if node_id is None:
-                continue
+        lost_node_ids = self.proc_manager.cleanup_dead_workers()
+        for node_id in lost_node_ids:
             node = self.registry.nodes[node_id]
             self.task_manager.revert_to_active(node_id, -node.weight)
-            self.workers[proc.pid] = (proc, task_queue, None)
+            self.logger.warning(f"Rescheduled lost node {node_id}")
 
     def schedule_tasks(self):
 
         # Skip if maximum number of active workers reached
-        if len(self.busy_workers) >= self.max_workers:
+        if self.proc_manager.all_busy:
             return
 
         # Skip if no memory available
@@ -307,43 +407,34 @@ class PoolScheduler:
         if vmem.available < MEM_MAXIMAL:
             return
 
-        # Get next node
+        # Get next task
         node_id = self.task_manager.get_next()
         if node_id is None:
             return
         node = self.registry.nodes[node_id]
 
-        # Skip if not enough memory available if at least one worker is busy
+        # Kill idle workers until enough memory is available for this task
         rss = self.max_rss(node_id)
-        if vmem.available - rss < MEM_CRITICAL:
+        while vmem.available - rss < MEM_CRITICAL and self.proc_manager.idle_count:
+            pid, rss = self.proc_manager.terminate_idle()
+            if pid:
+                rss /= 1024 ** 2
+                self.logger.warning(f"Terminated idle PID {pid} using {rss:.0f}MB")
+            vmem = psutil.virtual_memory()
 
-            # Terminate an idle worker
-            if len(self.idle_workers) > 0:
-                pid = self.idle_workers[0]
-                rss = self.get_rss(pid) / 1024 ** 2
-                self.logger.warning(f"Terminating idle PID {pid} using {rss:.0f}MB")
-                node_id = self.terminate(pid)
-                assert node_id is None
+        # Skip task if still not enough memory available, but at least one busy worker
+        if vmem.available - rss < MEM_CRITICAL and self.proc_manager.busy_count:
+            self.task_manager.revert_to_active(node_id, -node.weight)
+            return
 
-            # Skip task only if at least one worker is busy
-            if len(self.busy_workers) > 0:
-                self.task_manager.revert_to_active(node_id, -node.weight)
-                return
+        # Get worker, if available
+        proc, task_queue = self.proc_manager.get_worker()
+        if not proc:
+            self.task_manager.revert_to_active(node_id, node.weight)
+            return
 
-        # Get free worker
-        free_workers = [(proc, queue) for proc, queue, node_id in self.workers.values() if node_id is None]
-        if free_workers:
-            proc, task_queue = free_workers[0]
-
-        # Get new worker
-        else:
-            task_queue = self.manager.Queue()
-            process_args = (task_queue, self.result_queue, self.log_queue, self.stop_event)
-            proc = multiprocessing.Process(target=pool_worker, args=process_args)
-            proc.start()
-
-        # Deal task to worker
-        self.workers[proc.pid] = (proc, task_queue, node_id)
+        # Schedule task to the worker
+        self.proc_manager.assign(proc.pid, node_id)
         task_queue.put(node)
 
     def store_result(self):
@@ -354,22 +445,24 @@ class PoolScheduler:
 
         # Mark node as finished
         self.task_manager.mark_finished(node_id)
+        node = self.registry.nodes[node_id]
+        node.exists = True
 
         # Try to activate all child nodes
-        node = self.registry.nodes[node_id]
         for child_id in node.children:
-            if not node.exists and node.in_degree == 0:
-                self.task_manager.add_active(node_id, -node.weight)
+            self.add_node(child_id)
 
         # Log result
         rss = self.max_rss(node_id) / 1024 ** 2
         self.logger.info(f"Finished {node} [maximum RSS: {rss:.0f} MB].")
 
         # Release worker
-        proc, task_queue, nid = self.workers[pid]
-        assert proc.pid == pid
-        assert node_id == nid
-        self.workers[proc.pid] = (proc, task_queue, None)
+        self.proc_manager.release(pid)
+
+    def add_node(self, node_id):
+        node = self.registry.nodes[node_id]
+        if not node.exists and node.in_degree == 0:
+            self.task_manager.add_active(node_id, -node.weight)
 
     def register(self, num_electrons: int):
         self.logger.info(f"Register all matrices for lanthanide ion f{num_electrons}.")
@@ -380,9 +473,7 @@ class PoolScheduler:
 
         # Activate all nodes with zero in-degree
         for node_id in self.registry.nodes.keys():
-            node = self.registry.nodes[node_id]
-            if not node.exists and node.in_degree == 0:
-                self.task_manager.add_active(node_id, -node.weight)
+            self.add_node(node_id)
 
         uf = self.unfinished
         ac = self.task_manager.len_active
@@ -390,7 +481,7 @@ class PoolScheduler:
 
     @property
     def unfinished(self):
-        return self.registry.unfinished - self.task_manager.len_finished
+        return self.registry.unfinished
 
     @property
     def status(self):
@@ -399,21 +490,22 @@ class PoolScheduler:
         hard = MEM_CRITICAL / 1024 ** 2
         status = f"Mem avail: {avail:.0f} MB (limits: {limit:.0f}/{hard:.0f} MB)"
 
-        w = len(self.workers)
-        r = len(self.busy_workers)
-        a = self.task_manager.len_active
+        w = len(self.proc_manager.workers)
+        r = self.proc_manager.busy_count
         t = self.unfinished
+        a = self.task_manager.len_active
         status += f" -- Workers: {w} ({r} busy) -- Tasks: {t} ({a} active)"
         return status
 
     def run(self, nums_electrons: list):
-        self.logger.info(f"Build nodes in a pool of {self.max_workers} workers.")
+        max_workers = self.proc_manager.max_workers
+        self.logger.info(f"Build nodes in a pool of {max_workers} workers.")
         t = time.time()
 
         # Run until all nodes are completed
         last_status = ""
         while len(nums_electrons) or (self.unfinished and not self.stop_event.is_set()):
-            if self.unfinished <= self.max_workers and not self.task_manager.len_active and nums_electrons:
+            if self.unfinished <= max_workers and not self.task_manager.len_active and nums_electrons:
                 self.register(nums_electrons.pop(0))
 
             status = self.status
@@ -429,10 +521,8 @@ class PoolScheduler:
             self.store_result()
 
         # Stop all workers
-        self.logger.info(f"Stop all {len(self.workers)} workers.")
-        for proc, task_queue, node_id in self.workers.values():
-            task_queue.put(None)
-            proc.join()
+        self.logger.info(f"Stop all {len(self.proc_manager.workers)} workers.")
+        self.proc_manager.stop()
 
         t = time.time() - t
         self.logger.info(f"Total execution time: {t:.1f} seconds")

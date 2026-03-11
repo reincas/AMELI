@@ -146,11 +146,6 @@ class Registry:
 
         return self.nodes[node_id].weight
 
-    def exists(self, node_id):
-        """ Return True if the given node file exists. """
-
-        return self.nodes[node_id].exists
-
     @property
     def unfinished(self):
         """ Return number of unfinished nodes. """
