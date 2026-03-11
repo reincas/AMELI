@@ -86,48 +86,76 @@ def run_sync(nums_electrons, handlers):
 
 
 ##########################################################################
-# Registry housekeeping functions
+# TaskManager class
 ##########################################################################
 
-def complete_node(node_id, registry, active_heap):
-    """ Remove finished node from the registry if its out-degree is zero (all children finished) or try to activate
-    all of its children otherwise. """
+class TaskManager:
+    """ Manage tasks (node ids) in three states 'active' (ready to be processed), 'pending' (in process), and
+    'finished' (finished successfully). """
 
-    # Sanity check
-    node = registry.nodes[node_id]
-    assert node.exists
+    def __init__(self):
+        # Priority queue for nodes ready for processing
+        self._active_heap = []
+        # Nodes currently in progress
+        self._pending = set()
+        # Successfully finished nodes
+        self._finished = set()
 
-    # Remove unnecessary node
-    if node.out_degree == 0:
-        return
+    def add_active(self, node_id, weight):
+        """ Add a node id to the active state if it hasn't been seen before. """
 
-    # Try to activate all children
-    for child_id in node.children:
-        activate_node(child_id, registry, active_heap)
+        # Sanity check, skip known node id
+        if node_id in self._finished or node_id in self._pending:
+            return
+        if any(node_id == nid for _, nid in self._active_heap):
+            return
 
+        # Push node id on the active heap
+        heapq.heappush(self._active_heap, (-weight, node_id))
 
-def activate_node(node_id, registry, active_heap):
-    """ Activate the given node if its in-degree is zero (all parents finished). Try to remove the node from the
-    registry if it already exists. """
+    def get_next(self):
+        """ Move next node id from active to pending state and return it. """
 
-    # Node is already active
-    active_nodes = [node_id for _, node_id in active_heap]
-    if node_id in active_nodes:
-        return
+        # No active node id waiting
+        if not self._active_heap:
+            return None
 
-    # Node has unresolved dependencies
-    node = registry.nodes[node_id]
-    if node.in_degree > 0:
-        return
+        # Move node id from active heap to pending
+        _, node_id = heapq.heappop(self._active_heap)
+        self._pending.add(node_id)
 
-    # Try to remove node from registry if it is finished
-    if node.exists:
-        complete_node(node_id, registry, active_heap)
-        return
+        # Return node id
+        return node_id
 
-    # Place node on the heap of active nodes
-    heapq.heappush(active_heap, (-node.weight, node_id))
+    def mark_finished(self, node_id):
+        """ Move node id from pending to finished state. """
 
+        self._pending.remove(node_id)
+        self._finished.add(node_id)
+
+    def revert_to_active(self, node_id, weight):
+        """ Move node id from pending back to active state. """
+
+        self._pending.remove(node_id)
+        heapq.heappush(self._active_heap, (-weight, node_id))
+
+    @property
+    def len_active(self):
+        """ Return number of active nodes. """
+
+        return len(self._active_heap)
+
+    @property
+    def len_pending(self):
+        """ Return number of pending nodes. """
+
+        return len(self._pending)
+
+    @property
+    def len_finished(self):
+        """ Return number of finished nodes. """
+
+        return len(self._finished)
 
 ##########################################################################
 # Worker process
@@ -148,7 +176,6 @@ def pool_worker(task_queue, result_queue, log_queue, stop_event):
 
         node_id = node.node_id
         logger.info(f"Worker generating {node_id}: {node}")
-        assert not node.exists
         try:
             node.generate()
             result_queue.put((node_id, os.getpid()))
@@ -172,8 +199,12 @@ class PoolScheduler:
 
         self.max_workers = multiprocessing.cpu_count()
         self.workers = {}
+
+        # Memory stats collected and updated for every processed node
         self.node_stats = {}
-        self.active_heap = []
+
+        # Initialise the task manager
+        self.task_manager = TaskManager()
 
         # Initialise required queues and events
         self.manager = multiprocessing.Manager()
@@ -252,8 +283,7 @@ class PoolScheduler:
         # Put node on the heap again if the worker was active
         if node_id is not None:
             node = self.registry.nodes[node_id]
-            if not node.exists:
-                heapq.heappush(self.active_heap, (-node.weight, node_id))
+            self.task_manager.revert_to_active(node_id, -node.weight)
         return False
 
     def process_cleanup(self):
@@ -263,15 +293,10 @@ class PoolScheduler:
             if node_id is None:
                 continue
             node = self.registry.nodes[node_id]
-            if not node.exists:
-                heapq.heappush(self.active_heap, (-node.weight, node_id))
+            self.task_manager.revert_to_active(node_id, -node.weight)
             self.workers[proc.pid] = (proc, task_queue, None)
 
     def schedule_tasks(self):
-
-        # Skip if no active task
-        if len(self.active_heap) == 0:
-            return
 
         # Skip if maximum number of active workers reached
         if len(self.busy_workers) >= self.max_workers:
@@ -282,11 +307,11 @@ class PoolScheduler:
         if vmem.available < MEM_MAXIMAL:
             return
 
-        # Skip if node is existing
-        priority, node_id = heapq.heappop(self.active_heap)
-        node = self.registry.nodes[node_id]
-        if node.exists:
+        # Get next node
+        node_id = self.task_manager.get_next()
+        if node_id is None:
             return
+        node = self.registry.nodes[node_id]
 
         # Skip if not enough memory available if at least one worker is busy
         rss = self.max_rss(node_id)
@@ -302,7 +327,7 @@ class PoolScheduler:
 
             # Skip task only if at least one worker is busy
             if len(self.busy_workers) > 0:
-                heapq.heappush(self.active_heap, (priority, node_id))
+                self.task_manager.revert_to_active(node_id, -node.weight)
                 return
 
         # Get free worker
@@ -327,11 +352,20 @@ class PoolScheduler:
         except queue.Empty:
             return
 
+        # Mark node as finished
+        self.task_manager.mark_finished(node_id)
+
+        # Try to activate all child nodes
         node = self.registry.nodes[node_id]
-        node.exists = True
+        for child_id in node.children:
+            if not node.exists and node.in_degree == 0:
+                self.task_manager.add_active(node_id, -node.weight)
+
+        # Log result
         rss = self.max_rss(node_id) / 1024 ** 2
         self.logger.info(f"Finished {node} [maximum RSS: {rss:.0f} MB].")
-        complete_node(node_id, self.registry, self.active_heap)
+
+        # Release worker
         proc, task_queue, nid = self.workers[pid]
         assert proc.pid == pid
         assert node_id == nid
@@ -345,14 +379,18 @@ class PoolScheduler:
             self.registry.register(MatrixNode, **kwargs)
 
         # Activate all nodes with zero in-degree
-        self.active_heap = []
-        for node_id in list(self.registry.nodes.keys()):
-            if node_id in self.registry.nodes:
-                activate_node(node_id, self.registry, self.active_heap)
+        for node_id in self.registry.nodes.keys():
+            node = self.registry.nodes[node_id]
+            if not node.exists and node.in_degree == 0:
+                self.task_manager.add_active(node_id, -node.weight)
 
-        uf = self.registry.unfinished
-        ac = len(self.active_heap)
+        uf = self.unfinished
+        ac = self.task_manager.len_active
         self.logger.info(f"Number of unfinished nodes: {uf} ({ac} active).")
+
+    @property
+    def unfinished(self):
+        return self.registry.unfinished - self.task_manager.len_finished
 
     @property
     def status(self):
@@ -363,9 +401,8 @@ class PoolScheduler:
 
         w = len(self.workers)
         r = len(self.busy_workers)
-        a = len(self.active_heap)
-        t = self.registry.unfinished
-        assert a <= t
+        a = self.task_manager.len_active
+        t = self.unfinished
         status += f" -- Workers: {w} ({r} busy) -- Tasks: {t} ({a} active)"
         return status
 
@@ -373,12 +410,12 @@ class PoolScheduler:
         self.logger.info(f"Build nodes in a pool of {self.max_workers} workers.")
         t = time.time()
 
-        while len(nums_electrons) > 0 and len(self.active_heap) == 0:
-            self.register(nums_electrons.pop(0))
-
         # Run until all nodes are completed
         last_status = ""
-        while self.registry.unfinished and not self.stop_event.is_set():
+        while len(nums_electrons) or (self.unfinished and not self.stop_event.is_set()):
+            if self.unfinished <= self.max_workers and not self.task_manager.len_active and nums_electrons:
+                self.register(nums_electrons.pop(0))
+
             status = self.status
             if status != last_status:
                 self.logger.info(f"Status: {status}")
@@ -390,9 +427,6 @@ class PoolScheduler:
             if free_space:
                 self.schedule_tasks()
             self.store_result()
-
-            if self.registry.unfinished <= self.max_workers and len(self.active_heap) == 0 and nums_electrons:
-                self.register(nums_electrons.pop(0))
 
         # Stop all workers
         self.logger.info(f"Stop all {len(self.workers)} workers.")
