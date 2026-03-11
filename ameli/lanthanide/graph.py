@@ -178,6 +178,12 @@ class Node:
         self.arg_names = list(signature.parameters.keys())[1:]
         self.exists = container_vault.in_vault(str(self.file), self.version)
 
+        config_name = kwargs["config_name"]
+        assert config_name.startswith("f")
+        num_electrons = int(config_name[1:])
+        offset = (num_electrons * 2) - 1 if num_electrons <= 7 else (14 - num_electrons) * 2
+        self.priority_offset = 1000 * offset
+
     @property
     def in_degree(self):
         return len([node_id for node_id in self.parents if not self.registry.nodes[node_id].exists])
@@ -209,6 +215,9 @@ class Node:
     def weight(self):
         return 1 + sum(self.registry.weight(child_id) for child_id in self.children)
 
+    @property
+    def priority(self):
+        return self.priority_offset + self.weight
 
 class ConfigNode(Node):
     def __init__(self, registry, node_id, config_name):

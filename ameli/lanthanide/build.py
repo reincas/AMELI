@@ -101,7 +101,7 @@ class TaskManager:
         # Successfully finished nodes
         self._finished = set()
 
-    def add_active(self, node_id, weight):
+    def add_active(self, node_id, priority):
         """ Add a node id to the active state if it hasn't been seen before. """
 
         # Sanity check, skip known node id
@@ -111,7 +111,7 @@ class TaskManager:
             return
 
         # Push node id on the active heap
-        heapq.heappush(self._active_heap, (-weight, node_id))
+        heapq.heappush(self._active_heap, (priority, node_id))
 
     def get_next(self):
         """ Move next node id from active to pending state and return it. """
@@ -133,11 +133,11 @@ class TaskManager:
         self._pending.remove(node_id)
         self._finished.add(node_id)
 
-    def revert_to_active(self, node_id, weight):
+    def revert_to_active(self, node_id, priority):
         """ Move node id from pending back to active state. """
 
         self._pending.remove(node_id)
-        heapq.heappush(self._active_heap, (-weight, node_id))
+        heapq.heappush(self._active_heap, (priority, node_id))
 
     @property
     def len_active(self):
@@ -386,14 +386,14 @@ class PoolScheduler:
         # Put node on the heap again if the worker was active
         if node_id is not None:
             node = self.registry.nodes[node_id]
-            self.task_manager.revert_to_active(node_id, -node.weight)
+            self.task_manager.revert_to_active(node_id, node.priority)
         return False
 
     def process_cleanup(self):
         lost_node_ids = self.proc_manager.cleanup_dead_workers()
         for node_id in lost_node_ids:
             node = self.registry.nodes[node_id]
-            self.task_manager.revert_to_active(node_id, -node.weight)
+            self.task_manager.revert_to_active(node_id, node.priority)
             self.logger.warning(f"Rescheduled lost node {node_id}")
 
     def schedule_tasks(self):
@@ -424,13 +424,13 @@ class PoolScheduler:
 
         # Skip task if still not enough memory available, but at least one busy worker
         if vmem.available - rss < MEM_CRITICAL and self.proc_manager.busy_count:
-            self.task_manager.revert_to_active(node_id, -node.weight)
+            self.task_manager.revert_to_active(node_id, node.priority)
             return
 
         # Get worker, if available
         proc, task_queue = self.proc_manager.get_worker()
         if not proc:
-            self.task_manager.revert_to_active(node_id, node.weight)
+            self.task_manager.revert_to_active(node_id, node.priority)
             return
 
         # Schedule task to the worker
@@ -462,7 +462,7 @@ class PoolScheduler:
     def add_node(self, node_id):
         node = self.registry.nodes[node_id]
         if not node.exists and node.in_degree == 0:
-            self.task_manager.add_active(node_id, -node.weight)
+            self.task_manager.add_active(node_id, node.priority)
 
     def register(self, num_electrons: int):
         self.logger.info(f"Register all matrices for lanthanide ion f{num_electrons}.")
@@ -500,8 +500,8 @@ class PoolScheduler:
 
         # Run until all nodes are completed
         last_status = time.time()
-        while len(nums_electrons) or (self.registry.unfinished and not self.stop_event.is_set()):
-            if self.registry.unfinished <= max_workers and not self.task_manager.len_active and nums_electrons:
+        while (self.registry.unfinished and not self.stop_event.is_set()) or nums_electrons:
+            if nums_electrons:
                 self.register(nums_electrons.pop(0))
 
             now = time.time()
