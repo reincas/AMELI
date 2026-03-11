@@ -475,13 +475,9 @@ class PoolScheduler:
         for node_id in self.registry.nodes.keys():
             self.add_node(node_id)
 
-        uf = self.unfinished
+        uf = self.registry.unfinished
         ac = self.task_manager.len_active
         self.logger.info(f"Number of unfinished nodes: {uf} ({ac} active).")
-
-    @property
-    def unfinished(self):
-        return self.registry.unfinished
 
     @property
     def status(self):
@@ -492,7 +488,7 @@ class PoolScheduler:
 
         w = len(self.proc_manager.workers)
         r = self.proc_manager.busy_count
-        t = self.unfinished
+        t = self.registry.unfinished
         a = self.task_manager.len_active
         status += f" -- Workers: {w} ({r} busy) -- Tasks: {t} ({a} active)"
         return status
@@ -503,15 +499,15 @@ class PoolScheduler:
         t = time.time()
 
         # Run until all nodes are completed
-        last_status = ""
-        while len(nums_electrons) or (self.unfinished and not self.stop_event.is_set()):
-            if self.unfinished <= max_workers and not self.task_manager.len_active and nums_electrons:
+        last_status = time.time()
+        while len(nums_electrons) or (self.registry.unfinished and not self.stop_event.is_set()):
+            if self.registry.unfinished <= max_workers and not self.task_manager.len_active and nums_electrons:
                 self.register(nums_electrons.pop(0))
 
-            status = self.status
-            if status != last_status:
-                self.logger.info(f"Status: {status}")
-                last_status = status
+            now = time.time()
+            if now - last_status >= 5.0:
+                self.logger.info(f"Status: {self.status}")
+                last_status = now
 
             self.update_rss()
             free_space = self.memory_watchdog()

@@ -159,6 +159,15 @@ class RawItem:
         self.f.close()
 
 
+def raw_version(zip_path):
+    """ Return version of given data container. """
+
+    with zipfile.ZipFile(zip_path, 'r') as z:
+        with z.open('meta.json') as f:
+            data = json.load(f)
+            return data["version"]
+
+
 ###########################################################################
 # Vault class
 ###########################################################################
@@ -213,8 +222,13 @@ class Vault:
         return hdf5_file['/']
 
     @staticmethod
-    def in_vault(name: str) -> bool:
-        return Vault.vault_path(name).exists()
+    def in_vault(name: str, version=None) -> bool:
+        path = Vault.vault_path(name)
+        if not path.exists():
+            return False
+        if version is None:
+            return True
+        return version == raw_version(path)
 
     @staticmethod
     def vault_path(name: str) -> Path:

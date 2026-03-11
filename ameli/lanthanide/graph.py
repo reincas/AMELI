@@ -17,12 +17,18 @@ from unittest.mock import patch, MagicMock
 import numpy as np
 import sympy as sp
 
-from ameli.config import generate_config, ConfigInfo, Config
-from ameli.product import Product
-from ameli.unit import MATRIX, Unit
-from ameli.matrix import MatrixName, Matrix
-from ameli.transform import SYM_INFO, SYM_CHAIN, config_key, Transform
+from ameli.config import generate_config, ConfigInfo, ConfigContainer, Config
+from ameli.product import ProductContainer
+from ameli.unit import MATRIX, UnitContainer
+from ameli.matrix import MatrixName, MatrixContainer
+from ameli.transform import SYM_INFO, SYM_CHAIN, config_key, TransformContainer
 from ameli.vault import Vault
+
+from ameli.config import __version__ as config_version
+from ameli.product import __version__ as product_version
+from ameli.unit import __version__ as unit_version
+from ameli.matrix import __version__ as matrix_version
+from ameli.transform import __version__ as transform_version
 
 container_vault = Vault()
 
@@ -75,7 +81,7 @@ def matrix_dry_run(func, *args, **kwargs):
     def mock_unit(config_name, name):
         """ Return stunt double of a Matrix object. """
 
-        # Store Uatrix initialisation arguments
+        # Store Matrix initialisation arguments
         kwargs = {"config_name": config_name, "name": name}
         trace.append(("Unit", kwargs))
 
@@ -158,18 +164,19 @@ class Registry:
 ##########################################################################
 
 class Node:
-    def __init__(self, registry, node_id, cls, file, **kwargs):
+    def __init__(self, registry, node_id, cls, version, file, **kwargs):
         self.kwargs = kwargs
         self.registry = registry
         self.node_id = node_id
         self.ameli_cls = cls
+        self.version = version
         self.file = Path(file)
         self.parents = []
         self.children = []
 
         signature = inspect.signature(cls.__init__)
         self.arg_names = list(signature.parameters.keys())[1:]
-        self.exists = container_vault.in_vault(str(self.file))
+        self.exists = container_vault.in_vault(str(self.file), self.version)
 
     @property
     def in_degree(self):
@@ -206,15 +213,15 @@ class Node:
 class ConfigNode(Node):
     def __init__(self, registry, node_id, config_name):
         kwargs = {"config_name": config_name}
-        file = Config.get_path(config_name)
-        super().__init__(registry, node_id, Config, file, **kwargs)
+        file = ConfigContainer.get_path(config_name)
+        super().__init__(registry, node_id, ConfigContainer, config_version, file, **kwargs)
 
 
 class ProductNode(Node):
     def __init__(self, registry, node_id, config_name, tensor_size):
         kwargs = {"config_name": config_name, "tensor_size": tensor_size}
-        file = Product.get_path(config_name, tensor_size)
-        super().__init__(registry, node_id, Product, file, **kwargs)
+        file = ProductContainer.get_path(config_name, tensor_size)
+        super().__init__(registry, node_id, ProductContainer, product_version, file, **kwargs)
 
         self.register_parent(ConfigNode, config_name=config_name)
 
@@ -222,8 +229,8 @@ class ProductNode(Node):
 class UnitNode(Node):
     def __init__(self, registry, node_id, config_name, name):
         kwargs = {"config_name": config_name, "name": name}
-        file = Unit.get_path(config_name, name)
-        super().__init__(registry, node_id, Unit, file, **kwargs)
+        file = UnitContainer.get_path(config_name, name)
+        super().__init__(registry, node_id, UnitContainer, unit_version, file, **kwargs)
 
         self.register_parent(ConfigNode, config_name=config_name)
         key, parameters = name.split("/")
@@ -234,8 +241,8 @@ class UnitNode(Node):
 class TransformNode(Node):
     def __init__(self, registry, node_id, config_name):
         kwargs = {"config_name": config_name}
-        file = Transform.get_path(config_name)
-        super().__init__(registry, node_id, Transform, file, **kwargs)
+        file = TransformContainer.get_path(config_name)
+        super().__init__(registry, node_id, TransformContainer, transform_version, file, **kwargs)
 
         self.register_parent(ConfigNode, config_name=config_name)
 
@@ -262,8 +269,8 @@ class MatrixNode(Node):
             "state_space": state_space,
             "reduced": reduced,
         }
-        file = Matrix.get_path(config_name, name, state_space, reduced)
-        super().__init__(registry, node_id, Matrix, file, **kwargs)
+        file = MatrixContainer.get_path(config_name, name, state_space, reduced)
+        super().__init__(registry, node_id, MatrixContainer, matrix_version, file, **kwargs)
 
         self.register_parent(ConfigNode, config_name=config_name)
         if state_space == "SLJ" and not reduced:
