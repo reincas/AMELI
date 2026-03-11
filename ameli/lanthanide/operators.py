@@ -24,14 +24,14 @@ def matrix_names():
     names.append(("S2", 1))
     names.append(("J2", 1))
     names.append(("LS", 1))
-    names.extend([(f"H1/{k}", 2) for k in (2, 4, 6)])
+    names.extend([(f"H1/{k}", 2) for k in (0, 2, 4, 6)])
     names.append(("H2", 1))
     names.extend([(f"H3/{i}", 2) for i in (0, 1, 2)])
-    names.extend([(f"H4/{c}", 3) for c in (2, 3, 4, 6, 7, 8)])
+    names.extend([(f"H4/{c}", 3) for c in (1, 2, 3, 4, 5, 6, 7, 8, 9)])
     names.extend([(f"Hss/{k}", 2) for k in (0, 2, 4)])
     names.extend([(f"Hsoo/{k}", 2) for k in (0, 2, 4)])
     names.extend([(f"H5/{k}", 2) for k in (0, 2, 4)])
-    names.extend([(f"H6/{k}", 2) for k in (2, 4, 6)])
+    names.extend([(f"H6/{k}", 2) for k in (0, 2, 4, 6)])
     return names
 
 
