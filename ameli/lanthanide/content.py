@@ -101,11 +101,10 @@ def get_root_path(num_electrons):
 
 # Content mapping for each zip folder
 ZIP_STRUCTURE = [
-    ("product.zip", [Path("product")]),
-    ("sljm.zip", [Path("sljm")]),
-    ("slj.zip", [Path("slj")]),
-    ("slj_reduced.zip", [Path("slj_reduced")]),
-    ("support.zip", [Path("."), Path("unit")]),
+    ("product.zip", ["transform.zdc", "product/*.zdc"]),
+    ("sljm.zip", ["sljm/*.zdc"]),
+    ("slj.zip", ["slj/*.zdc", "slj_reduced/*.zdc"]),
+    ("support.zip", ["config.zdc", "product*.zdc", "unit/*.zdc"]),
 ]
 
 
@@ -114,12 +113,10 @@ def get_zip_folders(root_path):
     ion with the given root path. """
 
     # Generate list of data container files for each zip folder in the given order
-    for zip_name, subfolders in ZIP_STRUCTURE:
+    for zip_name, patterns in ZIP_STRUCTURE:
         files = []
-        for folder in subfolders:
-            search_dir = root_path / folder
-            assert search_dir.is_dir(), f"Folder '{folder}' does not exist!"
-            for file_path in search_dir.glob("*.zdc"):
+        for pattern in patterns:
+            for file_path in root_path.glob(pattern):
                 files.append(file_path)
         yield zip_name, files
 
@@ -134,12 +131,12 @@ def get_matrix_heads(num_electrons):
 
     # Generate list of data container files for each zip folder in the given order
     matrix_heads = set()
-    for zip_name, subfolders in ZIP_STRUCTURE:
+    for zip_name, patterns in ZIP_STRUCTURE:
         if zip_name == "support.zip":
             continue
-        for folder in subfolders:
-            search_dir = root_path / folder
-            assert search_dir.is_dir(), f"Folder '{folder}' does not exist!"
-            for file_path in search_dir.glob("*.zdc"):
+        for pattern in patterns:
+            for file_path in root_path.glob(pattern):
+                if file_path.stem == "transform":
+                    continue
                 matrix_heads.add(file_path.stem.split("_", 1)[0])
     return matrix_heads

@@ -553,6 +553,8 @@ def upload_zenodo(version, title, desc, files, zenodo):
 
         if zenodo.hashes["hash"] == hashes.hash:
             assert zenodo.hashes["sha256Data"] == hashes.sha256_data
+            if version == zenodo.version:
+                return
             if version != zenodo.next_version:
                 raise VersionError(f"Version {zenodo.next_version} expected for metadata update, got {version}!")
         elif zenodo.hashes["sha256Data"] == hashes.sha256_data:
@@ -576,6 +578,7 @@ def upload_zenodo(version, title, desc, files, zenodo):
 def zenodo_lanthanide(num_electrons, version, concept_id, sandbox=True):
     """ Upload or update Zenodo dataset record for the given lanthanide ion. """
 
+    print(f"Electrons: {num_electrons}")
     zenodo = Zenodo(concept_id, sandbox)
 
     title = f"Matrix Elements for the {LANTHANIDE_IONS[num_electrons]} Ion"
