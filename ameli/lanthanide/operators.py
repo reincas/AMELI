@@ -12,9 +12,9 @@ def matrix_names():
     electron each one is acting on. """
 
     names = []
-    names.extend([(f"U/{k},{q}", 1) for k in range(7) for q in range(-k, k + 1)])
+    names.extend([(f"U/{k},{q}", 1) for k in range(8) for q in range(-k, k + 1)])
     names.extend([(f"T/{k},{q}", 1) for k in range(2) for q in range(-k, k + 1)])
-    names.extend([(f"UU/{k}", 1) for k in (0, 1, 2, 3, 4, 5, 6)])
+    names.extend([(f"UU/{k}", 1) for k in range(8)])
     names.extend([(f"TT/{k}", 1) for k in (0, 1)])
     names.extend([(f"UT/{k}", 1) for k in (0, 1)])
     names.extend([(f"L/{q}", 1) for q in range(-1, 2)])
