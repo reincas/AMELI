@@ -229,6 +229,10 @@ class ElementStorage:
     def __init__(self, index_chunk, element_chunk, index_dtype, element_dtype, index_size, element_cols):
         """ Create temporary HDF5 file with datasets 'indices' and 'elements'. """
 
+        # 2026-03-20 Replaced shape and chunk parameter values after tests.
+        #            chunks[2] must be 1, otherwise the file size becomes much larger
+        #            chunks[1] must be >= 1k otherwise the file size increases
+        #            chunks[1] must be <= 64k otherwise the file generations slows down significantly
         self.index_chunk = index_chunk
         self.element_chunk = element_chunk
         self.index_dtype = index_dtype
@@ -245,21 +249,27 @@ class ElementStorage:
         # Initialise empty resizable dataset 'indices'
         self.indices = self.fp.create_dataset(
             "indices",
-            shape=(self.index_size, 3),
+            #shape=(self.index_size, 3),
+            shape=(0, 3),
             maxshape=(None, 3),
             dtype=self.index_dtype,
-            chunks=(self.index_chunk, 3),
-            compression="gzip"
+            #chunks=(self.index_chunk, 3),
+            chunks=(16 * 1024, 1),
+            compression="gzip",
+            compression_opts=9
         )
 
         # Initialise empty resizable dataset 'elements'
         self.elements = self.fp.create_dataset(
             "elements",
-            shape=(128 * 1024, self.element_cols),
+            #shape=(128 * 1024, self.element_cols),
+            shape=(0, self.element_cols),
             maxshape=(None, self.element_cols),
             dtype=self.element_dtype,
-            chunks=(self.element_chunk, self.element_cols),
-            compression="gzip"
+            #chunks=(self.element_chunk, self.element_cols),
+            chunks=(16 * 1024, 1),
+            compression="gzip",
+            compression_opts=9
         )
 
         # Initialise index and element counters
