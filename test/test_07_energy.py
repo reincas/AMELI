@@ -209,12 +209,6 @@ def test_energy(data_key):
     assert data_key in RADIAL
     data = RADIAL[data_key]
 
-    # # Skip invalid dataset
-    # if "invalid" in data:
-    #     reason = f"Invalid dataset ({data['invalid']})"
-    #     logging.info(f"Test skipped -> {reason}")
-    #     pytest.skip(reason)
-
     # Test source link
     assert "source" in data
     assert data["source"] in SOURCES
@@ -225,7 +219,7 @@ def test_energy(data_key):
     config_name = f"f{num_electrons}"
 
     # Skip large configurations for debugging
-    if DEBUG and DEBUG < num_electrons < 14 - DEBUG:
+    if DEBUG and num_electrons != DEBUG:
         reason = "debugging"
         logging.info(f"Test skipped -> {reason}")
         pytest.skip(reason)

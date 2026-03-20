@@ -1,8 +1,7 @@
 import logging
 import pytest
 
-# Maximum number of electrons (or holes) for the test functions
-# Set 'DEFAULT = False' to run the full test suite
+# Set 'DEBUG = False' to run the full test suite or to the number of electrons for a single configuration test
 DEBUG = False
 
 

@@ -37,7 +37,7 @@ def test_triple(data_key):
     config_name = f"f{num_electrons}"
 
     # Skip large configurations for debugging
-    if DEBUG and DEBUG < num_electrons < 14 - DEBUG:
+    if DEBUG and num_electrons != DEBUG:
         reason = "debugging"
         logging.info(f"Test skipped -> {reason}")
         pytest.skip(reason)

@@ -23,7 +23,7 @@ def test_transform(num_electrons: int):
     """ LS transformation test. """
 
     # Skip large configurations for debugging
-    if DEBUG and DEBUG < num_electrons < 14 - DEBUG:
+    if DEBUG and num_electrons != DEBUG:
         reason = "debugging"
         logging.info(f"Test skipped -> {reason}")
         pytest.skip(reason)
