@@ -41,7 +41,7 @@ def matrix_U(config, k: int, q: int):
     # Parameters
     s = config.states.electron_pool[0].s
     l = config.states.electron_pool[0].l
-    assert 0 <= k <= 2 * l
+    assert 0 <= k <= 2 * l + 1
 
     # One-electron matrix
     matrix = Unit(config.name, f"UT/{k},0,{k},{q}").matrix
@@ -61,7 +61,7 @@ def matrix_T(config, k: int, q: int):
     # Parameters
     s = config.states.electron_pool[0].s
     l = config.states.electron_pool[0].l
-    assert 0 <= k <= 2 * s
+    assert 0 <= k <= 2 * s + 1
 
     # One-electron matrix
     matrix = Unit(config.name, f"UT/0,{k},{k},{q}").matrix
@@ -83,7 +83,7 @@ def matrix_UU(config, k: int):
     l = config.states.electron_pool[0].l
     num = config.info.num_electrons
     ident = sp.SparseMatrix.eye(config.num_states)
-    assert 0 <= k <= 2 * l
+    assert 0 <= k <= 2 * l + 1
     sign = (-1) ** k
 
     # One-electron matrix
@@ -111,7 +111,7 @@ def matrix_TT(config, k: int):
     l = config.states.electron_pool[0].l
     num = config.info.num_electrons
     ident = sp.SparseMatrix.eye(config.num_states)
-    assert 0 <= k <= 2 * s
+    assert 0 <= k <= 2 * s + 1
     sign = (-1) ** k
 
     # One-electron matrix
@@ -138,7 +138,7 @@ def matrix_UT(config, k: int):
     s = config.states.electron_pool[0].s
     l = config.states.electron_pool[0].l
     num = config.info.num_electrons
-    assert 0 <= k <= 2 * min(s, l)
+    assert 0 <= k <= 2 * min(s, l) + 1
     sign = (-1) ** k
 
     # One-electron matrix
