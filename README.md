@@ -83,4 +83,4 @@ of mathematical tests and comparisons to values published in printed literature.
 Its subfolder `results` contains the results from a test run and the subfolder `tables` contains the script used to
 extract the comparison tables in the AMELI paper from the test results.
 The folder `upload` is for documentation only.
-It contains the scripts used to upload and update the matrix datasets to the Zenodo repository.
+It contains the scripts used to upload and update the matrix datasets on the Zenodo repository.
