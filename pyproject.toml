@@ -35,4 +35,4 @@ Homepage = "https://github.com/reincas/AMELI"
 Issues = "https://github.com/reincas/AMELI/issues"
 
 [tool.setuptools]
-packages = ["ameli"]
+packages = ["src/ameli"]
