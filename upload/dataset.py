@@ -3,12 +3,19 @@
 # <reinhard.caspary@phoenixd.uni-hannover.de>                            #
 # This program is free software under the terms of the MIT license.      #
 ##########################################################################
+#
+# Note: This script is for documentation only. It is required by the
+# AMELI maintainer to upload the results of the AMELI package to the
+# Zenodo repository.
+#
+##########################################################################
 
-from .. import desc_format
-from ..matrix import MATRIX_INFO
-from ..transform import SYM_INFO
-from . import LANTHANIDE_IONS
-from .content import get_matrix_heads
+from ameli import desc_format
+from ameli.matrix import MATRIX_INFO
+from ameli.transform import SYM_INFO
+from ameli.lanthanide import LANTHANIDE_IONS
+
+from content import get_matrix_heads
 
 DESCRIPTION = """
 <p>

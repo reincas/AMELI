@@ -4,8 +4,9 @@
 # This program is free software under the terms of the MIT license.      #
 ##########################################################################
 #
-# This module provides generator functions for different objects required
-# for lanthanide ion configurations.
+# Note: This script is for documentation only. It is required by the
+# AMELI maintainer to upload the results of the AMELI package to the
+# Zenodo repository.
 #
 ##########################################################################
 

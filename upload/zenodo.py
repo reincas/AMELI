@@ -3,23 +3,28 @@
 # <reinhard.caspary@phoenixd.uni-hannover.de>                            #
 # This program is free software under the terms of the MIT license.      #
 ##########################################################################
+#
+# Note: This script is for documentation only. It is required by the
+# AMELI maintainer to upload the results of the AMELI package to the
+# Zenodo repository.
+#
+##########################################################################
 
 import hashlib
 import io
 import json
 import os
 import platform
-import pprint
-
 import requests
 import tempfile
 import zipfile
 from pathlib import Path
 
 from ameli.lanthanide import LANTHANIDE_IONS
-from ameli.lanthanide.content import get_root_path, get_zip_folders
-from ameli.lanthanide.dataset import description
 from ameli.vault import Version, VersionError
+
+from content import get_root_path, get_zip_folders
+from dataset import description
 
 
 ##########################################################################
