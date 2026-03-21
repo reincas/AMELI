@@ -13,8 +13,8 @@
 from ameli import desc_format
 from ameli.matrix import MATRIX_INFO
 from ameli.transform import SYM_INFO
-from ameli.lanthanide import LANTHANIDE_IONS
 
+from lanthanide import LANTHANIDE_IONS
 from content import get_matrix_heads
 
 DESCRIPTION = """

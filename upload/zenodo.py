@@ -20,9 +20,9 @@ import tempfile
 import zipfile
 from pathlib import Path
 
-from ameli.lanthanide import LANTHANIDE_IONS
 from ameli.vault import Version, VersionError
 
+from lanthanide import LANTHANIDE_IONS
 from content import get_root_path, get_zip_folders
 from dataset import description
 
