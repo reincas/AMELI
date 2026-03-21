@@ -15,7 +15,7 @@ authors = [
 description = "Python 3 package to calculate angular matrix elements of lanthanide ions."
 license = "MIT"
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.11"
 dependencies = [
 	"h5py == 3.15.1",
     "numpy == 2.4.2",
