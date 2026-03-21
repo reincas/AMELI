@@ -74,7 +74,7 @@ Even though the script builds a dependency graph and schedules the computation t
 takes several days to finish.
 The folder `test`contains a set of test scripts orchestrated by the main script `test.py` which perform a large number
 of mathematical tests and comparisons to values published in printed literature.
-Its subfolder `results` contains the results from a test run and the subfolder `tables` the script used to extract the
-comparison tables in the AMELI paper (coming soon) from the test results.
+Its subfolder `results` contains the results from a test run and the subfolder `tables` contains the script used to
+extract the comparison tables in the AMELI paper (coming soon) from the test results.
 The folder `upload` is for documentation only.
 It contains the scripts used to upload and update the matrix datasets to the Zenodo repository.
