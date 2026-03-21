@@ -61,6 +61,6 @@ transition from measured absorption spectra in amorphous hosts, it is not intend
 The AMELI repository contains all matrices for the Crystal Field Intensity (CFI) method instead, which uses the same
 mathematical procedure as Judd-Ofelt, but with a larger set of parameters reflecting the richer structure of 
 crystalline spectra.
-Based on the odd-rank unit tensor operators the electric dipole operators for any site-symmetry can be modelled in
+Based on odd-rank unit tensor operators the electric dipole operators for any site-symmetry can be modelled in
 addition to the magnetic dipole operator, which is the same for amorphous and crystalline materials.
 
