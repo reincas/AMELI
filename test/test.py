@@ -21,7 +21,7 @@ CODES = {
 
 
 def main(test_args=None):
-    test_path = Path("../test")
+    test_path = Path("")
     path = test_path / "pytest.ini"
 
     config = configparser.ConfigParser()
