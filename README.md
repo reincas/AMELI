@@ -20,6 +20,11 @@ used for Judd-Ofelt calculations up to now.
 Such calculations should instead be based on a set of radial integrals serving as linear expansion coefficients for the
 operator matrices.
 
+## Documentation
+
+A paper on the mathematical background of AMELI, its workflow and a detailed comparison to the literature is ready
+and will be submitted to arXiv and a scientific journal very soon.  
+
 ## General Remarks
 
 All angular matrices of a given electron configuration are constants and need to be calculated only once. 
@@ -78,8 +83,3 @@ Its subfolder `results` contains the results from a test run and the subfolder `
 extract the comparison tables in the AMELI paper from the test results.
 The folder `upload` is for documentation only.
 It contains the scripts used to upload and update the matrix datasets to the Zenodo repository.
-
-## Documentation
-
-A paper on the mathematical background of AMELI, its workflow and a detailed comparison to the literature is ready
-and will be submitted to arXiv and a scientific journal very soon.  
