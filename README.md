@@ -67,7 +67,8 @@ addition to the magnetic dipole operator, which is the same for amorphous and cr
 ## Package Structure
 
 The main code of the AMELI package is contained in the folder `ameli`.
-The script `generate/generate.py` is used to calculate the full set of matrices for all lanthanide configurations.
+The script `generate.py` in the folder `generate` is used to calculate the full set of matrices for all lanthanide
+configurations.
 Due to the exact arithmetic this is a time-consuming process.
 Even though the script builds a dependency graph and schedules the computation tasks to all available CPU cores, it
 takes several days to finish.
