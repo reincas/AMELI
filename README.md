@@ -41,7 +41,7 @@ content is easily accessible to humans and machines.
 A Python implementation is available, but not necessary, because a SciDataContainer file is just a ZIP folder.
 AMELI containers consist only of JSON files for the meta data and HDF5 files for the numerical data.
 
-## Application 1: Energy-Level Fits
+## Application 1: Energy Levels of Lanthanides
 
 The matrices are used for the fit of lanthanide energy levels to measured absorption spectra resulting in radial
 integrals and coefficients of all states in intermediate coupling.
@@ -51,7 +51,7 @@ This includes the mixing of states with different $J$ quantum number.
 For amorphous materials the calculations can take advantage of the effective rotational site symmetry which allows to
 perform them in a reduced $SLJ$ space with much smaller matrices.
 
-## Application 2: Fit of Transition Intensities
+## Application 2: Transition Intensities of Lanthanides
 
 Based on radial integrals from the literature or own energy-level fits, the coefficients of all states in intermediate
 coupling can be determined as linear combination of $LS$-states.
