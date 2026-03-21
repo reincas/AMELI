@@ -55,7 +55,7 @@ perform them in a reduced $SLJ$ space with much smaller matrices.
 
 Based on radial integrals from the literature or own energy-level fits, the coefficients of all states in intermediate
 coupling can be determined as linear combination of $LS$-states.
-This makes building all reduced matrix elements for Judd-Ofelt calculations very simple.
+This makes the generation of all reduced matrix elements for Judd-Ofelt calculations a simple task.
 While the Judd-Ofelt theory is standard to predict the radiative intensities of every emission and absorption
 transition from measured absorption spectra in amorphous hosts, it is not intended for crystalline hosts.
 The AMELI repository contains all matrices for the Crystal Field Intensity (CFI) method, which uses the same
