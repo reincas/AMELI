@@ -6,11 +6,14 @@ Each matrix element is stored as signed square root of a rational number.
 The basic functionality is ready for any many-electron configuration, but the implementation of most high-level
 operators is specific for single-shell systems like the lanthanide ions. 
 
-The main purpose of this software is the preparation of the comprehensive set of lanthanide matrices (unit tensors,
-angular momentum operators and Hamiltonians) in the [AMELI repository](https://zenodo.org/communities/ameli) on
-Zenodo.
+The main purpose of this software is the preparation of the comprehensive matrix datasets in the
+[AMELI repository](https://zenodo.org/communities/ameli) on Zenodo.
+Each dataset for the lanthanide ions from $\mathrm{Ce^{3+}}$ to $\mathrm{Yb^{3+}}$ contains unit tensor operators,
+angular momentum operators and Hamiltonians.
+All relevant perturbation operators are provided in first order (Coulomb, spin-orbit, spin-spin, spin-other-orbit) and
+in second order (Coulomb, electrostatic spin-orbit).
 
-The AMELI matrix sets are intended as replacements for the printed tables published by B. R. Judd, W. T. Carnall,
+The AMELI matrix datasets are intended as replacements for the printed tables published by B. R. Judd, W. T. Carnall,
 C. W. Nielson, and G. F. Koster on the 1960s and 1970s.
 In particular they are intended to replace all tables of reduced unit tensor matrix elements in intermediate coupling
 used for Judd-Ofelt calculations up to now.
@@ -42,8 +45,6 @@ AMELI containers consist only of JSON files for the meta data and HDF5 files for
 
 The matrices are used for the fit of lanthanide energy levels to measured absorption spectra resulting in radial
 integrals and coefficients of all states in intermediate coupling.
-All relevant perturbation operators are provided in first order (Coulomb, spin-orbit, spin-spin, spin-other-orbit) and
-in second order (Coulomb, electrostatic spin-orbit).
 For crystalline materials these calculations can take full advantage of the all spectral lines using the even-rank unit
 tensor operators for modelling the crystal-field splitting.
 This includes the mixing of states with different $J$ quantum number.
