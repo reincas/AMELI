@@ -17,7 +17,7 @@ The AMELI matrix datasets are intended as replacements for the printed incomplet
 W. T. Carnall, C. W. Nielson, and G. F. Koster on the 1960s and 1970s.
 In particular they are intended to replace all tables of reduced unit tensor matrix elements in intermediate coupling
 used for Judd-Ofelt calculations up to now.
-Such calculations should be based on a set of radial integrals serving as linear expansion coefficients for the
+Such calculations should instead be based on a set of radial integrals serving as linear expansion coefficients for the
 operator matrices.
 
 ## General Remarks
