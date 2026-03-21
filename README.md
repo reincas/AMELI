@@ -9,7 +9,7 @@ specific for single-shell systems like the lanthanide ions.
 The main purpose of this software is the preparation of the comprehensive matrix datasets in the
 [AMELI repository](https://zenodo.org/communities/ameli) on Zenodo.
 Each lanthanide dataset for the configurations $f^1$ to $f^{13}$ contains unit tensor operators, angular momentum
-operators and Hamiltonians.
+operators and perturbation Hamiltonians.
 All relevant perturbation operators are provided in first order (Coulomb, spin-orbit, spin-spin, spin-other-orbit) and
 in second order (Coulomb, electrostatic spin-orbit).
 
