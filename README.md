@@ -5,8 +5,9 @@ in exact arithmetic using SymPy.
 Each matrix element is stored as signed square root of a rational number.
 The basic functionality is ready for any many-electron configuration, but the implementation of most high-level
 operators is specific for single-shell systems like the lanthanide ions. 
+
 The main purpose of this software is the preparation of the comprehensive set of lanthanide matrices (unit tensors,
-angular momentum operators and Hamiltonians) in the [AMELI repository](https://doi.org/10.5281/zenodo.19144765) on
+angular momentum operators and Hamiltonians) in the [AMELI repository](https://zenodo.org/communities/ameli) on
 Zenodo.
 
 The AMELI matrix sets are intended as replacements for the printed tables published by B. R. Judd, W. T. Carnall,
