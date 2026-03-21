@@ -12,13 +12,13 @@ import multiprocessing
 import multiprocessing.queues
 import os
 import queue
-
 import psutil
 import time
 
-from ..matrix import Matrix
-from .graph import Registry, MatrixNode
-from .operators import matrix_args
+from ameli.matrix import Matrix
+
+from graph import Registry, MatrixNode
+from operators import matrix_args
 
 vmem = psutil.virtual_memory()
 MEM_CRITICAL = 0.05 * vmem.total

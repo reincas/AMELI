@@ -4,7 +4,7 @@
 # This program is free software under the terms of the MIT license.      #
 ##########################################################################
 
-from ..matrix import MatrixName
+from ameli.matrix import MatrixName
 
 
 def matrix_names():
