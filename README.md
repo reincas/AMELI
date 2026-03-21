@@ -34,8 +34,8 @@ Zenodo.
 A reference implementation will be provided by the [Lanthanide](https://github.com/reincas/Lanthanide) package,
 which will soon be switching from self-generated matrices to AMELI.
 
-AMELI calculates operator matrices in the product state space, but it also generates a transformation matrix to
-$LS$-coupling in exact arithmetic.
+AMELI calculates operator matrices in the product state space together with a transformation matrix to $LS$-coupling
+in exact arithmetic.
 All characteristic eigenvalues and irreducible representations for each state are provided.
 Global signs are synchronized for states inside each $J$-multiplet.
 This allows to use reduced matrices for intermediate coupling in amorphous materials.
