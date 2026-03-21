@@ -43,7 +43,7 @@ AMELI containers consist only of JSON files for the meta data and HDF5 files for
 
 ## Application 1: Energy Levels of Lanthanides
 
-The matrices are used for the fit of lanthanide energy levels to measured absorption spectra resulting in radial
+The matrices can be used for the fit of lanthanide energy levels to measured absorption spectra resulting in radial
 integrals and the coefficients of all states in intermediate coupling.
 For crystalline materials these calculations can take full advantage of the all spectral lines using the even-rank unit
 tensor operators for modelling the crystal-field splitting.
