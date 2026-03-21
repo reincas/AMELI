@@ -4,7 +4,7 @@
 # This program is free software under the terms of the MIT license.      #
 ##########################################################################
 #
-# This internal module provides the generation of a directed cyclic graph
+# This module provides the generation of a directed cyclic graph
 # representing the dependencies of data container objects (nodes).
 #
 ##########################################################################

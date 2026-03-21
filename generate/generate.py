@@ -3,6 +3,20 @@
 # <reinhard.caspary@phoenixd.uni-hannover.de>                            #
 # This program is free software under the terms of the MIT license.      #
 ##########################################################################
+#
+# This script uses the AMELI package to generate the full set of all
+# angular matrix elements of all lanthanide ions with 1-13 electrons in
+# the f-shell.
+#
+# This calculation uses exact arithmetic based on SymPy and is therefore
+# slow. If you set 'POOL = True' below, the script prepares a graph of
+# all dependent objects and schedules the calculation tasks to all
+# available CPU cores.
+#
+# Expect a runtime of several days even with multiprocessing.
+#
+##########################################################################
+
 
 import logging
 import time

@@ -3,6 +3,16 @@
 # <reinhard.caspary@phoenixd.uni-hannover.de>                            #
 # This program is free software under the terms of the MIT license.      #
 ##########################################################################
+#
+# This module provides functions to calculate the angular matrices of all
+# relevant tensor operators:
+#
+#     run_sync(): Linear calculation in one process. The runtime will
+#                 be some weeks.
+#     run_pool(): Multiprocessing-based calculation utilizing all available
+#                 CPU cores. The runtime will still be several days.
+#
+##########################################################################
 
 import gc
 import heapq

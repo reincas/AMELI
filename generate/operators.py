@@ -3,6 +3,11 @@
 # <reinhard.caspary@phoenixd.uni-hannover.de>                            #
 # This program is free software under the terms of the MIT license.      #
 ##########################################################################
+#
+# This module provides the names of the angular matrices of all relevant
+# tensor operators.
+#
+##########################################################################
 
 from ameli.matrix import MatrixName
 
