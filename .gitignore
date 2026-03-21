@@ -2,12 +2,8 @@
 .test/
 .venv/
 attic/
-ameli/vault
+src/ameli/vault
 private/
-
-
-logs
-*.log
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
