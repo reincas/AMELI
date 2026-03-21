@@ -13,8 +13,8 @@ operators and Hamiltonians.
 All relevant perturbation operators are provided in first order (Coulomb, spin-orbit, spin-spin, spin-other-orbit) and
 in second order (Coulomb, electrostatic spin-orbit).
 
-The AMELI matrix datasets are intended as replacements for the printed tables published by B. R. Judd, W. T. Carnall,
-C. W. Nielson, and G. F. Koster on the 1960s and 1970s.
+The AMELI matrix datasets are intended as replacements for the printed incomplete tables published by B. R. Judd,
+W. T. Carnall, C. W. Nielson, and G. F. Koster on the 1960s and 1970s.
 In particular they are intended to replace all tables of reduced unit tensor matrix elements in intermediate coupling
 used for Judd-Ofelt calculations up to now.
 Such calculations should be based on a set of radial integrals serving as linear expansion coefficients for the
