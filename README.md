@@ -1,4 +1,4 @@
-# AMELI 1.2.0 (Angular Matrix Elements of Lanthanide Ions)
+# AMELI 1.2.1 (Angular Matrix Elements of Lanthanide Ions)
 
 This is a Python 3 package to calculate the angular matrix elements of spherical tensor operators of lanthanide ions
 in exact arithmetic using SymPy.
@@ -13,28 +13,23 @@ operators and perturbation Hamiltonians.
 All relevant perturbation operators are provided in first order (Coulomb, spin-orbit, spin-spin, spin-other-orbit) and
 in second order (Coulomb, electrostatic spin-orbit).
 
-The AMELI matrix datasets are intended as replacements for the printed and incomplete tables published mainly by
+The **AMELI** matrix datasets are intended as replacements for the printed and incomplete tables published mainly by
 B. R. Judd, W. T. Carnall, C. W. Nielson, and G. F. Koster on the 1960s and 1970s.
 In particular they are intended to replace all tables of reduced unit tensor matrix elements in intermediate coupling
 still used for Judd-Ofelt calculations.
 Such calculations should instead be based on a set of radial integrals serving as linear expansion coefficients for the
 operator matrices.
 
-## Documentation
-
-A paper on the mathematical background of AMELI, its workflow, and a detailed comparison of the resulting tensor
-matrices to the literature is ready and will be submitted to arXiv and a scientific journal very soon.  
-
 ## General Remarks
 
 All angular matrices of a given electron configuration are constants and need to be calculated only once. 
 This software package therefore is intended mainly as reference.
-Instead of integrating AMELI code into your own project, you should use the matrices from the AMELI repository on
+Instead of integrating **AMELI** code into your own project, you should use the matrices from the **AMELI** repository on
 Zenodo.
 A reference implementation will be provided by the [Lanthanide](https://github.com/reincas/Lanthanide) package,
-which will soon be switching from self-generated matrices to AMELI.
+which will soon be switching from self-generated matrices to **AMELI**.
 
-AMELI calculates operator matrices in the product state space together with a transformation matrix to $LS$-coupling
+**AMELI** calculates operator matrices in the product state space together with a transformation matrix to $LS$-coupling
 in exact arithmetic.
 All characteristic eigenvalues and irreducible representations for each state are provided.
 Global signs are synchronized for states inside each $J$-multiplet.
@@ -45,7 +40,20 @@ All matrices and other intermediate calculation results are stored as
 Following the [FAIR data principles](https://en.wikipedia.org/wiki/FAIR_data) of research data management the container
 content is easily accessible to humans and machines.
 A Python implementation is available, but not necessary, because a SciDataContainer file is just a ZIP folder.
-AMELI containers consist only of JSON files for the meta data and HDF5 files for the numerical data.
+**AMELI** containers consist only of JSON files for the meta data and HDF5 files for the numerical data.
+
+## Documentation
+
+A paper on the mathematical background of **AMELI**, its workflow, and a detailed comparison of the resulting tensor
+matrices to the literature is ready and will be submitted to arXiv and a scientific journal very soon.  
+
+## Installation
+
+You can install **AMELI** directly from PyPI using `pip`:
+
+```
+pip install ameli
+```
 
 ## Application 1: Energy Levels of Lanthanides
 
@@ -64,7 +72,7 @@ coupling can be determined as linear combination of $LS$-states.
 This makes the generation of all reduced matrix elements for Judd-Ofelt calculations a simple task.
 While the Judd-Ofelt theory is standard to predict the radiative intensities of every emission and absorption
 transition from measured absorption spectra in amorphous hosts, it is not intended for crystalline hosts.
-The AMELI repository contains all matrices for the Crystal Field Intensity (CFI) method instead, which uses the same
+The **AMELI** repository contains all matrices for the Crystal Field Intensity (CFI) method instead, which uses the same
 mathematical procedure as Judd-Ofelt, but with a larger set of parameters reflecting the richer structure of 
 crystalline spectra.
 Based on odd-rank unit tensor operators the electric dipole operators for any site-symmetry can be modelled in
@@ -72,7 +80,7 @@ addition to the magnetic dipole operator, which is the same for amorphous and cr
 
 ## Package Structure
 
-The main code of the AMELI package is contained in the folder `ameli`.
+The main code of the **AMELI** package is contained in the folder `ameli`.
 The script `generate.py` in the folder `generate` is used to calculate the full set of matrices for all lanthanide
 configurations.
 Due to the exact arithmetic this is a time-consuming process.
@@ -81,6 +89,6 @@ takes several days to finish.
 The folder `test`contains a set of test scripts orchestrated by the main script `test.py` which perform a large number
 of mathematical tests and comparisons to values published in printed literature.
 Its subfolder `results` contains the results from a test run and the subfolder `tables` contains the script used to
-extract the comparison tables in the AMELI paper from the test results.
+extract the comparison tables in the **AMELI** paper from the test results.
 The folder `upload` is for documentation only.
 It contains the scripts used to upload and update the matrix datasets on the Zenodo repository.
