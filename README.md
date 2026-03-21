@@ -44,7 +44,7 @@ AMELI containers consist only of JSON files for the meta data and HDF5 files for
 ## Application 1: Energy Levels of Lanthanides
 
 The matrices are used for the fit of lanthanide energy levels to measured absorption spectra resulting in radial
-integrals and coefficients of all states in intermediate coupling.
+integrals and the coefficients of all states in intermediate coupling.
 For crystalline materials these calculations can take full advantage of the all spectral lines using the even-rank unit
 tensor operators for modelling the crystal-field splitting.
 This includes the mixing of states with different $J$ quantum number.
@@ -56,8 +56,8 @@ perform them in a reduced $SLJ$ space with much smaller matrices.
 Based on radial integrals from the literature or own energy-level fits, the coefficients of all states in intermediate
 coupling can be determined as linear combination of $LS$-states.
 This makes building all reduced matrix elements for Judd-Ofelt calculations very simple.
-While the Judd-Ofelt theory is standard to predict the radiative transition intensities in amorphous hosts, it should
-be avoided for crystalline hosts.
+While the Judd-Ofelt theory is standard to predict the radiative intensities of every emission and absorption
+transition from measured absorption spectra in amorphous hosts, it is not intended for crystalline hosts.
 The AMELI repository contains all matrices for the Crystal Field Intensity (CFI) method, which uses the same
 mathematical procedure as Judd-Ofelt, but with a larger set of parameters reflecting the richer structure of 
 crystalline spectra.
