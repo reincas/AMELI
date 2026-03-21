@@ -6,9 +6,6 @@ requires = [
 ]
 build-backend = "setuptools.build_meta"
 
-[tool.setuptools]
-packages = ["ameli", "ameli.lanthanide"]
-
 [project]
 name = "AMELI"
 version = "1.2.0"
@@ -18,16 +15,24 @@ authors = [
 description = "Python 3 package to calculate angular matrix elements of lanthanide ions."
 license = "MIT"
 readme = "README.md"
+requires-python = ">=3.13"
 dependencies = [
 	"h5py == 3.15.1",
     "numpy == 2.4.2",
-    "psutil == 7.2.2",
-    "requests == 2.32.5",
     "scidatacontainer == 1.2.0",
     "sympy == 1.14.0",
 ]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Physics",
     "Programming Language :: Python :: 3",
     "Operating System :: OS Independent"
 ]
+
+[project.urls]
+Homepage = "https://github.com/reincas/AMELI"
+Issues = "https://github.com/reincas/AMELI/issues"
+
+[tool.setuptools]
+packages = ["ameli"]
