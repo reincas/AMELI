@@ -16,7 +16,7 @@ in second order (Coulomb, electrostatic spin-orbit).
 The AMELI matrix datasets are intended as replacements for the printed and incomplete tables published mainly by
 B. R. Judd, W. T. Carnall, C. W. Nielson, and G. F. Koster on the 1960s and 1970s.
 In particular they are intended to replace all tables of reduced unit tensor matrix elements in intermediate coupling
-used for Judd-Ofelt calculations up to now.
+still used for Judd-Ofelt calculations.
 Such calculations should instead be based on a set of radial integrals serving as linear expansion coefficients for the
 operator matrices.
 
