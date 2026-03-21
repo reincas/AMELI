@@ -24,7 +24,7 @@ operator matrices.
 
 All angular matrices of a given electron configuration are constants and need to be calculated only once. 
 This package therefore is intended mainly as reference.
-Instead of integrating AMELI code in your own project, you should use the matrices from the AMELI repository on Zenodo.
+Instead of integrating AMELI code into your own project, you should use the matrices from the AMELI repository on Zenodo.
 The reference implementation will be the [Lanthanide](https://github.com/reincas/Lanthanide) package, which will soon
 switch from self-generated matrices to AMELI.
 
