@@ -64,3 +64,13 @@ crystalline spectra.
 Based on odd-rank unit tensor operators the electric dipole operators for any site-symmetry can be modelled in
 addition to the magnetic dipole operator, which is the same for amorphous and crystalline materials.
 
+## Package Structure
+
+The main code of the AMELI package is contained in the folder `ameli`.
+The script `generate/generate.py` is used to calculate the full set of matrices for all lanthanide configurations.
+Due to the exact arithmetic this is a time-consuming process.
+Even though the script builds a dependency graph and schedules the computation tasks to all available CPU cores, it
+takes several days to finish.
+The folder `test`contains a set of test scripts orchestrated by the main script `test.py` which perform a large number
+of mathematical tests and comparisons to values published in printed literature.
+Its subfolder `results` contains the [results](test/results/ameli_test.html) from a test run.
