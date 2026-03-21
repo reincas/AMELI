@@ -22,7 +22,7 @@ operator matrices.
 
 ## Documentation
 
-A paper on the mathematical background of AMELI, its workflow and a detailed comparison of the resulting tensor
+A paper on the mathematical background of AMELI, its workflow, and a detailed comparison of the resulting tensor
 matrices to the literature is ready and will be submitted to arXiv and a scientific journal very soon.  
 
 ## General Remarks
