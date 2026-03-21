@@ -35,4 +35,7 @@ Homepage = "https://github.com/reincas/AMELI"
 Issues = "https://github.com/reincas/AMELI/issues"
 
 [tool.setuptools]
-packages = ["src/ameli"]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
