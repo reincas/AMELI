@@ -1,9 +1,8 @@
 name: Publish AMELI to PyPI
 
 on:
-  push:
-    tags:
-      - "v*.*.*" # Triggers on tags like v1.2.0
+  release:
+    types: [published] # Triggers when a GitHub Release is officially published
 
 jobs:
   build-n-publish:
