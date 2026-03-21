@@ -36,8 +36,8 @@ This allows to use reduced matrices for intermediate coupling in amorphous mater
 
 All matrices and other intermediate calculation results are stored as
 [SciDataContainer](https://scidatacontainer.readthedocs.io) files enriched with plenty of meta data and descriptions.
-Following the [FAIR data principles](https://en.wikipedia.org/wiki/FAIR_data) of data management the container content
-is easily accessible to humans and machines.
+Following the [FAIR data principles](https://en.wikipedia.org/wiki/FAIR_data) of research data management the container
+content is easily accessible to humans and machines.
 A Python implementation is available, but not necessary, because a SciDataContainer file is just a ZIP folder.
 AMELI containers consist only of JSON files for the meta data and HDF5 files for the numerical data.
 
