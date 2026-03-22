@@ -7,7 +7,7 @@ The basic functions support any many-electron configuration, but the implementat
 specific for single-shell systems like the lanthanide ions. 
 
 The main purpose of this software is the preparation of the comprehensive matrix datasets in the
-[AMELI repository](https://zenodo.org/communities/ameli) on Zenodo.
+[AMELI community](https://zenodo.org/communities/ameli) on Zenodo.
 Each lanthanide dataset for the electron configurations $f^1$ to $f^{13}$ contains unit tensor operators, angular
 momentum operators and perturbation Hamiltonians.
 All relevant perturbation operators are provided in first order (Coulomb, spin-orbit, spin-spin, spin-other-orbit) and
@@ -49,7 +49,7 @@ matrices to the literature is ready and will be submitted to arXiv and a scienti
 
 ## Installation
 
-You can install AMELI directly from PyPI using `pip`:
+You can install the AMELI software directly from PyPI using `pip`:
 
 ```
 pip install ameli
