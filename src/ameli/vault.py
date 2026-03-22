@@ -21,7 +21,7 @@ from pathlib import Path
 import h5py
 from scidatacontainer import Container
 
-AMELI_VERSION = "1.2.0"
+AMELI_VERSION = "1.2.1"
 VERSION_PATTERN = r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$"
 VAULT_PATH = Path(__file__).resolve().parent / "vault"
 
