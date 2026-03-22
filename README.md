@@ -1,7 +1,7 @@
 # AMELI 1.2.1 (Angular Matrix Elements of Lanthanide Ions)
 
-This is a Python 3 package to calculate the angular matrix elements of spherical tensor operators of lanthanide ions
-in exact arithmetic using SymPy.
+This is a Python 3 package to calculate the constant angular matrix elements of spherical tensor operators of
+lanthanide ions in exact arithmetic using SymPy.
 Each matrix element is stored as signed square root of a rational number.
 The basic functions support any many-electron configuration, but the implementation of most high-level operators is
 specific for single-shell systems like the lanthanide ions. 
