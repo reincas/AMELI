@@ -45,7 +45,7 @@ AMELI containers consist only of JSON files for the meta data and HDF5 files for
 ## Documentation
 
 A paper on the mathematical background of AMELI, its workflow, and a detailed comparison of the resulting tensor
-matrices to the literature is [available on arXive](https://doi.org/10.48550/arXiv.2603.21947) and will be submitted
+matrices to the literature is [available on arXiv](https://doi.org/10.48550/arXiv.2603.21947) and will be submitted
 to a scientific journal very soon.  
 
 ## Installation
