@@ -355,21 +355,25 @@ def update_signs(slices, operator, k, transform, J, M, known, signs):
         if np.all(known[i:j]):
             continue
 
-        # Take the reduced matrix of the stretched state M = -J as reference, if it is not zero
-        diagonal = reduced(i, i, operator, k, transform, J[i], M[i], M[i])
+        # Take the reduced matrix of the stretched state M = J as reference, if it is not zero
+        ref = j - 1
+        assert M[ref] == J[ref]
+        diagonal = reduced(ref, ref, operator, k, transform, J[ref], M[ref], M[ref])
         if diagonal is sp.nan:
             continue
-        known[i] = True
+        known[ref] = True
 
         # Loop through all other eigenvectors
-        for col in range(i + 1, j):
+        for col in range(i, ref)[::-1]:
 
             # Sign was already fixed
             if known[col]:
                 continue
 
-            # Loop through all rows < col (negative coordinates of the tensor operator) limited by the tensor rank
-            for row in range(max(i, col - k), col)[::-1]:
+            # Loop through all rows > col (positive coordinates of the tensor operator) limited by the tensor rank
+            for row in range(col + 1, min(j, col + k + 1)):
+                if not known[row]:
+                    continue
 
                 # Try to get a value for the reduced matrix element
                 assert J[row] == J[col]
@@ -391,6 +395,21 @@ def update_signs(slices, operator, k, transform, J, M, known, signs):
                     raise RuntimeError("Wigner-Eckart theorem failed!")
                 known[col] = True
                 break
+
+
+def get_j_slices(config, eigenvalues):
+    """ Return the list of slices of J eigenvalues. """
+
+    num_states = config.num_states
+    names = SYM_CHAIN[config_key(config)]["chain"][:-1]
+    keys = [state_key(eigenvalues, i, names) for i in range(num_states)]
+    slices = []
+    i = 0
+    for j in range(num_states + 1):
+        if j == num_states or keys[j] != keys[i]:
+            slices.append((i, j))
+            i = j
+    return slices
 
 
 def correct_signs(config, transform: sp.Matrix, eigenvalues: dict) -> sp.Matrix:
@@ -415,38 +434,28 @@ def correct_signs(config, transform: sp.Matrix, eigenvalues: dict) -> sp.Matrix:
     M = eigenvalues["Jz"]
 
     # Slices of the J eigenspaces
-    names = SYM_CHAIN[config_key(config)]["chain"][:-1]
-    keys = [state_key(eigenvalues, i, names) for i in range(num_states)]
-    slices = []
-    i = 0
-    for j in range(num_states + 1):
-        if j == num_states or keys[j] != keys[i]:
-            slices.append((i, j))
-            i = j
+    slices = get_j_slices(config, eigenvalues)
 
-    # Use unit tensor operators to fix the global signs
+    # Get all unit tensor operator names
+    unit_names = {"U": "UT/{k},0,{k},{q}", "T": "UT/0,{k},{k},{q}"}
+    operators = []
     l = max(electron.l for electron in config.states.electron_pool)
     for k in range(1, 2 * l + 1):
+        for op in ["U", "T"]:
+            if op == "T" and k > 1:
+                continue
+            operators.append((k, f"{op}({k})", unit_names[op]))
 
-        # Use the components of the unit tensor operator of rank k in the orbital angular momentum space to correct
-        # as many signs as possible. The function update_signs() uses only non-positive components.
-        operator = {q: Unit(config.name, "UT/{k},0,{k},{q}".format(k=k, q=q)).matrix for q in range(-k, 1)}
-        update_signs(slices, operator, k, transform, J, M, known, signs)
-        logger.info(f"Global signs U({k}) in {config.name}: {sum(known)}/{len(known)} fixed")
-        if np.all(known):
-            break
-
-        # Operators in the spin space are limited to rank 1
-        if k > 1:
-            continue
-
-        # Use the unit tensor operator of rank k in the spin angular momentum space to correct as many signs
-        # as possible
-        operator = {q: Unit(config.name, "UT/0,{k},{k},{q}".format(k=k, q=q)).matrix for q in range(-k, 1)}
-        update_signs(slices, operator, k, transform, J, M, known, signs)
-        logger.info(f"Global signs T({k}) in {config.name}: {sum(known)}/{len(known)} fixed")
-        if np.all(known):
-            break
+    # Fix all signs in each J multiplet
+    while not np.all(known):
+        num_known = sum(known)
+        for k, name, unit in operators:
+            operator = {q: Unit(config.name, unit.format(k=k, q=q)).matrix for q in range(0, k + 1)}
+            update_signs(slices, operator, k, transform, J, M, known, signs)
+            logger.info(f"Global signs {name} in {config.name}: {sum(known)}/{len(known)} fixed")
+            if np.all(known):
+                break
+        assert sum(known) > num_known
 
     # Make sure that all global signs are corrected
     if not np.all(known):
@@ -1036,10 +1045,10 @@ class LS_States:
         return spaces
 
     def indices_j(self):
-        """ Return the indices of all stretched states with M = -J. """
+        """ Return the indices of all stretched states with M = J. """
 
         assert self.state_space == "SLJM"
-        return [i for i, j in self.state_spaces("J2")]
+        return [j - 1 for i, j in self.state_spaces("J2")]
 
     def collapse_j(self):
         """ Return this states object with collapsed J spaces. """
@@ -1048,7 +1057,7 @@ class LS_States:
         assert self.state_space == "SLJM"
         assert self.tensor_chain[-1] == "Jz"
 
-        # Indices of stretched sttaes with M = -J
+        # Indices of stretched states with M = J
         indices = self.indices_j()
 
         # Get dictionary representation of the current states object
