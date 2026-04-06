@@ -400,7 +400,7 @@ def update_signs(slices, operator, k, transform, J, M, known, signs):
                 break
 
 
-def get_j_slices(config, eigenvalues):
+def get_j_slices(config, eigenvalues, J, M):
     """ Return the list of slices of J eigenvalues. """
 
     num_states = config.num_states
@@ -410,6 +410,10 @@ def get_j_slices(config, eigenvalues):
     i = 0
     for j in range(num_states + 1):
         if j == num_states or keys[j] != keys[i]:
+            assert len(set(J[i:j])) == 1, keys[i]
+            assert j - i == 2 * J[i] + 1, keys[i]
+            assert M[i] == -J[i], keys[i]
+            assert M[j - 1] == J[i], keys[i]
             slices.append((i, j))
             i = j
     return slices
@@ -437,7 +441,7 @@ def correct_signs(config, transform: sp.Matrix, eigenvalues: dict) -> sp.Matrix:
     M = eigenvalues["Jz"]
 
     # Slices of the J eigenspaces
-    slices = get_j_slices(config, eigenvalues)
+    slices = get_j_slices(config, eigenvalues, J, M)
 
     # Get all unit tensor operator names
     unit_names = {"U": "UT/{k},0,{k},{q}", "T": "UT/0,{k},{k},{q}"}
