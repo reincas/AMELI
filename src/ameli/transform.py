@@ -357,7 +357,10 @@ def update_signs(slices, operator, k, transform, J, M, known, signs):
 
         # Take the reduced matrix of the stretched state M = J as reference, if it is not zero
         ref = j - 1
-        assert M[ref] == J[ref]
+        if M[ref] != J[ref]:
+            logger.error(f"Slice ({i},{j}): J={J[i:j]}")
+            logger.error(f"Slice ({i},{j}): M={M[i:j]}")
+        assert M[ref] == J[ref], f"M[{ref}]={M[ref]} != J[{ref}]={J[ref]}"
         diagonal = reduced(ref, ref, operator, k, transform, J[ref], M[ref], M[ref])
         if diagonal is sp.nan:
             continue
