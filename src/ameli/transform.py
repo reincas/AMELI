@@ -167,7 +167,7 @@ def build_tau(eigenvalues: dict) -> list:
         elif "C5" in eigenvalues:
             key = state_key(eigenvalues, i, ["S2", "C5", "L2", "J2", "Jz"])
         else:
-            raise ValueError("Wrong configuration!")
+            key = state_key(eigenvalues, i, ["S2", "L2", "J2", "Jz"])
         if key not in names:
             names[key] = [i]
         else:
