@@ -101,7 +101,7 @@ SYM_CHAIN = {
     },
     "f(n)": {
         "chain": ["S2", "C7", "sen", "C2", "L2", "tau", "num", "J2", "Jz"],
-        "sort": ["S2", "L2", "C7", "C2", "J2", "Jz"],
+        "sort": ["S2", "L2", "C7", "C2", "tau", "J2", "Jz"],
         "template_short": "{S2}{L2}{num}",
         "template_term": "{S2}{L2}{num} {sen} {C7}{C2}{tau}",
         "template_full": "{S2}{L2}{num} {sen} {C7}{C2}{tau} {J2} {Jz}",
@@ -837,15 +837,12 @@ def transform_states(config):
     # Build a dictionary containing lists of the eigenvalues of all states for each symmetry operator name
     eigenvalues = dict(zip(result.names, result.eigenvalues))
 
-    # Sort states in canonical order
-    transform, eigenvalues = sort_states(config, transform, eigenvalues)
-
-    # Add certain classification numbers to the dictionary of eigenvalues
-    eigenvalues = classify_states(config, eigenvalues)
-
     # Build a list which contains a dictionary of all eigenvalues and classification numbers for each state
     # in LS coupling
     states = get_states(config, eigenvalues)
+
+    # Add certain classification numbers to the dictionary of eigenvalues
+    eigenvalues = classify_states(config, eigenvalues)
 
     # Fix the global signs of the states in each J eigenspace
     transform = correct_signs(config, transform, eigenvalues)
