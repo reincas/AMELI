@@ -853,7 +853,7 @@ def transform_states(config):
     logger.info(f"Classified LS states for configuration {config.name}")
 
     # Sort states in canonical order
-    if "tau" in eigenvalues and set(eigenvalues["tau"]) == {0}:
+    if "tau" in eigenvalues and set(eigenvalues["tau"]) != {0}:
         transform, eigenvalues = sort_states(config, transform, eigenvalues)
         logger.info(f"Sorted LS states again for configuration {config.name}")
 
