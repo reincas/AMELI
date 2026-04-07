@@ -844,11 +844,6 @@ def transform_states(config):
     eigenvalues = dict(zip(result.names, result.eigenvalues))
     logger.info(f"Got LS eigenvalues for configuration {config.name}")
 
-    # Build a list which contains a dictionary of all eigenvalues and classification numbers for each state
-    # in LS coupling
-    states = get_states(config, eigenvalues)
-    logger.info(f"Got LS states for configuration {config.name}")
-
     # Sort states in canonical order
     transform, eigenvalues = sort_states(config, transform, eigenvalues)
     logger.info(f"Sorted LS states for configuration {config.name}")
@@ -861,6 +856,11 @@ def transform_states(config):
     if "tau" in eigenvalues and set(eigenvalues["tau"]) == {0}:
         transform, eigenvalues = sort_states(config, transform, eigenvalues)
         logger.info(f"Sorted LS states again for configuration {config.name}")
+
+    # Build a list which contains a dictionary of all eigenvalues and classification numbers for each state
+    # in LS coupling
+    states = get_states(config, eigenvalues)
+    logger.info(f"Got LS states for configuration {config.name}")
 
     # Fix the global signs of the states in each J eigenspace
     transform = correct_signs(config, transform, eigenvalues)
