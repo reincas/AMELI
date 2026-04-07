@@ -195,6 +195,14 @@ def build_num(eigenvalues: dict) -> list:
     assert len(num_states) == 1, "Different numbers of eigenvalues!"
     num_states = num_states.pop()
 
+    # Get other key chain
+    if "C7" in eigenvalues:
+        other_key_names = ["C7", "C2", "tau"]
+    elif "C5" in eigenvalues:
+        other_key_names = ["C5", "tau"]
+    else:
+        other_key_names = ["tau"]
+
     # Build a two-level dictionary which maps every term to the respective state indices
     names = {}
     for i in range(num_states):
@@ -208,12 +216,7 @@ def build_num(eigenvalues: dict) -> list:
         # The second level key distinguishes LS terms with the same L and S values, but different term classification
         # otherwise. The list names[ls_key]["order"] is used to record the order in which every different other_key
         # appears in the loop.
-        if "C7" in eigenvalues:
-            other_key = state_key(eigenvalues, i, ["C7", "C2", "tau"])
-        elif "C5" in eigenvalues:
-            other_key = state_key(eigenvalues, i, ["C5", "tau"])
-        else:
-            raise ValueError("Wrong configuration!")
+        other_key = state_key(eigenvalues, i, other_key_names)
         if other_key not in names[ls_key]:
             names[ls_key][other_key] = [i]
             names[ls_key]["order"].append(other_key)
@@ -278,7 +281,8 @@ def classify_states(config, eigenvalues: dict):
     if "num" in chain:
         eigenvalues["num"] = build_num(eigenvalues)
     if "sen" in chain:
-        eigenvalues["sen"] = build_sen(eigenvalues)
+        if "C7" in eigenvalues or "C5" in eigenvalues:
+            eigenvalues["sen"] = build_sen(eigenvalues)
 
     # The set of eigenvalues and classification numbers must be complete now
     assert set(chain) == set(eigenvalues.keys())
@@ -518,7 +522,9 @@ def sort_states(config, transform, eigenvalues):
     assert all(len(eigenvalues[name]) == config.num_states for name in eigenvalues)
 
     # Get sort order from the dictionary SYM_CHAIN
-    sort_names = SYM_CHAIN[config_key(config)]["sort"]
+    sort_names = list(SYM_CHAIN[config_key(config)]["sort"])
+    if "tau" in sort_names and "tau" not in eigenvalues:
+        sort_names.remove("tau")
 
     # Collect a list of eigenvalues in the sort order for each state
     elements = []
@@ -836,16 +842,29 @@ def transform_states(config):
 
     # Build a dictionary containing lists of the eigenvalues of all states for each symmetry operator name
     eigenvalues = dict(zip(result.names, result.eigenvalues))
+    logger.info(f"Got LS eigenvalues for configuration {config.name}")
 
     # Build a list which contains a dictionary of all eigenvalues and classification numbers for each state
     # in LS coupling
     states = get_states(config, eigenvalues)
+    logger.info(f"Got LS states for configuration {config.name}")
+
+    # Sort states in canonical order
+    transform, eigenvalues = sort_states(config, transform, eigenvalues)
+    logger.info(f"Sorted LS states for configuration {config.name}")
 
     # Add certain classification numbers to the dictionary of eigenvalues
     eigenvalues = classify_states(config, eigenvalues)
+    logger.info(f"Classified LS states for configuration {config.name}")
+
+    # Sort states in canonical order
+    if "tau" in eigenvalues and set(eigenvalues["tau"]) == {0}:
+        transform, eigenvalues = sort_states(config, transform, eigenvalues)
+        logger.info(f"Sorted LS states again for configuration {config.name}")
 
     # Fix the global signs of the states in each J eigenspace
     transform = correct_signs(config, transform, eigenvalues)
+    logger.info(f"Synchronised signs of J-multiplets for configuration {config.name}")
 
     # Send the list of all LS terms to the log
     terms = str_terms(config, states)
