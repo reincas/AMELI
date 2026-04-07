@@ -414,10 +414,10 @@ def get_j_slices(config, eigenvalues, J, M):
     i = 0
     for j in range(num_states + 1):
         if j == num_states or keys[j] != keys[i]:
-            assert len(set(J[i:j])) == 1, keys[i]
-            assert j - i == 2 * J[i] + 1, keys[i]
-            assert M[i] == -J[i], keys[i]
-            assert M[j - 1] == J[i], keys[i]
+            assert len(set(J[i:j])) == 1, f"Slice({i},{j}): J={J[i:j]}"
+            assert j - i == 2 * J[i] + 1, f"Slice({i},{j}): {j - i} != {2 * J[i] + 1}"
+            assert M[i] == -J[i], f"Slice({i},{j}): {M[i]} != {-J[i]}"
+            assert M[j - 1] == J[i], f"Slice({i},{j}): {M[j]} != {J[i]}"
             slices.append((i, j))
             i = j
     return slices
