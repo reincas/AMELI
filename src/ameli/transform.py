@@ -307,126 +307,166 @@ def get_states(config, eigenvalues: dict) -> list:
 # Global sign correction
 ###########################################################################
 
-def reduced(index_a, index_b, operator, k, transform, J, Ma, Mb):
-    """ Return a reduced matrix element <J||Q||J> of the given tensor operator Q of rank k by application of the
-    Wigner-Eckart theorem on the matrix element <J,Ma|Q|J,Mb>. Return SymPy.nan if the Wigner-Eckart theorem
-    can't be used for this matrix element. The function expects the product state matrices of the tensor coordinates
-    in the dictionary 'operator' with the coordinate number q as key. The respective column vectors from the matrix
-    'transform' are used to transform the tensor matrix element into the LS space. """
+# def reduced(index_a, index_b, operator, k, transform, J, Ma, Mb):
+#     """ Return a reduced matrix element <J||Q||J> of the given tensor operator Q of rank k by application of the
+#     Wigner-Eckart theorem on the matrix element <J,Ma|Q|J,Mb>. Return SymPy.nan if the Wigner-Eckart theorem
+#     can't be used for this matrix element. The function expects the product state matrices of the tensor coordinates
+#     in the dictionary 'operator' with the coordinate number q as key. The respective column vectors from the matrix
+#     'transform' are used to transform the tensor matrix element into the LS space. """
+#
+#     # The required tensor coordinate is defined by the m-conditions of the 3j-symbol in the Wigner-Eckart theorem
+#     q = Ma - Mb
+#     if q < -k or q > k:
+#         return sp.nan
+#
+#     # 3j-symbol with sign factor from the Wigner-Eckart theorem
+#     denominator = sym3j(J, k, J, -Ma, q, Mb)
+#     if denominator == 0:
+#         return sp.nan
+#     if (J - Ma) % 2:
+#         denominator = -denominator
+#
+#     # Matrix element of the q-component of the tensor operator in LS coupling
+#     numerator = transform.col(index_a).T * operator[q] * transform.col(index_b)
+#     assert numerator.shape == (1, 1)
+#     numerator = numerator[0, 0]
+#     if numerator == 0:
+#         return sp.nan
+#
+#     # Return valid non-zero reduced matrix element
+#     return numerator / denominator
 
-    # The required tensor coordinate is defined by the m-conditions of the 3j-symbol in the Wigner-Eckart theorem
-    q = Ma - Mb
-    if q < -k or q > k:
-        return sp.nan
 
-    # 3j-symbol with sign factor from the Wigner-Eckart theorem
-    denominator = sym3j(J, k, J, -Ma, q, Mb)
-    if denominator == 0:
-        return sp.nan
-    if (J - Ma) % 2:
-        denominator = -denominator
-
-    # Matrix element of the q-component of the tensor operator in LS coupling
-    numerator = transform.col(index_a).T * operator[q] * transform.col(index_b)
-    assert numerator.shape == (1, 1)
-    numerator = numerator[0, 0]
-    if numerator == 0:
-        return sp.nan
-
-    # Return valid non-zero reduced matrix element
-    return numerator / denominator
-
-
-def update_signs(slices, operator, k, transform, J, M, known, signs):
-    """ Fix as many global signs in each of the J eigenspaces as possible using the Wigner-Eckart theorem on
-    the given tensor operator of rank k. The eigenspaces are defined by the given list 'slices'. The dictionary
-    'operator' contains the Sympy matrices of components of a tensor operator of rank k in the product space. Keys
-    are the component number q and values are the matrices. Only negative components and q=0 are used here. The
-    matrix 'transform' contains the LS eigenvectors as columns and the sequences J and M contain the respective
-    quantum numbers of all states. The elements of the sequence 'known' are set True, if the sign of the respective
-    eigenvector was determined and the element in 'signs' is set to 1 if the sign of the eigenvector must be changed,
-    and to 0 otherwise. This function ignores all eigenvectors for which the respective element in 'known' is True. """
-
-    # Loop over each J eigenspace
-    for i, j in slices:
-
-        # Single element space
-        if J[i] == 0:
-            known[i] = True
-            continue
-
-        # This eigenspace is already fixed completely
-        if np.all(known[i:j]):
-            continue
-
-        # Take the reduced matrix of the stretched state M = J as reference, if it is not zero
-        ref = j - 1
-        if M[ref] != J[ref]:
-            logger.error(f"Slice ({i},{j}): J={J[i:j]}")
-            logger.error(f"Slice ({i},{j}): M={M[i:j]}")
-        assert M[ref] == J[ref], f"M[{ref}]={M[ref]} != J[{ref}]={J[ref]}"
-        diagonal = reduced(ref, ref, operator, k, transform, J[ref], M[ref], M[ref])
-        if diagonal is sp.nan:
-            continue
-        known[ref] = True
-
-        # Loop through all other eigenvectors
-        for col in range(i, ref)[::-1]:
-
-            # Sign was already fixed
-            if known[col]:
-                continue
-
-            # Loop through all rows > col (positive coordinates of the tensor operator) limited by the tensor rank
-            for row in range(col + 1, min(j, col + k + 1)):
-                if not known[row]:
-                    continue
-
-                # Try to get a value for the reduced matrix element
-                assert J[row] == J[col]
-                element = reduced(row, col, operator, k, transform, J[row], M[row], M[col])
-                if element is sp.nan:
-                    continue
-
-                # Apply sign of the row eigenvector
-                if signs[row]:
-                    element = -element
-
-                # Fix sign of this eigenvector and proceed with the next one
-                if element - diagonal == 0:
-                    signs[col] = 0
-                elif element + diagonal == 0:
-                    signs[col] = 1
-                else:
-                    print(element, diagonal)
-                    raise RuntimeError("Wigner-Eckart theorem failed!")
-                known[col] = True
-                break
+# def update_signs(slices, operator, k, transform, J, M, known, signs):
+#     """ Fix as many global signs in each of the J eigenspaces as possible using the Wigner-Eckart theorem on
+#     the given tensor operator of rank k. The eigenspaces are defined by the given list 'slices'. The dictionary
+#     'operator' contains the Sympy matrices of components of a tensor operator of rank k in the product space. Keys
+#     are the component number q and values are the matrices. Only negative components and q=0 are used here. The
+#     matrix 'transform' contains the LS eigenvectors as columns and the sequences J and M contain the respective
+#     quantum numbers of all states. The elements of the sequence 'known' are set True, if the sign of the respective
+#     eigenvector was determined and the element in 'signs' is set to 1 if the sign of the eigenvector must be changed,
+#     and to 0 otherwise. This function ignores all eigenvectors for which the respective element in 'known' is True. """
+#
+#     # Loop over each J eigenspace
+#     for i, j in slices:
+#
+#         # Single element space
+#         if J[i] == 0:
+#             known[i] = True
+#             continue
+#
+#         # This eigenspace is already fixed completely
+#         if np.all(known[i:j]):
+#             continue
+#
+#         # Take the reduced matrix of the stretched state M = J as reference, if it is not zero
+#         ref = j - 1
+#         if M[ref] != J[ref]:
+#             logger.error(f"Slice ({i},{j}): J={J[i:j]}")
+#             logger.error(f"Slice ({i},{j}): M={M[i:j]}")
+#         assert M[ref] == J[ref], f"M[{ref}]={M[ref]} != J[{ref}]={J[ref]}"
+#         diagonal = reduced(ref, ref, operator, k, transform, J[ref], M[ref], M[ref])
+#         if diagonal is sp.nan:
+#             continue
+#         known[ref] = True
+#
+#         # Loop through all other eigenvectors
+#         for col in range(i, ref)[::-1]:
+#
+#             # Sign was already fixed
+#             if known[col]:
+#                 continue
+#
+#             # Loop through all rows > col (positive coordinates of the tensor operator) limited by the tensor rank
+#             for row in range(col + 1, min(j, col + k + 1)):
+#                 if not known[row]:
+#                     continue
+#
+#                 # Try to get a value for the reduced matrix element
+#                 assert J[row] == J[col]
+#                 element = reduced(row, col, operator, k, transform, J[row], M[row], M[col])
+#                 if element is sp.nan:
+#                     continue
+#
+#                 # Apply sign of the row eigenvector
+#                 if signs[row]:
+#                     element = -element
+#
+#                 # Fix sign of this eigenvector and proceed with the next one
+#                 if element - diagonal == 0:
+#                     signs[col] = 0
+#                 elif element + diagonal == 0:
+#                     signs[col] = 1
+#                 else:
+#                     print(element, diagonal)
+#                     raise RuntimeError("Wigner-Eckart theorem failed!")
+#                 known[col] = True
+#                 break
 
 
 def get_j_slices(config, eigenvalues, J, M):
     """ Return the list of slices of J eigenvalues. """
 
     num_states = config.num_states
-    names = SYM_CHAIN[config_key(config)]["chain"][:-1]
+    names = SYM_CHAIN[config_key(config)]["sort"][:-1]
     keys = [state_key(eigenvalues, i, names) for i in range(num_states)]
     slices = []
     i = 0
     for j in range(num_states + 1):
         if j == num_states or keys[j] != keys[i]:
             assert len(set(J[i:j])) == 1, f"Slice({i},{j}): J={J[i:j]}"
-            assert j - i == 2 * J[i] + 1, f"Slice({i},{j}): {j - i} != {2 * J[i] + 1}"
-            assert M[i] == -J[i], f"Slice({i},{j}): {M[i]} != {-J[i]}"
-            assert M[j - 1] == J[i], f"Slice({i},{j}): {M[j]} != {J[i]}"
+            J_slice = J[i]
+            assert j - i == 2 * J_slice + 1, f"Slice({i},{j}): {j - i} elements for J={J[i]}"
+            M_slice = [i - J_slice for i in range(2 * J_slice + 1)]
+            assert M[i:j] == M_slice, f"Slice({i},{j}): {M[i:j]} != {M_slice}"
             slices.append((i, j))
             i = j
     return slices
 
 
+# def get_j_slices(config, eigenvalues, J, M):
+#     """ Return the list of slices of J eigenvalues. """
+#
+#     num_states = config.num_states
+#     names = SYM_CHAIN[config_key(config)]["sort"][:-1]
+#     if "tau" in names and "tau" not in eigenvalues:
+#         names.remove("tau")
+#     keys = [state_key(eigenvalues, i, names) for i in range(num_states)]
+#     slices = []
+#     i = 0
+#     for j in range(num_states + 1):
+#         if j == num_states or keys[j] != keys[i]:
+#             assert len(set(J[i:j])) == 1, f"Slice({i},{j}): J={J[i:j]}"
+#             J_slice = J[i]
+#             if j - i == 2 * J_slice + 1:
+#                 M_slice = [i - J_slice for i in range(2 * J_slice + 1)]
+#             elif j - i == 2 * (2 * J_slice + 1):
+#                 M_slice = [i - J_slice for i in range(2 * J_slice + 1) for _ in range(2)]
+#             else:
+#                 raise RuntimeError(f"Slice({i},{j}): {j - i} elements for J={J[i]}")
+#             assert M[i:j] == M_slice, f"Slice({i},{j}): {M[i:j]} != {M_slice}"
+#             slices.append((i, j))
+#             i = j
+#     return slices
+
+
+def angular_momentum(config, q):
+    """ Return component q of the total angular momentum operator in the product sstate space. """
+
+    k = 1
+    s = config.states.electron_pool[0].s
+    l = config.states.electron_pool[0].l
+
+    L = Unit(config.name, f"UT/{k},0,{k},{q}").matrix
+    L *= sp.sqrt(l * (l + 1) * (2 * l + 1) * (2 * s + 1))
+    S = Unit(config.name, f"UT/0,{k},{k},{q}").matrix
+    S *= sp.sqrt(s * (s + 1) * (2 * s + 1) * (2 * l + 1))
+    return L + S
+
+
 def correct_signs(config, transform: sp.Matrix, eigenvalues: dict) -> sp.Matrix:
-    """ Use the Wigner-Eckart theorem in the JM space to obtain consistent global signs of the eigenvectors in each
-    J eigenspace. This allows to construct correct superpositions of M states. The matrix transform is returned with
-    adjusted signs for all column vectors. """
+    """ Use the ladder operator J_{-1} to build phase synchronised eigenvectors in each J eigenspace. This allows to
+    construct correct superpositions of M states. The new matrix transform is returned. """
 
     logger.info(f"Fixing global signs in the J eigenspaces {config.name}")
 
@@ -434,57 +474,85 @@ def correct_signs(config, transform: sp.Matrix, eigenvalues: dict) -> sp.Matrix:
     num_states = config.num_states
     assert num_states == transform.shape[0] == transform.shape[1]
 
-    # No phase fixed yet
-    known = np.zeros(num_states, dtype=bool)
-
-    # Sign of each column vector
-    signs = np.zeros(num_states, dtype=int)
-
     # Quantum numbers J and M of all states
-    J = [(sp.sqrt(4 * x + 1) - 1) / 2 for x in eigenvalues["J2"]]
-    M = eigenvalues["Jz"]
+    Jvals = [(sp.sqrt(4 * x + 1) - 1) / 2 for x in eigenvalues["J2"]]
+    Mvals = eigenvalues["Jz"]
 
-    # Slices of the J eigenspaces
-    slices = get_j_slices(config, eigenvalues, J, M)
+    # Slices of the J-eigenspaces (J-multiplets)
+    slices = get_j_slices(config, eigenvalues, Jvals, Mvals)
 
-    # Get all unit tensor operator names
-    unit_names = {"U": "UT/{k},0,{k},{q}", "T": "UT/0,{k},{k},{q}"}
-    operators = []
-    l = max(electron.l for electron in config.states.electron_pool)
-    for k in range(1, 2 * l + 1):
-        for op in ["U", "T"]:
-            if op == "T" and k > 1:
-                continue
-            operators.append((k, f"{op}({k})", unit_names[op]))
+    # Build the states of all J-multiplets based on the stretched state M=J
+    J_ladder = angular_momentum(config, -1)
+    for i, j in slices:
+        for index in range(j - 2, i - 1, -1):
+            transform[:, index] = (J_ladder * transform[:, index + 1]).normalized()
 
-    # Fix all signs in each J multiplet
-    while not np.all(known):
-        num_known = sum(known)
-        for k, name, unit in operators:
-            operator = {q: Unit(config.name, unit.format(k=k, q=q)).matrix for q in range(0, k + 1)}
-            update_signs(slices, operator, k, transform, J, M, known, signs)
-            logger.info(f"Global signs {name} in {config.name}: {sum(known)}/{len(known)} fixed")
-            if np.all(known):
-                break
-        assert sum(known) > num_known
-
-    # Make sure that all global signs are corrected
-    if not np.all(known):
-        eigenvalues = classify_states(config, eigenvalues)
-        states = get_states(config, eigenvalues)
-        terms = str_terms(config, states, template="template_full")
-        for i in range(num_states):
-            if not known[i]:
-                print("Unresolved:", terms[i])
-    assert np.all(known)
-
-    # Apply the global signs
-    for i in range(len(signs)):
-        if signs[i]:
-            transform[:, i] = -transform[:, i]
-
-    # Return the corrected transformation matrix
+    # Return the transformation matrix with synchronized states
     return transform
+
+
+# def correct_signs(config, transform: sp.Matrix, eigenvalues: dict) -> sp.Matrix:
+#     """ Use the Wigner-Eckart theorem in the JM space to obtain consistent global signs of the eigenvectors in each
+#     J eigenspace. This allows to construct correct superpositions of M states. The matrix transform is returned with
+#     adjusted signs for all column vectors. """
+#
+#     logger.info(f"Fixing global signs in the J eigenspaces {config.name}")
+#
+#     # Number of states
+#     num_states = config.num_states
+#     assert num_states == transform.shape[0] == transform.shape[1]
+#
+#     # No phase fixed yet
+#     known = np.zeros(num_states, dtype=bool)
+#
+#     # Sign of each column vector
+#     signs = np.zeros(num_states, dtype=int)
+#
+#     # Quantum numbers J and M of all states
+#     J = [(sp.sqrt(4 * x + 1) - 1) / 2 for x in eigenvalues["J2"]]
+#     M = eigenvalues["Jz"]
+#
+#     # Slices of the J eigenspaces
+#     slices = get_j_slices(config, eigenvalues, J, M)
+#
+#     # Get all unit tensor operator names
+#     unit_names = {"U": "UT/{k},0,{k},{q}", "T": "UT/0,{k},{k},{q}"}
+#     operators = []
+#     l = max(electron.l for electron in config.states.electron_pool)
+#     for k in range(1, 2 * l + 1):
+#         for op in ["U", "T"]:
+#             if op == "T" and k > 1:
+#                 continue
+#             operators.append((k, f"{op}({k})", unit_names[op]))
+#
+#     # Fix all signs in each J multiplet
+#     while not np.all(known):
+#         num_known = sum(known)
+#         for k, name, unit in operators:
+#             operator = {q: Unit(config.name, unit.format(k=k, q=q)).matrix for q in range(0, k + 1)}
+#             update_signs(slices, operator, k, transform, J, M, known, signs)
+#             logger.info(f"Global signs {name} in {config.name}: {sum(known)}/{len(known)} fixed")
+#             if np.all(known):
+#                 break
+#         assert sum(known) > num_known
+#
+#     # Make sure that all global signs are corrected
+#     if not np.all(known):
+#         eigenvalues = classify_states(config, eigenvalues)
+#         states = get_states(config, eigenvalues)
+#         terms = str_terms(config, states, template="template_full")
+#         for i in range(num_states):
+#             if not known[i]:
+#                 print("Unresolved:", terms[i])
+#     assert np.all(known)
+#
+#     # Apply the global signs
+#     for i in range(len(signs)):
+#         if signs[i]:
+#             transform[:, i] = -transform[:, i]
+#
+#     # Return the corrected transformation matrix
+#     return transform
 
 
 ###########################################################################
