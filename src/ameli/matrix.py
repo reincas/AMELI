@@ -42,6 +42,7 @@ def matrix_U(config, k: int, q: int):
     s = config.states.electron_pool[0].s
     l = config.states.electron_pool[0].l
     assert 0 <= k <= 2 * l + 1
+    assert -k <= q <= k
 
     # One-electron matrix
     matrix = Unit(config.name, f"UT/{k},0,{k},{q}").matrix
@@ -62,6 +63,7 @@ def matrix_T(config, k: int, q: int):
     s = config.states.electron_pool[0].s
     l = config.states.electron_pool[0].l
     assert 0 <= k <= 2 * s + 1
+    assert -k <= q <= k
 
     # One-electron matrix
     matrix = Unit(config.name, f"UT/0,{k},{k},{q}").matrix
@@ -154,6 +156,53 @@ def matrix_UT(config, k: int):
 
     # Return matrix
     return matrix
+
+
+###########################################################################
+# Coulomb and crystal field operators
+###########################################################################
+
+def matrix_C(config, k: int, q: int):
+    """ Return the matrix <|Ck_q|> of the q-component of the Coulomb interaction operator of rank k as product state
+    matrix for the given electron configuration. """
+
+    l = config.states.electron_pool[0].l
+    ck = (-1) ** l * (2 * l + 1) * sym3j(l, k, l, 0, 0, 0)
+
+    matrix = Matrix(config.name, f"U/1,{q}", "Product").matrix
+    matrix *= ck
+    return matrix
+
+
+def matrix_crystal(config, k: int, q: int):
+    """ Return the q-component of the crystal field operator of rank k as product state matrix for the given electron
+     configuration. """
+
+    assert q >= 0
+
+    matrix = Matrix(config.name, f"C/{k},{q}", "Product").matrix
+    if k > 0:
+        matrix_neg = Matrix(config.name, f"C/{k},{-q}", "Product").matrix
+        if q % 2:
+            matrix_neg = -matrix_neg
+        matrix += matrix_neg
+    return matrix
+
+
+def matrix_Hcf(config, k: int, q: int):
+    """ Return the q-component of the crystal field Hamiltonian of rank k as product state matrix for the given
+     electron configuration. """
+
+    assert k % 2 == 0
+    return matrix_crystal(config, k, q)
+
+
+def matrix_Dcf(config, k: int, q: int):
+    """ Return the q-component of the electrical dipole operator of rank k as product state matrix for the given
+     electron configuration. """
+
+    assert k % 2 == 1
+    return matrix_crystal(config, k, q)
 
 
 ###########################################################################
@@ -476,6 +525,18 @@ MATRIX_INFO = [
             "desc": "Scalar product of the total unit tensor operators U^(k)*T^(k) of rank k in the orbital and spin spaces",
             "html_op": "$(\\mathrm{{U}}^{{(k)}}\\cdot\\mathrm{{T}}^{{(k)}})$",
             "html_desc": "Scalar product of the total unit tensor operators of rank $k$ in the orbital and spin spaces"}),
+    ("C", {"func": matrix_C, "keys": ("k", "q"),
+           "desc": "Component q of the Coulomb operator C^(k)_q of rank k",
+           "html_op": "$\\mathrm{{C}}^{{(k)}}_q$",
+           "html_desc": "Component $q$ of the Coulomb operator of rank $k$"}),
+    ("Hcf", {"func": matrix_Hcf, "keys": ("k", "q"),
+           "desc": "Component q of the crystal field perturbation Hamiltonian Hcf^(k)_q of rank k",
+           "html_op": "$\\mathrm{{H}}_{{cf}}^{{(k)}}_q$",
+           "html_desc": "Component $q$ of the crystal field perturbation Hamiltonian of rank $k$"}),
+    ("Dcf", {"func": matrix_Dcf, "keys": ("k", "q"),
+           "desc": "Component q of the electric dipole operator Dcf^(k)_q of rank k",
+           "html_op": "$\\mathrm{{D}}_{{cf}}^{{(k)}}_q$",
+           "html_desc": "Component $q$ of the electric dipole operator of rank $k$"}),
     ("L", {"func": matrix_L, "keys": ("q",),
            "desc": "Component q of the total orbital angular momentum operator L_q",
            "html_op": "$\\mathrm{{L}}_q$",
