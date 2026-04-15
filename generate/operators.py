@@ -55,6 +55,10 @@ def matrix_args(num_electrons):
             if num_electrons < min_electrons:
                 continue
 
+            # Crystal fields require full space
+            if "cf" in name and state_space == "SLJ":
+                continue
+
             # Yield initialisation arguments of a normal matrix
             kwargs = {
                 "config_name": config_name,

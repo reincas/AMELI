@@ -169,7 +169,7 @@ def matrix_C(config, k: int, q: int):
     l = config.states.electron_pool[0].l
     ck = (-1) ** l * (2 * l + 1) * sym3j(l, k, l, 0, 0, 0)
 
-    matrix = Matrix(config.name, f"U/1,{q}", "Product").matrix
+    matrix = Matrix(config.name, f"U/{k},{q}", "Product").matrix
     matrix *= ck
     return matrix
 
