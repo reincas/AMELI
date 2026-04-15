@@ -1,4 +1,4 @@
-# AMELI 1.2.2 (Angular Matrix Elements of Lanthanide Ions)
+# AMELI 1.3.0 (Angular Matrix Elements of Lanthanide Ions)
 
 This is a Python 3 package to calculate the constant angular matrix elements of spherical tensor operators of
 lanthanide ions in exact arithmetic using SymPy.
@@ -93,6 +93,14 @@ Its subfolder `results` contains the results from a test run and the subfolder `
 extract the comparison tables in the AMELI paper from the test results.
 The folder `upload` is for documentation only.
 It contains the scripts used to upload and update the matrix datasets on the Zenodo repository.
+
+## Update History
+
+1.2.1: First public release
+1.2.2: Documentation update
+1.3.0: * Fixed splitting of tau-branches for f5-f9
+       * Replaced sign correction algorithm by ladder operator
+       * Added Coulomb and crystal field operators (C, Hcf, Dcf)
 
 ## Reference
 
