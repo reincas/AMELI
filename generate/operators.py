@@ -73,7 +73,7 @@ def matrix_args(num_electrons):
                 continue
 
             name_data = MatrixName(name)
-            if name_data.rank > 0:
+            if name_data.has_components:
                 if "," in name:
                     reduced_name = name[:name.rfind(",")]
                 else:

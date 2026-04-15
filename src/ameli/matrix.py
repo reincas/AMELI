@@ -644,10 +644,12 @@ class MatrixName:
         self.tensor_desc = info["desc"]
 
         # Determine tensor rank
+        self.has_components = False
         if "q" not in self.keys:
             k = 0
         else:
             assert self.keys[-1] == "q"
+            self.has_components = True
             if "k" not in self.keys:
                 k = 1
             else:
@@ -655,21 +657,17 @@ class MatrixName:
                 k = self.args[self.keys.index("k")]
         self.rank = k
 
-        # Missing parameters
-        diff = len(self.keys) - len(self.args)
-        assert diff >= 0
-        self.missing = []
-        if diff > 0:
-            self.missing = self.keys[-diff:]
+        if self.has_components and len(self.keys) - len(self.args) == 1:
+            assert self.keys[-1] == "q"
+        else:
+            assert len(self.keys) == len(self.args)
 
     def components(self):
-        if self.missing == ("q",):
+        if self.has_components:
             sep = "/" if len(self.args) == 0 else ","
             names = [f"{self.name}{sep}{q}" for q in range(-self.rank, self.rank + 1)]
-        elif not self.missing:
-            names = [self.name]
         else:
-            raise RuntimeError(f"Missing matrix parameters {self.missing} for matrix {self.name}!")
+            names = [self.name]
         return names
 
 
