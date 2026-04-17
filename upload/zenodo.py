@@ -10,6 +10,7 @@
 #
 ##########################################################################
 
+import datetime
 import hashlib
 import io
 import json
@@ -343,12 +344,15 @@ class Zenodo:
     def get_concept(self, concept_id):
         """ Get latest record of the given concept ID. Return None if no record is published yet. """
 
-        url = f"{self.url}/records/{concept_id}"
+        # url = f"{self.url}/records/{concept_id}"
+        url = f"https://zenodo.org/api/records?q=conceptrecid:{concept_id}&sort=version&size=1&all_versions=true"
         response = requests.get(url, headers=self.auth_header)
         if response.status_code == 404:
             return None
         response.raise_for_status()
-        return response.json()
+        data = response.json()
+        return data['hits']['hits'][0]
+        # return response.json()
 
     def get_deposition(self, record):
         """ Get pending draft of the given Zenodo record. Return None if no draft exists. """
@@ -383,6 +387,8 @@ class Zenodo:
         data = {"metadata": self.metadata | metadata}
         data["metadata"].pop("resource_type", None)
         data["metadata"].pop("doi", None)
+        data["metadata"].pop("relations", None)
+        data["metadata"].pop("communities", None)
 
         if self.is_submitted:
             record = self.get_deposition(self.record)
@@ -494,6 +500,7 @@ class Zenodo:
         self.is_submitted = self.record["submitted"]
         assert not self.is_submitted
 
+
 ##########################################################################
 # Upload functions for Zenodo records
 ##########################################################################
@@ -505,8 +512,7 @@ def upload_record(zenodo, hashes, meta, files):
     for filename in zenodo.filenames():
         zenodo.delete_file(filename)
 
-    # Update record metadata and upload all data files
-    zenodo.update_meta(meta)
+    # Upload all data files
     for file in files:
         zenodo.upload_file(file.generate(), file.name)
     zenodo.load_record()
@@ -514,6 +520,10 @@ def upload_record(zenodo, hashes, meta, files):
     # Upload hashes
     hashes.merge(zenodo)
     zenodo.upload_file(io.BytesIO(hashes.bytes()), "hashes.json")
+    zenodo.load_record()
+
+    # Update record metadata
+    zenodo.update_meta(meta)
 
     # Submit record
     zenodo.publish()
@@ -531,6 +541,7 @@ def upload_zenodo(version, title, desc, files, zenodo):
         "upload_type": "dataset",
         "version": str(version),
         "title": title,
+        "publication_date": datetime.date.today().strftime('%Y-%m-%d'),
         "description": desc,
         "language": "eng",
         "access_right": "open",
@@ -550,6 +561,7 @@ def upload_zenodo(version, title, desc, files, zenodo):
 
     # Zenodo record is in draft state
     if not zenodo.is_submitted:
+        print("    Updating draft Zenodo record")
         upload_record(zenodo, hashes, metadata, files)
 
     # Zenodo record is in submitted state
@@ -573,12 +585,16 @@ def upload_zenodo(version, title, desc, files, zenodo):
 
         # Create new release of Zenodo record
         if release:
+            print("    Creating new version of Zenodo record")
             zenodo.create_release(version)
             upload_record(zenodo, hashes, metadata, files)
 
         # Update record metadata
         else:
+            print("    Updating Zenodo record")
             zenodo.update_meta(metadata)
+        print(f"    Record {zenodo.record["id"]} published")
+
 
 def zenodo_lanthanide(num_electrons, version, concept_id, sandbox=True):
     """ Upload or update Zenodo dataset record for the given lanthanide ion. """
@@ -595,4 +611,3 @@ def zenodo_lanthanide(num_electrons, version, concept_id, sandbox=True):
         files.append(file)
 
     upload_zenodo(version, title, desc, files, zenodo)
-
