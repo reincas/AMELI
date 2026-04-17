@@ -3,6 +3,7 @@
 .venv/
 attic/
 src/ameli/vault
+paper/
 private/
 releases/
 
