@@ -174,9 +174,9 @@ def matrix_C(config, k: int, q: int):
     return matrix
 
 
-def matrix_crystal(config, k: int, q: int):
-    """ Return the q-component of the crystal field operator of rank k as product state matrix for the given electron
-     configuration. """
+def matrix_Hcf(config, k: int, q: int):
+    """ Return the q-component of the crystal field Hamiltonian of rank k as product state matrix for the given
+     electron configuration. """
 
     assert q >= 0
 
@@ -187,22 +187,6 @@ def matrix_crystal(config, k: int, q: int):
             matrix_neg = -matrix_neg
         matrix += matrix_neg
     return matrix
-
-
-def matrix_Hcf(config, k: int, q: int):
-    """ Return the q-component of the crystal field Hamiltonian of rank k as product state matrix for the given
-     electron configuration. """
-
-    assert k % 2 == 0
-    return matrix_crystal(config, k, q)
-
-
-def matrix_Dcf(config, k: int, q: int):
-    """ Return the q-component of the electrical dipole operator of rank k as product state matrix for the given
-     electron configuration. """
-
-    assert k % 2 == 1
-    return matrix_crystal(config, k, q)
 
 
 ###########################################################################
@@ -597,10 +581,6 @@ MATRIX_INFO = [
              "desc": "Component q of the crystal field perturbation Hamiltonian Hcf^(k)_q of rank k",
              "html_op": "$\\mathrm{{H}}_{{\\mathrm{{cf}},q}}^{{(k)}}$", "html_radial": "$B^k_q$",
              "html_desc": "Component $q$ of the crystal field perturbation Hamiltonian of rank $k$"}),
-    ("Dcf", {"func": matrix_Dcf, "keys": ("k", "q"),
-             "desc": "Component q of the electric dipole operator Dcf^(k)_q of rank k",
-             "html_op": "$\\mathrm{{D}}_{{\\mathrm{{cf}},q}}^{{(k)}}$",
-             "html_desc": "Component $q$ of the electric dipole operator of rank $k$"}),
 ]
 MATRICES = dict(MATRIX_INFO)
 

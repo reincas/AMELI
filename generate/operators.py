@@ -22,9 +22,7 @@ def matrix_names():
     names.extend([(f"UU/{k}", 1) for k in range(8)])
     names.extend([(f"TT/{k}", 1) for k in (0, 1)])
     names.extend([(f"UT/{k}", 1) for k in (0, 1)])
-    names.extend([(f"C/{k},{q}", 1) for k in range(8) for q in range(-k, k + 1)])
-    names.extend([(f"Hcf/{k},{q}", 1) for k in (0, 2, 4, 6) for q in range(0, k + 1)])
-    names.extend([(f"Dcf/{k},{q}", 1) for k in (1, 3, 5, 7) for q in range(0, k + 1)])
+    names.extend([(f"C/{k},{q}", 1) for k in (0, 2, 4, 6) for q in range(-k, k + 1)])
     names.extend([(f"L/{q}", 1) for q in range(-1, 2)])
     names.extend([(f"S/{q}", 1) for q in range(-1, 2)])
     names.extend([(f"J/{q}", 1) for q in range(-1, 2)])
@@ -40,6 +38,7 @@ def matrix_names():
     names.extend([(f"Hsoo/{k}", 2) for k in (0, 2, 4)])
     names.extend([(f"H5/{k}", 2) for k in (0, 2, 4)])
     names.extend([(f"H6/{k}", 2) for k in (0, 2, 4, 6)])
+    names.extend([(f"Hcf/{k},{q}", 1) for k in (0, 2, 4, 6) for q in range(0, k + 1)])
     return names
 
 
