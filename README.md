@@ -26,8 +26,10 @@ All angular matrices of a given electron configuration are constants and need to
 This software package therefore is intended mainly as reference.
 Instead of integrating AMELI code into your own project, you should use the matrices from the AMELI repository on
 Zenodo.
-A reference implementation will be provided by the [Lanthanide](https://github.com/reincas/Lanthanide) package,
-which will soon be switching from self-generated matrices to AMELI.
+A reference implementation is available with the [YALIP](https://github.com/reincas/yalip) package.
+It provides access to floating point representations of all AMELI matrices and basis states, it calculates energy
+levels in intermediate coupling and radiative transition properties, and it fits radial integrals and Judd-Ofelt
+parameters to measured absorption spectra.
 
 AMELI calculates operator matrices in the product state space together with a transformation matrix to $LS$-coupling
 in exact arithmetic.
