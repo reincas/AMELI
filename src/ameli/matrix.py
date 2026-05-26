@@ -181,7 +181,7 @@ def matrix_Hcf(config, k: int, q: int):
     assert q >= 0
 
     matrix = Matrix(config.name, f"C/{k},{q}", "Product").matrix
-    if k > 0:
+    if q > 0:
         matrix_neg = Matrix(config.name, f"C/{k},{-q}", "Product").matrix
         if q % 2:
             matrix_neg = -matrix_neg
