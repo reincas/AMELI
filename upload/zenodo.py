@@ -345,7 +345,7 @@ class Zenodo:
         """ Get latest record of the given concept ID. Return None if no record is published yet. """
 
         # url = f"{self.url}/records/{concept_id}"
-        url = f"https://zenodo.org/api/records?q=conceptrecid:{concept_id}&sort=version&size=1&all_versions=true"
+        url = f"{self.url}/records?q=conceptrecid:{concept_id}&sort=version&size=1&all_versions=true"
         response = requests.get(url, headers=self.auth_header)
         if response.status_code == 404:
             return None
