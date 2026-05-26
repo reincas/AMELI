@@ -21,6 +21,7 @@ dependencies = [
     "numpy == 2.4.2",
     "scidatacontainer == 1.2.0",
     "sympy == 1.14.0",
+    "platformdirs == 4.9.6",
 ]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
