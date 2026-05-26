@@ -12,7 +12,7 @@
 
 from zenodo import zenodo_lanthanide
 
-SANDBOX = True
+SANDBOX = False
 RECORDS_SB = {
     1: {"concept_id": 489074, "version": "3.0.0"},
     2: {"concept_id": 489076, "version": "3.0.0"},
