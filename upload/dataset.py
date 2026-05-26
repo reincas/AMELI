@@ -131,7 +131,7 @@ of certain tensor operators.
 {ls_rows}</table>  
 </p>
 
-<h2>Version Policy</h2>
+<h2>Version History</h2>
 <p>
 The dataset is published with a semantic version number in the scheme 'major.minor.patch', starting at '1.0.0'.
 The <strong>patch number</strong> is incremented for every update of the datasets metadata without any modification of 
@@ -142,6 +142,29 @@ Modifications may include updated or corrected titles or descriptions in the met
 metadata attributes.
 The <strong>major number</strong> is incremented with functional modifications of data containers or additional tensor 
 operators.
+</p>
+
+<h3>Version 1.0.0</h3>
+<p>
+<ul>
+  <li>Initial version</li>
+</ul>
+</p>
+
+<h3>Version 2.0.0</h3>
+<p>
+<ul>
+  <li>Replaced proprietary sign fix inside $J$-multiplets by ladder operator</li>
+  <li>Coulomb operators added</li>
+  <li>Crystal field operators added</li>
+</ul>
+</p>
+
+<h3>Version 3.0.0</h3>
+<p>
+<ul>
+  <li>Fixed <code>Hcf/{{k}},0</code> matrices (wrong factor 2)</li>
+</ul>
 </p>
 """
 
