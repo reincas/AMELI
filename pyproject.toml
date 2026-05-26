@@ -21,6 +21,7 @@ dependencies = [
     "numpy == 2.4.2",
     "scidatacontainer == 1.2.0",
     "sympy == 1.14.0",
+    "psutil == 7.2.2",
     "platformdirs == 4.9.6",
 ]
 classifiers = [
