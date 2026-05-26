@@ -23,7 +23,7 @@ import h5py
 from platformdirs import user_cache_dir
 from scidatacontainer import Container
 
-AMELI_VERSION = "1.3.3"
+AMELI_VERSION = "1.2.2"
 VERSION_PATTERN = r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$"
 VAULT_PATH_OLD = Path(__file__).resolve().parent / "vault"
 VAULT_PATH = Path(user_cache_dir(appname="AMELI", appauthor="REINCAS")) / "vault"
