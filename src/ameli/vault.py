@@ -14,16 +14,19 @@
 import json
 import os
 import re
+import shutil
 import time
 import zipfile
 from pathlib import Path
 
 import h5py
+from platformdirs import user_cache_dir
 from scidatacontainer import Container
 
-AMELI_VERSION = "1.2.2"
+AMELI_VERSION = "1.3.3"
 VERSION_PATTERN = r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$"
-VAULT_PATH = Path(__file__).resolve().parent / "vault"
+VAULT_PATH_OLD = Path(__file__).resolve().parent / "vault"
+VAULT_PATH = Path(user_cache_dir(appname="AMELI", appauthor="REINCAS")) / "vault"
 
 
 class VersionError(Exception):
@@ -182,6 +185,15 @@ class Vault:
         # Generate the data container object with hash
         dc = Container(items=items)
         dc.freeze()
+
+        # Create vault folder if it does not exist
+        if not VAULT_PATH.exists():
+            if not VAULT_PATH_OLD.exists():
+                VAULT_PATH.mkdir(parents=True, exist_ok=True)
+            else:
+                # Move vault folder from previous location
+                VAULT_PATH.parent.mkdir(parents=True, exist_ok=True)
+                shutil.move(str(VAULT_PATH_OLD), str(VAULT_PATH))
 
         # Store data container in a temporary file
         path = self.vault_path(name)
