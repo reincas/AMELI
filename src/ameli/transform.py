@@ -484,6 +484,13 @@ def correct_signs(config, transform: sp.Matrix, eigenvalues: dict) -> sp.Matrix:
     # Build the states of all J-multiplets based on the stretched state M=J
     J_ladder = angular_momentum(config, -1)
     for i, j in slices:
+        ################### Todo: Activate this before the next full build & test run
+        # for index in range(j - 1, i, 0):
+        #     J = Jvals[index]
+        #     M = Mvals[index]
+        #     factor = sp.sqrt((J * (J + 1) - M * (M - 1)) / 2)
+        #     transform[:, index - 1] = (J_ladder * transform[:, index]) / factor
+        ################### Todo: ####################################################
         for index in range(j - 2, i - 1, -1):
             transform[:, index] = (J_ladder * transform[:, index + 1]).normalized()
 
