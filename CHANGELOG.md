@@ -7,3 +7,6 @@
     * Replaced sign correction algorithm by ladder operator
     * Added Coulomb and crystal field operators (`C`, `Hcf`, `Dcf`)
 * **1.3.1**: Removed obsolete operator `Dcf`
+* **1.3.2**: Link to YALIP
+* **1.3.3**: Corrected Hcf/k,0 error (factor 2)
+* **1.3.4**: Use platformdirs for VAULT_PATH
