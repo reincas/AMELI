@@ -451,7 +451,7 @@ def get_j_slices(config, eigenvalues, J, M):
 
 
 def angular_momentum(config, q):
-    """ Return component q of the total angular momentum operator in the product sstate space. """
+    """ Return component q of the total angular momentum operator in the product state space. """
 
     k = 1
     s = config.states.electron_pool[0].s
